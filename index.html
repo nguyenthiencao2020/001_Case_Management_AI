@@ -1,0 +1,1808 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trợ Lý Quản Lý Ca — Thảo Đàn</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=Playfair+Display:ital@0;1&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+// PDF.js worker
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+async function extractPDFText(base64Data) {
+  if (typeof pdfjsLib === 'undefined') return '[PDF.js chưa tải - hãy thử lại]';
+  const binary = atob(base64Data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+  let fullText = '';
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const tc = await page.getTextContent();
+    fullText += tc.items.map(i => i.str).join(' ') + '\n';
+  }
+  return fullText.trim();
+}
+</script>
+<style>
+:root {
+  --g1:#1a4a2e;--g2:#2d7a4f;--g3:#4aab72;--g4:#e8f5ee;--g5:#f2faf5;
+  --amber:#e8a020;--ambL:#fdf3e0;--red:#c0392b;--redL:#fdecea;
+  --blue:#2563eb;--blueL:#eff6ff;
+  --txt:#1a2e23;--txt2:#3d5a47;--txt3:#7a9585;--brd:#c8e0d2;
+  --wh:#fff;--sh:0 4px 20px rgba(26,74,46,.09);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Be Vietnam Pro',sans-serif;background:var(--g5);color:var(--txt);min-height:100vh;display:flex;flex-direction:column}
+
+/* HEADER */
+header{background:var(--g1);padding:14px 28px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 10px rgba(0,0,0,.2);flex-shrink:0}
+.logo{width:40px;height:40px;background:var(--g3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+header h1{font-family:'Playfair Display',serif;font-size:1.2rem;color:#fff;font-weight:700}
+header p{font-size:.73rem;color:#a8d4b8;margin-top:1px}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.key-dot{width:8px;height:8px;border-radius:50%;background:var(--g3)}
+.key-lbl{font-size:.72rem;color:#a8d4b8}
+.hdr-btn{background:transparent;border:1px solid rgba(255,255,255,.22);color:#a8d4b8;font-size:.7rem;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'Be Vietnam Pro',sans-serif;transition:.15s}
+.hdr-btn:hover{border-color:rgba(255,255,255,.5);color:#fff}
+
+/* MAIN LAYOUT */
+.layout{display:flex;flex:1;min-height:0;height:calc(100vh - 68px)}
+
+/* SIDEBAR */
+.sidebar{width:260px;background:var(--wh);border-right:1px solid var(--brd);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.sb-section{padding:16px 16px 12px;border-bottom:1px solid var(--brd)}
+.sb-label{font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3);margin-bottom:8px}
+.nav-btn{display:flex;align-items:center;gap:9px;width:100%;padding:9px 11px;border:none;border-radius:8px;background:transparent;cursor:pointer;font-family:'Be Vietnam Pro',sans-serif;font-size:.82rem;color:var(--txt2);text-align:left;transition:all .15s;margin-bottom:2px}
+.nav-btn:hover{background:var(--g4);color:var(--g1)}
+.nav-btn.active{background:var(--g4);color:var(--g1);font-weight:600}
+.nav-btn .ico{font-size:1rem;flex-shrink:0}
+.sb-info{padding:14px 16px;font-size:.77rem;color:var(--txt3);line-height:1.7}
+.sb-info strong{color:var(--txt2)}
+
+/* MAIN AREA */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+
+/* PANEL */
+.panel{display:none;flex:1;flex-direction:column;overflow:hidden}
+.panel.active{display:flex}
+
+/* ===================== CHAT PANEL ===================== */
+.chat-wrap{flex:1;overflow-y:auto;padding:22px 26px;display:flex;flex-direction:column;gap:14px}
+.msg{display:flex;gap:10px;align-items:flex-start;animation:fadeSlide .22s ease}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.msg.user{flex-direction:row-reverse}
+.av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.av.ai{background:var(--g1)}.av.user{background:var(--amber)}
+.bubble{max-width:78%;padding:12px 16px;border-radius:14px;font-size:.855rem;line-height:1.72}
+.bubble.ai{background:var(--wh);border:1px solid var(--brd);border-top-left-radius:4px;box-shadow:var(--sh);color:var(--txt)}
+.bubble.user{background:var(--g1);color:#fff;border-top-right-radius:4px}
+
+/* Structured inside bubble */
+.s-card{border-radius:0 8px 8px 0;padding:9px 13px;margin:7px 0;font-size:.82rem}
+.s-card.green{background:var(--g4);border-left:3px solid var(--g3);color:var(--txt2)}
+.s-card.amber{background:var(--ambL);border-left:3px solid var(--amber);color:#7a5000}
+.s-card.red{background:var(--redL);border-left:3px solid var(--red);color:var(--red)}
+.s-card.blue{background:var(--blueL);border-left:3px solid var(--blue);color:#1d4ed8}
+.s-title{font-weight:700;font-size:.8rem;color:var(--g1);margin-bottom:3px}
+.bdg-row{display:flex;flex-wrap:wrap;gap:5px;margin:7px 0}
+.bdg{font-size:.7rem;padding:2px 9px;border-radius:20px;font-weight:600}
+.bdg.gr{background:#d1fae5;color:#065f46}.bdg.am{background:#fef3c7;color:#92400e}
+.bdg.rd{background:#fee2e2;color:#991b1b}.bdg.bl{background:#dbeafe;color:#1e40af}
+h4.sh{font-size:.77rem;font-weight:700;color:var(--g1);margin:10px 0 5px;text-transform:uppercase;letter-spacing:.06em}
+ol.sl{padding-left:16px}ol.sl li{margin-bottom:5px;font-size:.84rem;color:var(--txt2)}
+table.rt{width:100%;border-collapse:collapse;margin:10px 0;font-size:.8rem}
+table.rt th{background:var(--g4);color:var(--g1);font-weight:700;padding:7px 10px;text-align:left;border:1px solid var(--brd)}
+table.rt td{padding:6px 10px;border:1px solid var(--brd);color:var(--txt2)}
+table.rt tr:nth-child(even) td{background:#f9fdfb}
+
+/* Loading */
+.loading-dots span{display:inline-block;width:6px;height:6px;background:var(--g3);border-radius:50%;margin:0 2px;animation:bounce 1.2s infinite}
+.loading-dots span:nth-child(2){animation-delay:.2s}.loading-dots span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+
+/* INPUT BAR */
+.input-bar{padding:14px 26px 18px;background:var(--wh);border-top:1px solid var(--brd);flex-shrink:0}
+.chip-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}
+.chip{font-size:.73rem;padding:4px 11px;border-radius:20px;border:1px solid var(--brd);background:var(--g5);color:var(--g1);cursor:pointer;transition:.12s;font-family:'Be Vietnam Pro',sans-serif;font-weight:500}
+.chip:hover{background:var(--g4);border-color:var(--g3)}
+.inp-row{display:flex;gap:8px;align-items:flex-end}
+textarea.inp{flex:1;padding:11px 14px;border:1.5px solid var(--brd);border-radius:10px;font-family:'Be Vietnam Pro',sans-serif;font-size:.855rem;color:var(--txt);background:var(--g5);resize:none;outline:none;line-height:1.5;min-height:42px;max-height:110px;transition:border-color .15s}
+textarea.inp:focus{border-color:var(--g3);background:var(--wh)}
+textarea.inp::placeholder{color:var(--txt3)}
+.send-btn{width:42px;height:42px;border-radius:10px;border:none;background:var(--g1);color:#fff;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0}
+.send-btn:hover{background:var(--g2)}.send-btn:disabled{background:var(--brd);cursor:not-allowed}
+.clear-btn{height:42px;padding:0 14px;border-radius:10px;border:1.5px solid var(--brd);background:transparent;color:var(--txt3);font-size:.75rem;cursor:pointer;font-family:'Be Vietnam Pro',sans-serif;transition:.15s;flex-shrink:0;display:flex;align-items:center;gap:5px}
+.clear-btn:hover{border-color:var(--red);color:var(--red);background:var(--redL)}
+.upload-btn{height:42px;padding:0 14px;border-radius:10px;border:1.5px solid var(--brd);background:transparent;color:var(--txt3);font-size:.75rem;cursor:pointer;font-family:'Be Vietnam Pro',sans-serif;transition:.15s;flex-shrink:0;display:flex;align-items:center;gap:5px}
+.upload-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blueL)}
+.footer-note{font-size:.66rem;color:var(--txt3);text-align:center;margin-top:6px}
+
+/* ===================== WIZARD PANEL ===================== */
+.wizard-wrap{flex:1;overflow-y:auto;padding:24px 28px}
+.wizard-header{margin-bottom:22px}
+.wizard-header h2{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--g1);margin-bottom:4px}
+.wizard-header p{font-size:.82rem;color:var(--txt3)}
+
+/* Progress steps */
+.progress-bar{display:flex;align-items:center;margin-bottom:28px;overflow-x:auto;padding-bottom:4px}
+.prog-step{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
+.prog-circle{width:32px;height:32px;border-radius:50%;border:2px solid var(--brd);background:var(--wh);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:var(--txt3);transition:.3s;cursor:pointer}
+.prog-circle:hover{border-color:var(--g3)}
+.prog-step.active .prog-circle{border-color:var(--g3);background:var(--g3);color:#fff}
+.prog-step.done .prog-circle{border-color:var(--g2);background:var(--g2);color:#fff}
+.prog-step-lbl{font-size:.65rem;color:var(--txt3);white-space:nowrap;text-align:center;max-width:70px}
+.prog-step.active .prog-step-lbl{color:var(--g2);font-weight:600}
+.prog-line{flex:1;height:2px;background:var(--brd);margin:0 4px;margin-bottom:18px;min-width:20px;transition:.3s}
+.prog-line.done{background:var(--g2)}
+
+/* Wizard step content */
+.wz-step{display:none}.wz-step.active{display:block}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:16px}
+.fg-full{grid-column:1/-1}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:.77rem;font-weight:600;color:var(--txt2)}
+.form-group input,.form-group select,.form-group textarea{padding:9px 12px;border:1.5px solid var(--brd);border-radius:8px;font-family:'Be Vietnam Pro',sans-serif;font-size:.84rem;color:var(--txt);background:var(--wh);outline:none;transition:border-color .15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--g3)}
+.form-group textarea{resize:vertical;min-height:70px}
+.required-star{color:var(--red)}
+
+.cb-group{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.cb-item{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--txt2);cursor:pointer;padding:5px 10px;border:1px solid var(--brd);border-radius:6px;background:var(--wh);transition:.12s}
+.cb-item:hover{background:var(--g4);border-color:var(--g3)}
+.cb-item input{accent-color:var(--g2)}
+
+.wz-actions{display:flex;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--brd)}
+.btn-prev{padding:10px 22px;border:1.5px solid var(--brd);border-radius:9px;background:transparent;color:var(--txt2);font-family:'Be Vietnam Pro',sans-serif;font-size:.84rem;cursor:pointer;transition:.15s}
+.btn-prev:hover{border-color:var(--g3);color:var(--g1)}
+.btn-next{padding:10px 22px;border:none;border-radius:9px;background:var(--g1);color:#fff;font-family:'Be Vietnam Pro',sans-serif;font-size:.84rem;font-weight:600;cursor:pointer;transition:.15s}
+.btn-next:hover{background:var(--g2)}
+.btn-gen{padding:10px 24px;border:none;border-radius:9px;background:var(--amber);color:#fff;font-family:'Be Vietnam Pro',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:7px}
+.btn-gen:hover{background:#c87d10}
+
+/* ===================== REPORT PANEL ===================== */
+.report-wrap{flex:1;overflow-y:auto;padding:24px 28px}
+.report-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;gap:12px;flex-wrap:wrap}
+.report-title-box h2{font-family:'Playfair Display',serif;font-size:1.25rem;color:var(--g1)}
+.report-title-box p{font-size:.78rem;color:var(--txt3);margin-top:3px}
+.report-actions{display:flex;gap:8px;flex-wrap:wrap}
+.rpt-btn{padding:8px 16px;border-radius:8px;border:1.5px solid var(--brd);background:var(--wh);color:var(--txt2);font-family:'Be Vietnam Pro',sans-serif;font-size:.78rem;font-weight:500;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:6px}
+.rpt-btn:hover{border-color:var(--g3);color:var(--g1)}
+.rpt-btn.primary{background:var(--g1);border-color:var(--g1);color:#fff}
+.rpt-btn.primary:hover{background:var(--g2)}
+
+#reportContent{background:var(--wh);border:1px solid var(--brd);border-radius:14px;padding:28px 32px;box-shadow:var(--sh)}
+#reportContent.empty{display:flex;align-items:center;justify-content:center;min-height:300px;flex-direction:column;gap:12px;color:var(--txt3)}
+#reportContent.empty .empty-icon{font-size:2.5rem;opacity:.5}
+.rpt-section{margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--brd)}
+.rpt-section:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.rpt-section h3{font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--g1);margin-bottom:14px;display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:2px solid var(--g4)}
+.rpt-section h3 span{font-size:1.05rem}
+.info-table{width:100%;border-collapse:collapse;font-size:.875rem}
+.info-table th{background:var(--g4);color:var(--g1);padding:9px 14px;text-align:left;font-weight:700;border:1px solid var(--brd)}
+.info-table td{padding:9px 14px;border:1px solid var(--brd);color:var(--txt2);line-height:1.6;vertical-align:top}
+.info-table tr:nth-child(even) td{background:#f8fcfa}
+.info-table .lbl{color:var(--txt2);font-weight:600;width:20%;white-space:nowrap;background:#f4faf6}
+.risk-badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:.72rem;font-weight:700}
+.risk-badge.high{background:#fee2e2;color:#991b1b}
+.risk-badge.med{background:#fef3c7;color:#92400e}
+.risk-badge.low{background:#d1fae5;color:#065f46}
+.plan-table{width:100%;border-collapse:collapse;font-size:.855rem}
+.plan-table th{background:var(--g1);color:#fff;padding:10px 14px;text-align:left;font-size:.78rem;letter-spacing:.04em}
+.plan-table td{padding:9px 14px;border:1px solid var(--brd);vertical-align:top;line-height:1.55}
+.plan-table tr:nth-child(even) td{background:#f8fcfa}
+.pri-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px}
+.pri-dot.high{background:var(--red)}.pri-dot.med{background:var(--amber)}.pri-dot.low{background:var(--g3)}
+.stat-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.stat-card{flex:1;min-width:120px;background:var(--g4);border-radius:10px;padding:14px 16px;text-align:center}
+.stat-card .n{font-size:1.6rem;font-weight:700;color:var(--g1)}
+.stat-card .l{font-size:.72rem;color:var(--txt3);margin-top:2px}
+
+/* ===================== UPLOAD PANEL ===================== */
+.upload-wrap{flex:1;overflow-y:auto;padding:24px 28px}
+.drop-zone{border:2px dashed var(--brd);border-radius:14px;padding:40px 28px;text-align:center;cursor:pointer;transition:.2s;background:var(--wh);margin-bottom:20px}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--g3);background:var(--g4)}
+.drop-zone .dz-icon{font-size:2.5rem;margin-bottom:10px;display:block}
+.drop-zone h3{font-size:1rem;color:var(--g1);margin-bottom:6px}
+.drop-zone p{font-size:.8rem;color:var(--txt3);line-height:1.6}
+.file-btn{display:inline-block;margin-top:14px;padding:9px 20px;background:var(--g1);color:#fff;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;transition:.15s}
+.file-btn:hover{background:var(--g2)}
+#fileInput{display:none}
+.preview-table-wrap{background:var(--wh);border:1px solid var(--brd);border-radius:12px;overflow:auto;max-height:400px}
+.preview-table{width:100%;border-collapse:collapse;font-size:.78rem}
+.preview-table th{background:var(--g1);color:#fff;padding:8px 12px;text-align:left;white-space:nowrap;position:sticky;top:0}
+.preview-table td{padding:6px 12px;border-bottom:1px solid var(--brd);color:var(--txt2);white-space:nowrap}
+.preview-table tr:hover td{background:var(--g4)}
+.import-bar{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap}
+.import-note{font-size:.78rem;color:var(--txt3)}
+
+/* API SCREEN */
+#apiScreen{position:fixed;inset:0;background:var(--g1);display:flex;align-items:center;justify-content:center;z-index:999;padding:24px}
+.api-box{background:var(--wh);border-radius:20px;padding:38px 34px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center}
+.api-box .big-ico{font-size:2.8rem;margin-bottom:10px}
+.api-box h2{font-family:'Playfair Display',serif;font-size:1.35rem;color:var(--g1);margin-bottom:6px}
+.api-box p{font-size:.8rem;color:var(--txt3);margin-bottom:22px;line-height:1.65}
+.api-input-wrap{position:relative;margin-bottom:10px}
+.api-input-wrap input{width:100%;padding:12px 42px 12px 14px;border:1.5px solid var(--brd);border-radius:9px;font-family:'Be Vietnam Pro',sans-serif;font-size:.84rem;color:var(--txt);background:var(--g5);outline:none;transition:border-color .15s}
+.api-input-wrap input:focus{border-color:var(--g3);background:var(--wh)}
+.toggle-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:.95rem;user-select:none}
+.api-submit{width:100%;padding:12px;background:var(--g1);color:#fff;border:none;border-radius:9px;font-family:'Be Vietnam Pro',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer;transition:.15s;margin-bottom:12px}
+.api-submit:hover{background:var(--g2)}
+.api-error{font-size:.76rem;color:var(--red);margin-bottom:8px;display:none}
+.api-hint{font-size:.7rem;color:var(--txt3);line-height:1.6}
+.api-hint a{color:var(--g2);text-decoration:none}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--brd);border-radius:10px}
+
+@media print{
+  header,.sidebar,.input-bar,.report-actions,.nav-btn,.hdr-right{display:none!important}
+  .layout{display:block}.panel{display:block!important}
+  #reportContent{border:none;box-shadow:none;padding:0}
+  body{background:#fff}
+}
+
+/* CASE LIST PANEL */
+.cases-wrap{flex:1;overflow-y:auto;padding:22px 26px}
+.search-bar{display:flex;gap:10px;margin-bottom:18px;align-items:center;flex-wrap:wrap}
+.search-inp{flex:1;padding:10px 14px;border:1.5px solid var(--brd);border-radius:10px;font-family:'Be Vietnam Pro',sans-serif;font-size:.855rem;color:var(--txt);background:var(--wh);outline:none;min-width:160px}
+.search-inp:focus{border-color:var(--g3)}
+.case-count{font-size:.75rem;color:var(--txt3);white-space:nowrap}
+.case-grid{display:flex;flex-direction:column;gap:10px}
+.case-card{background:var(--wh);border:1.5px solid var(--brd);border-radius:12px;padding:14px 18px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:14px}
+.case-card:hover{border-color:var(--g3);box-shadow:0 2px 12px rgba(26,74,46,.1);transform:translateY(-1px)}
+.case-card .cc-avatar{width:42px;height:42px;border-radius:50%;background:var(--g4);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+.case-card .cc-info{flex:1;min-width:0}
+.case-card .cc-name{font-size:.9rem;font-weight:700;color:var(--g1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.case-card .cc-meta{font-size:.75rem;color:var(--txt3);margin-top:2px}
+.case-card .cc-risk{font-size:.7rem;padding:2px 9px;border-radius:20px;font-weight:700;flex-shrink:0}
+.case-card .cc-date{font-size:.7rem;color:var(--txt3);flex-shrink:0;text-align:right}
+.case-card .cc-del{width:28px;height:28px;border-radius:8px;border:1px solid var(--brd);background:transparent;color:var(--txt3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.8rem;transition:.15s;flex-shrink:0}
+.case-card .cc-del:hover{border-color:var(--red);color:var(--red);background:var(--redL)}
+.empty-cases{text-align:center;padding:60px 20px;color:var(--txt3)}
+.empty-cases .ei{font-size:3rem;margin-bottom:12px;opacity:.4}
+.storage-note{font-size:.72rem;color:var(--txt3);background:var(--g4);border-radius:8px;padding:8px 12px;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🌿</div>
+  <div>
+    <h1>Trợ Lý Quản Lý Ca — Thảo Đàn</h1>
+    <p>Hỗ trợ nhân viên CTXH · Trẻ em có hoàn cảnh đặc biệt · TP.HCM</p>
+  </div>
+  <div class="hdr-right">
+    <div class="key-dot"></div>
+    <span class="key-lbl">Groq LLaMA 3.3 70B ✓</span>
+    
+  </div>
+</header>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-section">
+      <div class="sb-label">Chức năng</div>
+      <button class="nav-btn active" onclick="showPanel('chat',this)"><span class="ico">💬</span> Trợ lý AI</button>
+      <button class="nav-btn" onclick="showPanel('wizard',this)"><span class="ico">📋</span> Nhập ca từng bước</button>
+      <button class="nav-btn" onclick="showPanel('report',this)"><span class="ico">📊</span> Báo cáo & Bảng phân tích</button>
+      <button class="nav-btn" onclick="showPanel('cases',this)"><span class="ico">🗂️</span> Danh sách ca <span id="caseCountBadge" style="margin-left:auto;background:var(--g3);color:#fff;font-size:.65rem;padding:1px 7px;border-radius:20px;font-weight:700"></span></button>
+      <button class="nav-btn" onclick="showPanel('upload',this)"><span class="ico">📁</span> Import Excel / PDF</button>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Đối tượng</div>
+      <div class="sb-info">
+        <strong>Thảo Đàn</strong> hỗ trợ:<br>
+        • Trẻ lang thang, đường phố<br>
+        • Trẻ lao động sớm<br>
+        • Trẻ bị ảnh hưởng HIV/AIDS<br>
+        • Trẻ không nơi nương tựa<br>
+        • Trẻ nguy cơ tệ nạn xã hội<br><br>
+        <strong>Độ tuổi:</strong> Dưới 18<br>
+        <strong>Địa bàn:</strong> TP.HCM
+      </div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">Luật tham chiếu</div>
+      <div class="sb-info">
+        • Luật Trẻ em 2016<br>
+        • Nghị định 56/2017/NĐ-CP<br>
+        • Tiêu chuẩn CTXH Quận 3
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ CHAT PANEL ============ -->
+  <div class="panel active" id="panel-chat">
+    <div class="chat-wrap" id="chatArea">
+      <div class="msg ai">
+        <div class="av ai">🌿</div>
+        <div class="bubble ai">
+          <strong>Xin chào! Tôi là Trợ lý Quản lý Ca Thảo Đàn.</strong><br><br>
+          Tôi hỗ trợ nhân viên CTXH trong toàn bộ vòng đời quản lý ca. Hãy mô tả tình huống hoặc chọn chức năng:<br>
+          <div class="bdg-row">
+            <span class="bdg gr">📋 Tiếp nhận</span>
+            <span class="bdg bl">🔍 Đánh giá</span>
+            <span class="bdg am">📌 Can thiệp</span>
+            <span class="bdg gr">📈 Theo dõi</span>
+            <span class="bdg bl">🤝 Tái hòa nhập</span>
+          </div>
+          <br>
+          💡 Dùng <strong>"Nhập ca từng bước"</strong> để điền thông tin có cấu trúc và tạo báo cáo tự động.
+        </div>
+      </div>
+    </div>
+    <div class="input-bar">
+      <div class="chip-row">
+        <button class="chip" onclick="useChip(this)">Trẻ lang thang mới tiếp nhận</button>
+        <button class="chip" onclick="useChip(this)">Đánh giá mức độ rủi ro</button>
+        <button class="chip" onclick="useChip(this)">Lập kế hoạch can thiệp</button>
+        <button class="chip" onclick="useChip(this)">Trẻ bị ảnh hưởng HIV</button>
+        <button class="chip" onclick="useChip(this)">Chuẩn bị tái hòa nhập</button>
+      </div>
+      <div class="inp-row">
+        <button class="clear-btn" onclick="clearChat()" title="Xóa lịch sử chat">🗑 Xóa chat</button>
+        <button class="upload-btn" onclick="showPanel('upload', document.querySelectorAll('.nav-btn')[3])" title="Upload file">📁 Upload</button>
+        <textarea class="inp" id="userInput" placeholder="Mô tả ca, đặt câu hỏi hoặc yêu cầu hỗ trợ..." rows="1"
+          onkeydown="handleKey(event)" oninput="autoResize(this)" onpaste="handlePaste(event)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+      </div>
+      <div class="footer-note">Thông tin ca xử lý cục bộ · Không lưu trữ dữ liệu cá nhân của trẻ</div>
+    </div>
+  </div>
+
+  <!-- ============ WIZARD PANEL ============ -->
+  <div class="panel" id="panel-wizard">
+    <div class="wizard-wrap">
+      <div class="wizard-header">
+        <h2>📋 Nhập thông tin ca từng bước</h2>
+        <p>Điền thông tin theo các bước — hệ thống sẽ tự động tạo báo cáo và kế hoạch can thiệp</p>
+      </div>
+
+      <!-- Progress -->
+      <div class="progress-bar">
+        <div class="prog-step active" id="ps1" onclick="goStep(1)">
+          <div class="prog-circle">1</div>
+          <div class="prog-step-lbl">Thông tin cơ bản</div>
+        </div>
+        <div class="prog-line" id="pl1"></div>
+        <div class="prog-step" id="ps2" onclick="goStep(2)">
+          <div class="prog-circle">2</div>
+          <div class="prog-step-lbl">Hoàn cảnh gia đình</div>
+        </div>
+        <div class="prog-line" id="pl2"></div>
+        <div class="prog-step" id="ps3" onclick="goStep(3)">
+          <div class="prog-circle">3</div>
+          <div class="prog-step-lbl">Đánh giá nhu cầu</div>
+        </div>
+        <div class="prog-line" id="pl3"></div>
+        <div class="prog-step" id="ps4" onclick="goStep(4)">
+          <div class="prog-circle">4</div>
+          <div class="prog-step-lbl">Phân loại rủi ro</div>
+        </div>
+        <div class="prog-line" id="pl4"></div>
+        <div class="prog-step" id="ps5" onclick="goStep(5)">
+          <div class="prog-circle">5</div>
+          <div class="prog-step-lbl">Kế hoạch can thiệp</div>
+        </div>
+      </div>
+
+      <!-- STEP 1: Thông tin cơ bản -->
+      <div class="wz-step active" id="step1">
+        <div class="card" style="background:var(--wh);border:1px solid var(--brd);border-radius:14px;padding:22px 24px">
+          <div class="card-title" style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--txt3);margin-bottom:16px;display:flex;align-items:center;gap:8px"><span>👤</span> Thông tin cá nhân trẻ</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Mã ca <span class="required-star">*</span></label>
+              <input type="text" id="f_maCA" placeholder="VD: TD-2024-001">
+            </div>
+            <div class="form-group">
+              <label>Họ và tên trẻ <span class="required-star">*</span></label>
+              <input type="text" id="f_tenTre" placeholder="Nguyễn Văn A">
+            </div>
+            <div class="form-group">
+              <label>Giới tính</label>
+              <select id="f_gioiTinh">
+                <option value="">-- Chọn --</option>
+                <option>Nam</option><option>Nữ</option><option>Khác</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Ngày sinh / Tuổi</label>
+              <input type="text" id="f_tuoi" placeholder="01/01/2010 hoặc 14 tuổi">
+            </div>
+            <div class="form-group">
+              <label>Nơi sinh / Quê quán</label>
+              <input type="text" id="f_queQuan" placeholder="VD: Bình Dương">
+            </div>
+            <div class="form-group">
+              <label>Địa chỉ tạm trú tại TP.HCM</label>
+              <input type="text" id="f_diaChi" placeholder="Quận/huyện, khu vực">
+            </div>
+            <div class="form-group">
+              <label>Ngày tiếp nhận <span class="required-star">*</span></label>
+              <input type="date" id="f_ngayTN">
+            </div>
+            <div class="form-group">
+              <label>Nguồn tiếp nhận</label>
+              <select id="f_nguonTN">
+                <option value="">-- Chọn --</option>
+                <option>Cộng đồng phát hiện</option>
+                <option>Công an chuyển đến</option>
+                <option>Cơ sở y tế</option>
+                <option>Gia đình đưa đến</option>
+                <option>Tự đến</option>
+                <option>Phòng LĐTBXH chuyển</option>
+                <option>Cơ sở khác chuyển</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Nhân viên CTXH phụ trách</label>
+              <input type="text" id="f_nvPhuTrach" placeholder="Họ tên NVCTXH">
+            </div>
+            <div class="form-group">
+              <label>Trình độ học vấn hiện tại</label>
+              <select id="f_hocVan">
+                <option value="">-- Chọn --</option>
+                <option>Chưa đi học</option>
+                <option>Tiểu học (đang học)</option>
+                <option>Tiểu học (bỏ học)</option>
+                <option>THCS (đang học)</option>
+                <option>THCS (bỏ học)</option>
+                <option>THPT</option>
+                <option>Không rõ</option>
+              </select>
+            </div>
+            <div class="form-group fg-full">
+              <label>Mô tả tình huống ban đầu</label>
+              <textarea id="f_moTa" placeholder="Mô tả ngắn hoàn cảnh phát hiện, tình trạng khi tiếp nhận..."></textarea>
+            </div>
+          </div>
+          <div class="wz-actions">
+            <button class="btn-next" onclick="goStep(2)">Tiếp theo →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Hoàn cảnh gia đình -->
+      <div class="wz-step" id="step2">
+        <div class="card" style="background:var(--wh);border:1px solid var(--brd);border-radius:14px;padding:22px 24px">
+          <div class="card-title" style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--txt3);margin-bottom:16px;display:flex;align-items:center;gap:8px"><span>👨‍👩‍👧</span> Hoàn cảnh gia đình</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Tình trạng cha mẹ</label>
+              <select id="f_tinhTrangCM">
+                <option value="">-- Chọn --</option>
+                <option>Cha mẹ còn đủ</option>
+                <option>Mồ côi cha</option>
+                <option>Mồ côi mẹ</option>
+                <option>Mồ côi cả hai</option>
+                <option>Cha mẹ ly hôn</option>
+                <option>Bị bỏ rơi</option>
+                <option>Không rõ</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Hoàn cảnh kinh tế gia đình</label>
+              <select id="f_kinhTe">
+                <option value="">-- Chọn --</option>
+                <option>Hộ nghèo</option>
+                <option>Hộ cận nghèo</option>
+                <option>Khó khăn</option>
+                <option>Trung bình</option>
+                <option>Không có gia đình</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Địa chỉ gia đình (nếu có)</label>
+              <input type="text" id="f_diaChiGD" placeholder="Tỉnh/thành phố, địa chỉ">
+            </div>
+            <div class="form-group">
+              <label>Người giám hộ hợp pháp</label>
+              <input type="text" id="f_nguoiGiamHo" placeholder="Tên, quan hệ với trẻ">
+            </div>
+            <div class="form-group fg-full">
+              <label>Thông tin bổ sung về gia đình</label>
+              <textarea id="f_giadinh_more" placeholder="Bạo lực gia đình, nghiện rượu, tệ nạn, di cư..."></textarea>
+            </div>
+          </div>
+          <div class="wz-actions">
+            <button class="btn-prev" onclick="goStep(1)">← Quay lại</button>
+            <button class="btn-next" onclick="goStep(3)">Tiếp theo →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: Đánh giá nhu cầu -->
+      <div class="wz-step" id="step3">
+        <div class="card" style="background:var(--wh);border:1px solid var(--brd);border-radius:14px;padding:22px 24px">
+          <div class="card-title" style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--txt3);margin-bottom:16px;display:flex;align-items:center;gap:8px"><span>🔍</span> Đánh giá nhu cầu & Nhóm HCĐB</div>
+          
+          <div class="form-group fg-full" style="margin-bottom:14px">
+            <label>Nhóm hoàn cảnh đặc biệt (Luật Trẻ em 2016) — Có thể chọn nhiều</label>
+            <div class="cb-group">
+              <label class="cb-item"><input type="checkbox" value="Trẻ mồ côi"> Mồ côi</label>
+              <label class="cb-item"><input type="checkbox" value="Trẻ lang thang"> Lang thang</label>
+              <label class="cb-item"><input type="checkbox" value="Trẻ bị bỏ rơi"> Bị bỏ rơi</label>
+              <label class="cb-item"><input type="checkbox" value="Trẻ nhiễm HIV/AIDS"> Nhiễm HIV</label>
+              <label class="cb-item"><input type="checkbox" value="Trẻ khuyết tật"> Khuyết tật</label>
+              <label class="cb-item"><input type="checkbox" value="Nạn nhân bạo lực"> Nạn nhân bạo lực</label>
+              <label class="cb-item"><input type="checkbox" value="Nạn nhân xâm hại TDục"> Xâm hại tình dục</label>
+              <label class="cb-item"><input type="checkbox" value="Lao động trái quy định"> Lao động sớm</label>
+              <label class="cb-item"><input type="checkbox" value="Nghiện ma túy"> Nghiện chất</label>
+              <label class="cb-item"><input type="checkbox" value="Vi phạm pháp luật"> Vi phạm PL</label>
+              <label class="cb-item"><input type="checkbox" value="Bị tước quyền tự do"> Bị tước tự do</label>
+              <label class="cb-item"><input type="checkbox" value="Khó khăn đặc biệt khác"> Khó khăn khác</label>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Nhu cầu ưu tiên số 1</label>
+              <select id="f_nhuCau1">
+                <option value="">-- Chọn --</option>
+                <option>Nơi ở an toàn</option>
+                <option>Dinh dưỡng / ăn uống</option>
+                <option>Chăm sóc y tế</option>
+                <option>Giáo dục / học nghề</option>
+                <option>Tái hòa nhập gia đình</option>
+                <option>Bảo vệ khỏi bóc lột</option>
+                <option>Hỗ trợ tâm lý</option>
+                <option>Giấy tờ pháp lý</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Nhu cầu ưu tiên số 2</label>
+              <select id="f_nhuCau2">
+                <option value="">-- Chọn --</option>
+                <option>Nơi ở an toàn</option>
+                <option>Dinh dưỡng / ăn uống</option>
+                <option>Chăm sóc y tế</option>
+                <option>Giáo dục / học nghề</option>
+                <option>Tái hòa nhập gia đình</option>
+                <option>Bảo vệ khỏi bóc lột</option>
+                <option>Hỗ trợ tâm lý</option>
+                <option>Giấy tờ pháp lý</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Tình trạng sức khỏe</label>
+              <select id="f_suckHoe">
+                <option value="">-- Chọn --</option>
+                <option>Bình thường</option>
+                <option>Cần khám sàng lọc</option>
+                <option>Đang điều trị bệnh</option>
+                <option>Cần chăm sóc đặc biệt</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Tình trạng tâm lý</label>
+              <select id="f_tamLy">
+                <option value="">-- Chọn --</option>
+                <option>Ổn định</option>
+                <option>Lo lắng, sợ hãi</option>
+                <option>Trầm cảm, thu mình</option>
+                <option>Hung hăng, bốc đồng</option>
+                <option>Cần đánh giá thêm</option>
+              </select>
+            </div>
+            <div class="form-group fg-full">
+              <label>Điểm mạnh / Nguồn lực của trẻ</label>
+              <textarea id="f_diemManh" placeholder="Kỹ năng, mối quan hệ tích cực, điểm mạnh bản thân..."></textarea>
+            </div>
+          </div>
+          <div class="wz-actions">
+            <button class="btn-prev" onclick="goStep(2)">← Quay lại</button>
+            <button class="btn-next" onclick="goStep(4)">Tiếp theo →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4: Phân loại rủi ro -->
+      <div class="wz-step" id="step4">
+        <div class="card" style="background:var(--wh);border:1px solid var(--brd);border-radius:14px;padding:22px 24px">
+          <div class="card-title" style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--txt3);margin-bottom:16px;display:flex;align-items:center;gap:8px"><span>⚠️</span> Phân loại mức độ rủi ro</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Mức độ rủi ro tổng thể</label>
+              <select id="f_ruiRo">
+                <option value="">-- Chọn --</option>
+                <option value="Cao">Cao — Cần can thiệp khẩn</option>
+                <option value="Trung bình">Trung bình — Theo dõi chặt</option>
+                <option value="Thấp">Thấp — Hỗ trợ thông thường</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Rủi ro an toàn ngay lập tức</label>
+              <select id="f_ruiRoAT">
+                <option value="Không">Không có</option>
+                <option value="Có">Có — Cần xử lý ngay</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Yếu tố rủi ro cụ thể — Chọn tất cả phù hợp</label>
+            <div class="cb-group">
+              <label class="cb-item"><input type="checkbox" value="Nguy cơ bị bóc lột lao động"> Bóc lột lao động</label>
+              <label class="cb-item"><input type="checkbox" value="Nguy cơ xâm hại tình dục"> Xâm hại tình dục</label>
+              <label class="cb-item"><input type="checkbox" value="Tiếp xúc ma túy"> Tiếp xúc ma túy</label>
+              <label class="cb-item"><input type="checkbox" value="Không có nơi ở an toàn"> Không có nơi ở</label>
+              <label class="cb-item"><input type="checkbox" value="Bạo lực gia đình"> Bạo lực gia đình</label>
+              <label class="cb-item"><input type="checkbox" value="Bỏ học kéo dài"> Bỏ học dài hạn</label>
+              <label class="cb-item"><input type="checkbox" value="Không có giấy tờ tùy thân"> Thiếu giấy tờ</label>
+              <label class="cb-item"><input type="checkbox" value="Băng nhóm/ tội phạm"> Băng nhóm</label>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:14px">
+            <label>Ghi chú rủi ro</label>
+            <textarea id="f_ghiChuRR" placeholder="Chi tiết về các yếu tố rủi ro..."></textarea>
+          </div>
+          <div class="wz-actions">
+            <button class="btn-prev" onclick="goStep(3)">← Quay lại</button>
+            <button class="btn-next" onclick="goStep(5)">Tiếp theo →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 5: Kế hoạch can thiệp -->
+      <div class="wz-step" id="step5">
+        <div class="card" style="background:var(--wh);border:1px solid var(--brd);border-radius:14px;padding:22px 24px">
+          <div class="card-title" style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--txt3);margin-bottom:16px;display:flex;align-items:center;gap:8px"><span>📌</span> Kế hoạch can thiệp sơ bộ</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Mục tiêu ngắn hạn (1–3 tháng)</label>
+              <textarea id="f_mucTieuNH" placeholder="VD: Ổn định nơi ở, khám sức khỏe..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>Mục tiêu dài hạn (3–12 tháng)</label>
+              <textarea id="f_mucTieuDH" placeholder="VD: Tái hòa nhập gia đình, học nghề..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>Hình thức can thiệp chính</label>
+              <select id="f_hinhThuc">
+                <option value="">-- Chọn --</option>
+                <option>Chăm sóc tại cơ sở Thảo Đàn</option>
+                <option>Hỗ trợ tại cộng đồng</option>
+                <option>Tái hòa nhập gia đình có theo dõi</option>
+                <option>Chuyển gửi cơ sở chuyên biệt</option>
+                <option>Chăm sóc thay thế (gia đình nhận nuôi)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Thời gian dự kiến can thiệp</label>
+              <select id="f_thoiGian">
+                <option value="">-- Chọn --</option>
+                <option>Dưới 1 tháng</option>
+                <option>1–3 tháng</option>
+                <option>3–6 tháng</option>
+                <option>6–12 tháng</option>
+                <option>Trên 1 năm</option>
+              </select>
+            </div>
+            <div class="form-group fg-full">
+              <label>Dịch vụ / hỗ trợ cần kết nối</label>
+              <div class="cb-group">
+                <label class="cb-item"><input type="checkbox" value="Y tế / khám sức khỏe"> Y tế</label>
+                <label class="cb-item"><input type="checkbox" value="Giáo dục / trường học"> Giáo dục</label>
+                <label class="cb-item"><input type="checkbox" value="Học nghề"> Học nghề</label>
+                <label class="cb-item"><input type="checkbox" value="Hỗ trợ tâm lý"> Tâm lý</label>
+                <label class="cb-item"><input type="checkbox" value="Pháp lý / giấy tờ"> Pháp lý</label>
+                <label class="cb-item"><input type="checkbox" value="Trợ cấp xã hội"> Trợ cấp XH</label>
+                <label class="cb-item"><input type="checkbox" value="Kết nối gia đình"> Kết nối GĐ</label>
+                <label class="cb-item"><input type="checkbox" value="Nhà ở"> Nhà ở</label>
+              </div>
+            </div>
+            <div class="form-group fg-full">
+              <label>Ghi chú thêm</label>
+              <textarea id="f_ghiChuKH" placeholder="Bất kỳ lưu ý quan trọng nào cho kế hoạch can thiệp..."></textarea>
+            </div>
+          </div>
+          <div class="wz-actions">
+            <button class="btn-prev" onclick="goStep(4)">← Quay lại</button>
+            <button class="btn-gen" onclick="generateReport()">✨ Tạo báo cáo & Phân tích AI</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ REPORT PANEL ============ -->
+  <div class="panel" id="panel-report">
+    <div class="report-wrap">
+      <div class="report-header">
+        <div class="report-title-box">
+          <h2>📊 Báo cáo & Phân tích ca</h2>
+          <p>Báo cáo được tạo tự động từ dữ liệu đã nhập và phân tích AI</p>
+        </div>
+        <div class="report-actions">
+          <button class="rpt-btn primary" onclick="saveCaseToList()">💾 Lưu ca này</button>
+          <button class="rpt-btn" onclick="window.print()">🖨️ In báo cáo</button>
+          <button class="rpt-btn" onclick="exportReportExcel()">📥 Xuất Excel</button>
+          <button class="rpt-btn" onclick="showPanel('wizard', document.querySelectorAll('.nav-btn')[1])">✏️ Nhập ca mới</button>
+        </div>
+      </div>
+      <div id="reportContent" class="empty">
+        <span class="empty-icon">📋</span>
+        <p>Chưa có báo cáo. Vui lòng nhập thông tin ca qua <strong>"Nhập ca từng bước"</strong><br>hoặc import file Excel/PDF.</p>
+        <button class="btn-next" onclick="showPanel('wizard', document.querySelectorAll('.nav-btn')[1])" style="margin-top:10px">Nhập ca ngay →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CASES LIST PANEL ============ -->
+  <div class="panel" id="panel-cases">
+    <div class="cases-wrap">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+        <div>
+          <h2 style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--g1)">🗂️ Danh sách ca đã lưu</h2>
+          <p style="font-size:.78rem;color:var(--txt3);margin-top:3px">Lưu trên trình duyệt này · Tìm kiếm theo tên hoặc mã ca</p>
+        </div>
+        <button class="btn-gen" onclick="clearAllCases()" style="font-size:.75rem;padding:7px 14px;background:var(--red)">🗑 Xóa tất cả</button>
+      </div>
+      <div class="storage-note">💾 Dữ liệu lưu trong localStorage của trình duyệt · Không mất khi đóng tab · Mất nếu xóa cache trình duyệt</div>
+      <div class="search-bar">
+        <input class="search-inp" id="caseSearch" placeholder="🔍  Tìm theo tên, mã ca, tuổi, nhóm HCĐB..." oninput="renderCaseList()">
+        <span class="case-count" id="caseCountText"></span>
+      </div>
+      <div class="case-grid" id="caseGrid"></div>
+    </div>
+  </div>
+
+  <!-- ============ UPLOAD PANEL ============ -->
+  <div class="panel" id="panel-upload">
+    <div class="upload-wrap">
+      <div class="wizard-header">
+        <h2>📁 Import dữ liệu từ file</h2>
+        <p>Upload file Excel (.xlsx, .xls) hoặc PDF để trích xuất thông tin ca tự động</p>
+      </div>
+
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()"
+        ondragover="event.preventDefault();this.classList.add('drag')"
+        ondragleave="this.classList.remove('drag')"
+        ondrop="handleDrop(event)">
+        <span class="dz-icon">📂</span>
+        <h3>Kéo thả file vào đây</h3>
+        <p>Hỗ trợ: Excel (.xlsx, .xls) — tối đa 10MB<br>PDF — tối đa 20MB (trích xuất văn bản)</p>
+        <span class="file-btn">Chọn file từ máy</span>
+      </div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.pdf" onchange="handleFileSelect(this)">
+
+      <div id="uploadStatus" style="display:none">
+        <div class="s-card blue" style="border-radius:8px;margin-bottom:16px" id="uploadMsg"></div>
+      </div>
+
+      <div id="previewSection" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+          <strong style="font-size:.85rem;color:var(--g1)" id="previewTitle">Xem trước dữ liệu</strong>
+          <div class="import-bar">
+            <span class="import-note" id="importNote"></span>
+            <button class="btn-next" onclick="importToWizard()">📋 Import vào ca mới</button>
+            <button class="btn-gen" onclick="aiAnalyzeUpload()">✨ Phân tích AI</button>
+          </div>
+        </div>
+        <div class="preview-table-wrap">
+          <table class="preview-table" id="previewTable"></table>
+        </div>
+      </div>
+
+      <div id="pdfPreview" style="display:none;margin-top:16px">
+        <strong style="font-size:.85rem;color:var(--g1)">Nội dung PDF đã trích xuất:</strong>
+        <div id="pdfText" style="background:var(--wh);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-top:8px;font-size:.82rem;color:var(--txt2);max-height:400px;overflow-y:auto;white-space:pre-wrap;line-height:1.7"></div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-gen" onclick="aiAnalyzePDF()">✨ Phân tích AI từ PDF</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- end layout -->
+
+<script>
+// =================== STATE ===================
+// Key obfuscated - decode at runtime
+const _k = () => atob('UVFQdEEzVklNRElidlFLYzc1aHpLVmgzWUYzYnlkR1dPSWk0RG5OMmlDdFVZQ1REeVFuYV9rc2c=').split('').reverse().join('');
+let conversationHistory = [];
+let currentMode = 'tiepnhan';
+let wizardStep = 1;
+let caseData = {};
+let uploadedData = null;
+let uploadedPDFText = '';
+
+
+
+// =================== INIT ===================
+// Try models in order
+// Gemini 2.5 Flash - single clean call
+// =================== GROQ API ===================
+async function callGemini(systemPrompt, userContent, isMultiTurn=false, _retryTarget=null) {
+  const key = _k();
+  const url = 'https://api.groq.com/openai/v1/chat/completions';
+
+  // Build messages array (OpenAI format)
+  let messages = [{ role: 'system', content: systemPrompt }];
+  if (isMultiTurn) {
+    // userContent is array [{role, content/parts}]
+    for (const m of userContent) {
+      const role = m.role === 'model' ? 'assistant' : 'user';
+      const text = typeof m.content === 'string' ? m.content : (m.parts?.[0]?.text || '');
+      if (text) messages.push({ role, content: text });
+    }
+  } else {
+    messages.push({ role: 'user', content: userContent });
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${key}`
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages,
+      max_tokens: 8192,
+      temperature: 0.3
+    })
+  });
+
+  const data = await res.json();
+  console.log('Groq response:', JSON.stringify(data).slice(0, 300));
+
+  if (data.error) {
+    // Rate limit: show countdown and retry
+    if (res.status === 429 || (data.error.message||'').toLowerCase().includes('rate')) {
+      const retryAfter = parseInt(res.headers?.get?.('retry-after') || '30') || 30;
+      const target = _retryTarget || 'reportContent';
+      const el = document.getElementById(target);
+      if (el) {
+        await showCountdown(target, retryAfter, '🚦 Đạt giới hạn tốc độ Groq');
+      } else {
+        await new Promise(r => setTimeout(r, retryAfter * 1000));
+      }
+      return callGemini(systemPrompt, userContent, isMultiTurn, _retryTarget);
+    }
+    throw new Error(data.error.message || 'Lỗi Groq API');
+  }
+
+  const txt = data.choices?.[0]?.message?.content;
+  if (!txt) throw new Error('Phản hồi rỗng từ Groq');
+  return txt;
+}
+
+function showCountdown(containerId, seconds, msg) {
+  return new Promise(resolve => {
+    let s = Math.max(seconds, 3);
+    const total = s;
+    const tick = () => {
+      const el = document.getElementById(containerId);
+      if (el) el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--txt3)">
+        <div style="font-size:2rem;margin-bottom:8px">⏳</div>
+        <div style="font-size:.9rem;font-weight:600;color:var(--amber);margin-bottom:4px">${msg}</div>
+        <div style="font-size:.78rem">Tự động thử lại sau <strong style="color:var(--g1);font-size:1.1rem">${s}</strong> giây...</div>
+        <div style="margin-top:12px;background:var(--brd);border-radius:10px;height:6px;overflow:hidden">
+          <div style="background:var(--amber);height:100%;width:${Math.round((1-s/total)*100)}%;transition:width .9s"></div>
+        </div>
+      </div>`;
+      if (s <= 0) { resolve(); return; }
+      s--;
+      setTimeout(tick, 1000);
+    };
+    tick();
+  });
+}
+
+// =================== CASE STORAGE (localStorage) ===================
+let currentCaseData = null; // Stores the last parsed case JSON
+
+const CASES_KEY = 'thaodan_cases_v1';
+
+function getAllCases() {
+  try { return JSON.parse(localStorage.getItem(CASES_KEY) || '[]'); }
+  catch(e) { return []; }
+}
+
+function saveAllCases(arr) {
+  localStorage.setItem(CASES_KEY, JSON.stringify(arr));
+  updateCaseCountBadge();
+}
+
+function updateCaseCountBadge() {
+  const n = getAllCases().length;
+  const badge = document.getElementById('caseCountBadge');
+  if (badge) badge.textContent = n > 0 ? n : '';
+}
+
+function saveCaseToList() {
+  if (!currentCaseData) {
+    alert('Chưa có dữ liệu ca để lưu. Hãy tạo báo cáo trước.');
+    return;
+  }
+  const cases = getAllCases();
+  const id = currentCaseData.maCA || ('TD-' + Date.now().toString().slice(-6));
+  // Check duplicate by maCA
+  const existIdx = cases.findIndex(c => c.maCA === id);
+  const entry = {
+    ...currentCaseData,
+    maCA: id,
+    _savedAt: new Date().toISOString(),
+    _sourceLabel: currentCaseData._sourceLabel || 'Không rõ'
+  };
+  if (existIdx >= 0) {
+    if (!confirm(`Mã ca "${id}" đã tồn tại. Cập nhật?`)) return;
+    cases[existIdx] = entry;
+  } else {
+    cases.unshift(entry); // newest first
+  }
+  saveAllCases(cases);
+  // Visual feedback
+  const btn = document.querySelector('.rpt-btn.primary');
+  if (btn) { btn.textContent = '✅ Đã lưu!'; setTimeout(() => btn.textContent = '💾 Lưu ca này', 2000); }
+  updateCaseCountBadge();
+}
+
+function loadCaseFromList(maCA) {
+  const cases = getAllCases();
+  const c = cases.find(x => x.maCA === maCA);
+  if (!c) return;
+  currentCaseData = c;
+  const rc = document.getElementById('reportContent');
+  rc.classList.remove('empty');
+  rc.innerHTML = renderStandardReport(c, c._sourceLabel || 'Từ danh sách');
+  showPanel('report', document.querySelectorAll('.nav-btn')[2]);
+}
+
+function deleteCaseFromList(maCA, e) {
+  e.stopPropagation();
+  if (!confirm(`Xóa ca "${maCA}" khỏi danh sách?`)) return;
+  const cases = getAllCases().filter(c => c.maCA !== maCA);
+  saveAllCases(cases);
+  renderCaseList();
+}
+
+function clearAllCases() {
+  if (!confirm('Xóa toàn bộ danh sách ca? Không thể hoàn tác.')) return;
+  localStorage.removeItem(CASES_KEY);
+  updateCaseCountBadge();
+  renderCaseList();
+}
+
+function renderCaseList() {
+  const q = (document.getElementById('caseSearch')?.value || '').toLowerCase().trim();
+  let cases = getAllCases();
+  if (q) {
+    cases = cases.filter(c =>
+      (c.maCA||'').toLowerCase().includes(q) ||
+      (c.tenTre||'').toLowerCase().includes(q) ||
+      (c.tuoi||'').toLowerCase().includes(q) ||
+      (c.gioiTinh||'').toLowerCase().includes(q) ||
+      (c.nhomHCDB||[]).some(n => n.toLowerCase().includes(q)) ||
+      (c.mucDoRuiRo||'').toLowerCase().includes(q) ||
+      (c.queQuan||'').toLowerCase().includes(q)
+    );
+  }
+  const grid = document.getElementById('caseGrid');
+  const countEl = document.getElementById('caseCountText');
+  const total = getAllCases().length;
+  if (countEl) countEl.textContent = q ? `${cases.length}/${total} ca` : `${total} ca đã lưu`;
+  if (!grid) return;
+  if (total === 0) {
+    grid.innerHTML = `<div class="empty-cases"><div class="ei">🗂️</div><p>Chưa có ca nào được lưu.<br>Tạo báo cáo rồi nhấn <strong>"💾 Lưu ca này"</strong>.</p></div>`;
+    return;
+  }
+  if (cases.length === 0) {
+    grid.innerHTML = `<div class="empty-cases"><div class="ei">🔍</div><p>Không tìm thấy ca nào khớp với "<strong>${q}</strong>"</p></div>`;
+    return;
+  }
+  const riskColor = {'Cao':'#fee2e2','Trung bình':'#fef3c7','Thấp':'#d1fae5'};
+  const riskText = {'Cao':'#991b1b','Trung bình':'#92400e','Thấp':'#065f46'};
+  grid.innerHTML = cases.map(c => {
+    const rc = c.mucDoRuiRo||'';
+    const bg = riskColor[rc]||'#f3f4f6';
+    const tc = riskText[rc]||'#6b7280';
+    const avatar = c.gioiTinh === 'Nữ' ? '👧' : c.gioiTinh === 'Nam' ? '👦' : '🧒';
+    const nhom = (c.nhomHCDB||[]).slice(0,2).join(', ') + ((c.nhomHCDB||[]).length > 2 ? '...' : '');
+    const saved = c._savedAt ? new Date(c._savedAt).toLocaleDateString('vi-VN') : '—';
+    return `<div class="case-card" onclick="loadCaseFromList('${c.maCA}')">
+      <div class="cc-avatar">${avatar}</div>
+      <div class="cc-info">
+        <div class="cc-name">${c.tenTre||'Không rõ tên'} <span style="font-weight:400;color:var(--txt3);font-size:.78rem">· ${c.maCA||''}</span></div>
+        <div class="cc-meta">${c.tuoi||'?'} tuổi · ${c.queQuan||'—'} · ${nhom||'Chưa phân loại'}</div>
+      </div>
+      ${rc ? `<span class="cc-risk" style="background:${bg};color:${tc}">${rc}</span>` : ''}
+      <div class="cc-date">Lưu ${saved}</div>
+      <button class="cc-del" onclick="deleteCaseFromList('${c.maCA}',event)" title="Xóa ca này">✕</button>
+    </div>`;
+  }).join('');
+}
+
+window.onload = () => {
+  document.getElementById('f_ngayTN').value = new Date().toISOString().split('T')[0];
+  updateCaseCountBadge();
+  renderCaseList();
+};
+
+
+
+// =================== PANEL NAV ===================
+function showPanel(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (id === 'cases') renderCaseList();
+}
+
+// =================== WIZARD ===================
+function goStep(n) {
+  // Save current step to caseData
+  wizardStep = n;
+  document.querySelectorAll('.wz-step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step' + n).classList.add('active');
+  // Update progress
+  for (let i = 1; i <= 5; i++) {
+    const ps = document.getElementById('ps' + i);
+    ps.classList.remove('active', 'done');
+    if (i < n) ps.classList.add('done');
+    else if (i === n) ps.classList.add('active');
+    if (i < 5) {
+      const pl = document.getElementById('pl' + i);
+      pl.classList.toggle('done', i < n);
+    }
+  }
+}
+
+function collectCaseData() {
+  // Collect all form fields
+  const getVal = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  const getChecked = selector => [...document.querySelectorAll(selector + ':checked')].map(c => c.value);
+  return {
+    maCA: getVal('f_maCA'),
+    tenTre: getVal('f_tenTre'),
+    gioiTinh: getVal('f_gioiTinh'),
+    tuoi: getVal('f_tuoi'),
+    queQuan: getVal('f_queQuan'),
+    diaChi: getVal('f_diaChi'),
+    ngayTN: getVal('f_ngayTN'),
+    nguonTN: getVal('f_nguonTN'),
+    nvPhuTrach: getVal('f_nvPhuTrach'),
+    hocVan: getVal('f_hocVan'),
+    moTa: getVal('f_moTa'),
+    tinhTrangCM: getVal('f_tinhTrangCM'),
+    kinhTe: getVal('f_kinhTe'),
+    diaChiGD: getVal('f_diaChiGD'),
+    nguoiGiamHo: getVal('f_nguoiGiamHo'),
+    giaDinhMore: getVal('f_giadinh_more'),
+    nhomHCDB: getChecked('#step3 .cb-group input[type=checkbox]'),
+    nhuCau1: getVal('f_nhuCau1'),
+    nhuCau2: getVal('f_nhuCau2'),
+    sucKhoe: getVal('f_suckHoe'),
+    tamLy: getVal('f_tamLy'),
+    diemManh: getVal('f_diemManh'),
+    ruiRo: getVal('f_ruiRo'),
+    ruiRoAT: getVal('f_ruiRoAT'),
+    yeuToRuiRo: getChecked('#step4 .cb-group input[type=checkbox]'),
+    ghiChuRR: getVal('f_ghiChuRR'),
+    mucTieuNH: getVal('f_mucTieuNH'),
+    mucTieuDH: getVal('f_mucTieuDH'),
+    hinhThuc: getVal('f_hinhThuc'),
+    thoiGian: getVal('f_thoiGian'),
+    dichVu: getChecked('#step5 .cb-group input[type=checkbox]'),
+    ghiChuKH: getVal('f_ghiChuKH'),
+  };
+}
+
+async function generateReport() {
+  caseData = collectCaseData();
+  if (!caseData.tenTre && !caseData.maCA) {
+    alert('Vui lòng nhập ít nhất Mã ca hoặc Tên trẻ trước khi tạo báo cáo.');
+    return;
+  }
+  // Switch to report panel
+  showPanel('report', document.querySelectorAll('.nav-btn')[2]);
+  
+  const rc = document.getElementById('reportContent');
+  rc.classList.remove('empty');
+  rc.innerHTML = '<div style="text-align:center;padding:40px;color:var(--txt3)"><div class="loading-dots"><span></span><span></span><span></span></div><p style="margin-top:12px;font-size:.85rem">Đang phân tích và tạo báo cáo...</p></div>';
+
+  const riskColor = caseData.ruiRo === 'Cao' ? 'high' : caseData.ruiRo === 'Trung bình' ? 'med' : 'low';
+
+  // Build static report HTML first
+  // Generate standard report with AI
+  await fillAIAnalysis(caseData);
+}
+
+function buildStaticReport(d, riskColor) {
+  const nhomList = d.nhomHCDB.length ? d.nhomHCDB.map(n => `<span class="bdg gr">${n}</span>`).join(' ') : '<em>Chưa phân loại</em>';
+  const rrList = d.yeuToRuiRo.length ? d.yeuToRuiRo.map(r => `<span class="bdg rd">⚠ ${r}</span>`).join(' ') : '<em>Không có</em>';
+  const dvList = d.dichVu.length ? d.dichVu.map(v => `<span class="bdg bl">• ${v}</span>`).join(' ') : '<em>Chưa xác định</em>';
+
+  return `
+  <div class="rpt-section">
+    <h3><span>📋</span> THÔNG TIN CA</h3>
+    <table class="info-table">
+      <tr><td class="lbl">Mã ca</td><td><strong>${d.maCA || '—'}</strong></td><td class="lbl">Ngày tiếp nhận</td><td>${d.ngayTN || '—'}</td></tr>
+      <tr><td class="lbl">Họ tên trẻ</td><td>${d.tenTre || '—'}</td><td class="lbl">Giới tính</td><td>${d.gioiTinh || '—'}</td></tr>
+      <tr><td class="lbl">Tuổi / Ngày sinh</td><td>${d.tuoi || '—'}</td><td class="lbl">Quê quán</td><td>${d.queQuan || '—'}</td></tr>
+      <tr><td class="lbl">Địa chỉ tạm trú</td><td>${d.diaChi || '—'}</td><td class="lbl">Học vấn</td><td>${d.hocVan || '—'}</td></tr>
+      <tr><td class="lbl">Nguồn tiếp nhận</td><td>${d.nguonTN || '—'}</td><td class="lbl">NV phụ trách</td><td>${d.nvPhuTrach || '—'}</td></tr>
+      ${d.moTa ? `<tr><td class="lbl">Mô tả ban đầu</td><td colspan="3">${d.moTa}</td></tr>` : ''}
+    </table>
+  </div>
+
+  <div class="rpt-section">
+    <h3><span>👨‍👩‍👧</span> HOÀN CẢNH GIA ĐÌNH</h3>
+    <table class="info-table">
+      <tr><td class="lbl">Tình trạng cha mẹ</td><td>${d.tinhTrangCM || '—'}</td><td class="lbl">Kinh tế</td><td>${d.kinhTe || '—'}</td></tr>
+      <tr><td class="lbl">Địa chỉ gia đình</td><td>${d.diaChiGD || '—'}</td><td class="lbl">Người giám hộ</td><td>${d.nguoiGiamHo || '—'}</td></tr>
+      ${d.giaDinhMore ? `<tr><td class="lbl">Ghi chú</td><td colspan="3">${d.giaDinhMore}</td></tr>` : ''}
+    </table>
+  </div>
+
+  <div class="rpt-section">
+    <h3><span>🏷️</span> PHÂN LOẠI HCĐB (LUẬT TRẺ EM 2016)</h3>
+    <div class="bdg-row" style="margin-bottom:10px">${nhomList}</div>
+    <table class="info-table">
+      <tr><td class="lbl">Nhu cầu ưu tiên #1</td><td>${d.nhuCau1 || '—'}</td><td class="lbl">Nhu cầu ưu tiên #2</td><td>${d.nhuCau2 || '—'}</td></tr>
+      <tr><td class="lbl">Sức khỏe</td><td>${d.sucKhoe || '—'}</td><td class="lbl">Tâm lý</td><td>${d.tamLy || '—'}</td></tr>
+      ${d.diemManh ? `<tr><td class="lbl">Điểm mạnh</td><td colspan="3">${d.diemManh}</td></tr>` : ''}
+    </table>
+  </div>
+
+  <div class="rpt-section">
+    <h3><span>⚠️</span> ĐÁNH GIÁ RỦI RO</h3>
+    <div style="margin-bottom:10px">
+      Mức độ rủi ro tổng thể: <span class="risk-badge ${riskColor}">${d.ruiRo || 'Chưa xác định'}</span>
+      &nbsp;&nbsp;Rủi ro an toàn khẩn: <span class="risk-badge ${d.ruiRoAT === 'Có' ? 'high' : 'low'}">${d.ruiRoAT || 'Không'}</span>
+    </div>
+    <div class="bdg-row">${rrList}</div>
+    ${d.ghiChuRR ? `<p style="font-size:.82rem;color:var(--txt2);margin-top:8px">${d.ghiChuRR}</p>` : ''}
+  </div>
+
+  <div class="rpt-section">
+    <h3><span>📌</span> KẾ HOẠCH CAN THIỆP</h3>
+    <table class="plan-table">
+      <thead><tr><th>Hạng mục</th><th>Nội dung</th><th>Thời gian</th><th>Ưu tiên</th></tr></thead>
+      <tbody>
+        ${d.mucTieuNH ? `<tr><td>Mục tiêu ngắn hạn</td><td>${d.mucTieuNH}</td><td>1–3 tháng</td><td><span class="pri-dot high"></span>Cao</td></tr>` : ''}
+        ${d.mucTieuDH ? `<tr><td>Mục tiêu dài hạn</td><td>${d.mucTieuDH}</td><td>${d.thoiGian || '—'}</td><td><span class="pri-dot med"></span>Trung bình</td></tr>` : ''}
+        <tr><td>Hình thức can thiệp</td><td colspan="2">${d.hinhThuc || '—'}</td><td><span class="pri-dot high"></span>Cao</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:12px"><strong style="font-size:.78rem;color:var(--txt3)">DỊCH VỤ CẦN KẾT NỐI:</strong><div class="bdg-row" style="margin-top:6px">${dvList}</div></div>
+  </div>
+
+  <div class="rpt-section" id="aiAnalysisSection">
+    <h3><span>🤖</span> PHÂN TÍCH & KHUYẾN NGHỊ AI</h3>
+    <div id="aiAnalysisContent" style="padding:20px;text-align:center;color:var(--txt3)">
+      <div class="loading-dots"><span></span><span></span><span></span></div>
+      <p style="margin-top:8px;font-size:.82rem">Claude đang phân tích...</p>
+    </div>
+  </div>`;
+}
+
+
+// ============================================================
+// TEMPLATE BÁO CÁO CHUẨN - CỐ ĐỊNH, KHÔNG THAY ĐỔI
+// AI chỉ điền JSON vào các ô, không tự tạo format
+// ============================================================
+
+const REPORT_TEMPLATE_PROMPT = (input) => `Bạn là chuyên gia CTXH Thảo Đàn. Đọc thông tin và điền JSON. Nếu không có thông tin ghi "Không rõ". Chỉ trả về JSON, không markdown, không giải thích.
+
+{"maCA":"","ngayTN":"","nvPhuTrach":"","tenTre":"","gioiTinh":"","tuoi":"","queQuan":"","diaChi":"","hocVan":"","tinhTrangCM":"","kinhTe":"","nguoiGiamHo":"","moTaBanDau":"","nhomHCDB":[],"nhuCau1":"","nhuCau2":"","sucKhoe":"","tamLy":"","diemManh":"","mucDoRuiRo":"Thấp","ruiRoAnToan":"Không","yeuToRuiRo":[],"hinhThucCanThiep":"","thoiGian":"","mucTieuNH":"","mucTieuDH":"","dichVuKetNoi":[],"diemManhCoHoi":"","ruiRoUuTien":"","luuYDacBiet":"","keHoachHanhDong":[{"hanhDong":"","thoiHan":"","donVi":"","uuTien":"Cao"}]}
+
+Điền đầy đủ tất cả trường. keHoachHanhDong cần ít nhất 5 hành động cụ thể.
+
+THÔNG TIN:
+${input}`;
+
+function renderStandardReport(d, sourceLabel) {
+  // Risk badge
+  const riskClass = d.mucDoRuiRo === 'Cao' ? 'high' : d.mucDoRuiRo === 'Trung bình' ? 'med' : 'low';
+  const atClass = d.ruiRoAnToan === 'Có' ? 'high' : 'low';
+
+  // Nhóm HCĐB badges
+  const nhomBadges = (d.nhomHCDB||[]).length
+    ? (d.nhomHCDB||[]).map(n => `<span class="bdg gr">🏷 ${n}</span>`).join(' ')
+    : '<span style="color:var(--txt3);font-style:italic">Chưa phân loại</span>';
+
+  // Yếu tố rủi ro badges
+  const rrBadges = (d.yeuToRuiRo||[]).length
+    ? (d.yeuToRuiRo||[]).map(r => `<span class="bdg rd">⚠ ${r}</span>`).join(' ')
+    : '<span style="color:var(--txt3);font-style:italic">Không xác định</span>';
+
+  // Dịch vụ badges
+  const dvBadges = (d.dichVuKetNoi||[]).length
+    ? (d.dichVuKetNoi||[]).map(v => `<span class="bdg bl">• ${v}</span>`).join(' ')
+    : '<span style="color:var(--txt3);font-style:italic">Chưa xác định</span>';
+
+  // Kế hoạch hành động rows
+  const khRows = (d.keHoachHanhDong||[]).map((r,i) => {
+    const priDot = r.uuTien === 'Cao' ? 'high' : r.uuTien === 'TB' ? 'med' : 'low';
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${r.hanhDong||'—'}</td>
+      <td>${r.thoiHan||'—'}</td>
+      <td>${r.donVi||'—'}</td>
+      <td><span class="pri-dot ${priDot}"></span>${r.uuTien||'—'}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--txt3)">Chưa có hành động</td></tr>`;
+
+  return `
+  <!-- HEADER -->
+  <div style="background:var(--g1);color:#fff;border-radius:10px;padding:16px 22px;margin-bottom:20px;display:flex;align-items:center;gap:14px">
+    <div style="font-size:2rem">🌿</div>
+    <div>
+      <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700">Báo cáo Quản lý Ca — Thảo Đàn</div>
+      <div style="font-size:.75rem;color:#a8d4b8;margin-top:2px">Nguồn: ${sourceLabel||'Nhập tay'} · Ngày tạo: ${new Date().toLocaleDateString('vi-VN')}</div>
+    </div>
+    <div style="margin-left:auto;text-align:right">
+      <div style="font-size:.72rem;color:#a8d4b8">Mã ca</div>
+      <div style="font-size:1rem;font-weight:700">${d.maCA||'—'}</div>
+    </div>
+  </div>
+
+  <!-- SECTION 1: THÔNG TIN CÁ NHÂN -->
+  <div class="rpt-section">
+    <h3><span>👤</span> I. THÔNG TIN CÁ NHÂN & TIẾP NHẬN</h3>
+    <table class="info-table">
+      <colgroup><col style="width:22%"><col style="width:28%"><col style="width:22%"><col style="width:28%"></colgroup>
+      <tr>
+        <td class="lbl">Họ và tên</td><td><strong style="color:var(--g1);font-size:.95rem">${d.tenTre||'—'}</strong></td>
+        <td class="lbl">Giới tính</td><td>${d.gioiTinh||'—'}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Tuổi / Năm sinh</td><td>${d.tuoi||'—'}</td>
+        <td class="lbl">Quê quán</td><td>${d.queQuan||'—'}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Địa chỉ tạm trú</td><td>${d.diaChi||'—'}</td>
+        <td class="lbl">Học vấn</td><td>${d.hocVan||'—'}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Ngày tiếp nhận</td><td>${d.ngayTN||'—'}</td>
+        <td class="lbl">NV phụ trách</td><td>${d.nvPhuTrach||'—'}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Tình trạng cha mẹ</td><td colspan="3">${d.tinhTrangCM||'—'}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Kinh tế gia đình</td><td colspan="3">${d.kinhTe||'—'}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Người giám hộ</td><td colspan="3">${d.nguoiGiamHo||'—'}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Mô tả ban đầu</td>
+        <td colspan="3">${d.moTaBanDau||'—'}</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- SECTION 2: PHÂN LOẠI HCĐB -->
+  <div class="rpt-section">
+    <h3><span>🏷️</span> II. PHÂN LOẠI HOÀN CẢNH ĐẶC BIỆT (LUẬT TRẺ EM 2016)</h3>
+    <div style="background:var(--g4);border-radius:8px;padding:12px 14px;margin-bottom:14px">
+      <div style="font-size:.72rem;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Nhóm được xác định:</div>
+      <div class="bdg-row">${nhomBadges}</div>
+    </div>
+    <table class="info-table">
+      <colgroup><col style="width:22%"><col style="width:28%"><col style="width:22%"><col style="width:28%"></colgroup>
+      <tr>
+        <td class="lbl">Nhu cầu ưu tiên #1</td><td>${d.nhuCau1||'—'}</td>
+        <td class="lbl">Nhu cầu ưu tiên #2</td><td>${d.nhuCau2||'—'}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Tình trạng sức khỏe</td><td>${d.sucKhoe||'—'}</td>
+        <td class="lbl">Tình trạng tâm lý</td><td>${d.tamLy||'—'}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Điểm mạnh / Nguồn lực</td>
+        <td colspan="3">${d.diemManh||'—'}</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- SECTION 3: ĐÁNH GIÁ RỦI RO -->
+  <div class="rpt-section">
+    <h3><span>⚠️</span> III. ĐÁNH GIÁ RỦI RO</h3>
+    <table class="info-table" style="margin-bottom:12px">
+      <colgroup><col style="width:22%"><col style="width:28%"><col style="width:22%"><col style="width:28%"></colgroup>
+      <tr>
+        <td class="lbl">Mức độ rủi ro</td>
+        <td><span class="risk-badge ${riskClass}">${d.mucDoRuiRo||'Chưa đánh giá'}</span></td>
+        <td class="lbl">An toàn khẩn cấp</td>
+        <td><span class="risk-badge ${atClass}">${d.ruiRoAnToan||'—'}</span></td>
+      </tr>
+    </table>
+    <div style="background:#fff8f0;border-radius:8px;padding:12px 14px">
+      <div style="font-size:.72rem;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Yếu tố rủi ro xác định:</div>
+      <div class="bdg-row">${rrBadges}</div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: KẾ HOẠCH CAN THIỆP -->
+  <div class="rpt-section">
+    <h3><span>📌</span> IV. KẾ HOẠCH CAN THIỆP</h3>
+    <table class="info-table" style="margin-bottom:14px">
+      <colgroup><col style="width:22%"><col style="width:28%"><col style="width:22%"><col style="width:28%"></colgroup>
+      <tr>
+        <td class="lbl">Hình thức can thiệp</td><td>${d.hinhThucCanThiep||'—'}</td>
+        <td class="lbl">Thời gian dự kiến</td><td>${d.thoiGian||'—'}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Mục tiêu ngắn hạn</td><td colspan="3">${d.mucTieuNH||'—'}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Mục tiêu dài hạn</td><td colspan="3">${d.mucTieuDH||'—'}</td>
+      </tr>
+    </table>
+    <div style="background:var(--blueL);border-radius:8px;padding:12px 14px;margin-bottom:14px">
+      <div style="font-size:.72rem;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Dịch vụ cần kết nối:</div>
+      <div class="bdg-row">${dvBadges}</div>
+    </div>
+    <table class="plan-table">
+      <thead><tr><th style="width:4%">#</th><th style="width:38%">Hành động cụ thể</th><th style="width:16%">Thời hạn</th><th style="width:28%">Đơn vị thực hiện</th><th style="width:14%">Ưu tiên</th></tr></thead>
+      <tbody>${khRows}</tbody>
+    </table>
+  </div>
+
+  <!-- SECTION 5: PHÂN TÍCH AI -->
+  <div class="rpt-section" style="border-bottom:none">
+    <h3><span>🤖</span> V. PHÂN TÍCH & KHUYẾN NGHỊ</h3>
+    <div class="s-card green" style="margin-bottom:10px">
+      <div class="s-title" style="font-size:.82rem">✅ Điểm mạnh & Cơ hội</div>
+      <div style="margin-top:6px;font-size:.875rem;line-height:1.7;color:var(--txt2)">${d.diemManhCoHoi||'—'}</div>
+    </div>
+    <div class="s-card red" style="margin-bottom:10px">
+      <div class="s-title" style="font-size:.82rem">⚡ Rủi ro cần ưu tiên xử lý</div>
+      <div style="margin-top:6px;font-size:.875rem;line-height:1.7">${d.ruiRoUuTien||'—'}</div>
+    </div>
+    <div class="s-card amber">
+      <div class="s-title" style="font-size:.82rem">💡 Lưu ý đặc biệt cho NVCTXH</div>
+      <div style="margin-top:6px;font-size:.875rem;line-height:1.7">${d.luuYDacBiet||'—'}</div>
+    </div>
+  </div>`;
+}
+
+
+// Robust JSON parser - handles truncated/malformed AI output
+function safeParseJSON(raw, fallbackInput) {
+  // Strip markdown fences
+  let s = raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+  // Try direct parse first
+  try { return JSON.parse(s); } catch(e1) {}
+  // Try to find JSON object boundaries
+  const start = s.indexOf('{');
+  const end = s.lastIndexOf('}');
+  if (start >= 0 && end > start) {
+    try { return JSON.parse(s.slice(start, end+1)); } catch(e2) {}
+    // Try fixing truncated JSON by closing open strings/arrays/objects
+    let partial = s.slice(start, end+1);
+    try { return JSON.parse(repairJSON(partial)); } catch(e3) {}
+  }
+  // Last resort: extract individual fields with regex and build object manually
+  console.warn('JSON parse failed, using regex fallback. Raw:', s.slice(0,300));
+  return extractFieldsFromText(raw, fallbackInput);
+}
+
+function repairJSON(s) {
+  // Count unclosed brackets/braces
+  let depth = 0, inStr = false, escape = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (escape) { escape = false; continue; }
+    if (c === '\\') { escape = true; continue; }
+    if (c === '"' && !escape) { inStr = !inStr; continue; }
+    if (!inStr) {
+      if (c === '{' || c === '[') depth++;
+      else if (c === '}' || c === ']') depth--;
+    }
+  }
+  // Close any open string
+  if (inStr) s += '"';
+  // Close open arrays/objects
+  const stack = [];
+  inStr = false; escape = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (escape) { escape = false; continue; }
+    if (c === '\\') { escape = true; continue; }
+    if (c === '"') { inStr = !inStr; continue; }
+    if (!inStr) {
+      if (c === '{') stack.push('}');
+      else if (c === '[') stack.push(']');
+      else if (c === '}' || c === ']') stack.pop();
+    }
+  }
+  return s + stack.reverse().join('');
+}
+
+function extractFieldsFromText(raw, input) {
+  const get = (key) => {
+    const m = raw.match(new RegExp('"' + key + '"\s*:\s*"([^"]*)"'));
+    return m ? m[1] : '';
+  };
+  const getArr = (key) => {
+    const m = raw.match(new RegExp('"' + key + '"\s*:\s*\[([^\]]*)]'));
+    if (!m) return [];
+    return m[1].split(',').map(s => s.replace(/"/g,'').trim()).filter(Boolean);
+  };
+  return {
+    maCA: get('maCA') || 'TD-' + Date.now().toString().slice(-6),
+    ngayTN: get('ngayTN') || new Date().toLocaleDateString('vi-VN'),
+    nvPhuTrach: get('nvPhuTrach') || 'Không rõ',
+    tenTre: get('tenTre') || 'Không rõ',
+    gioiTinh: get('gioiTinh') || '',
+    tuoi: get('tuoi') || '',
+    queQuan: get('queQuan') || '',
+    diaChi: get('diaChi') || '',
+    hocVan: get('hocVan') || '',
+    tinhTrangCM: get('tinhTrangCM') || '',
+    kinhTe: get('kinhTe') || '',
+    nguoiGiamHo: get('nguoiGiamHo') || '',
+    moTaBanDau: get('moTaBanDau') || input.slice(0, 200),
+    nhomHCDB: getArr('nhomHCDB'),
+    nhuCau1: get('nhuCau1') || '',
+    nhuCau2: get('nhuCau2') || '',
+    sucKhoe: get('sucKhoe') || '',
+    tamLy: get('tamLy') || '',
+    diemManh: get('diemManh') || '',
+    mucDoRuiRo: get('mucDoRuiRo') || 'Trung bình',
+    ruiRoAnToan: get('ruiRoAnToan') || 'Không',
+    yeuToRuiRo: getArr('yeuToRuiRo'),
+    hinhThucCanThiep: get('hinhThucCanThiep') || '',
+    thoiGian: get('thoiGian') || '',
+    mucTieuNH: get('mucTieuNH') || '',
+    mucTieuDH: get('mucTieuDH') || '',
+    dichVuKetNoi: getArr('dichVuKetNoi'),
+    diemManhCoHoi: get('diemManhCoHoi') || '',
+    ruiRoUuTien: get('ruiRoUuTien') || '',
+    luuYDacBiet: get('luuYDacBiet') || '',
+    keHoachHanhDong: []
+  };
+}
+
+async function generateStandardReport(inputText, sourceLabel) {
+  const rc = document.getElementById('reportContent');
+  rc.classList.remove('empty');
+  rc.innerHTML = `<div style="text-align:center;padding:40px;color:var(--txt3)">
+    <div class="loading-dots"><span></span><span></span><span></span></div>
+    <p style="margin-top:12px;font-size:.85rem">AI đang phân tích và điền bảng chuẩn...</p>
+  </div>`;
+  showPanel('report', document.querySelectorAll('.nav-btn')[2]);
+
+  try {
+    const raw = await callGemini(
+      'Bạn là chuyên gia CTXH. Chỉ trả về JSON thuần túy, không markdown, không backtick.',
+      REPORT_TEMPLATE_PROMPT(inputText), false, 'reportContent'
+    );
+    const d = safeParseJSON(raw, inputText);
+    currentCaseData = {...d, _sourceLabel: sourceLabel}; rc.innerHTML = renderStandardReport(d, sourceLabel);
+  } catch(e) {
+    rc.innerHTML = `<div class="s-card red">⚠️ Lỗi tạo báo cáo: ${e.message}</div>`;
+    console.error('Report error:', e);
+  }
+}
+
+async function fillAIAnalysis(d) {
+  // Build full text input from wizard data
+  const inputText = `
+Mã ca: ${d.maCA||''} | Ngày tiếp nhận: ${d.ngayTN||''} | NV phụ trách: ${d.nvPhuTrach||''}
+Họ tên trẻ: ${d.tenTre||''} | Giới tính: ${d.gioiTinh||''} | Tuổi: ${d.tuoi||''}
+Quê quán: ${d.queQuan||''} | Địa chỉ: ${d.diaChi||''} | Học vấn: ${d.hocVan||''}
+Tình trạng cha mẹ: ${d.tinhTrangCM||''} | Kinh tế: ${d.kinhTe||''} | Người giám hộ: ${d.nguoiGiamHo||''}
+Nhóm HCĐB: ${(d.nhomHCDB||[]).join(', ')}
+Nhu cầu 1: ${d.nhuCau1||''} | Nhu cầu 2: ${d.nhuCau2||''}
+Sức khỏe: ${d.sucKhoe||''} | Tâm lý: ${d.tamLy||''} | Điểm mạnh: ${d.diemManh||''}
+Mức độ rủi ro: ${d.ruiRo||''} | An toàn khẩn: ${d.ruiRoAT||''} | Yếu tố rủi ro: ${(d.yeuToRuiRo||[]).join(', ')}
+Hình thức can thiệp: ${d.hinhThuc||''} | Thời gian: ${d.thoiGian||''}
+Mục tiêu ngắn hạn: ${d.mucTieuNH||''} | Mục tiêu dài hạn: ${d.mucTieuDH||''}
+Dịch vụ kết nối: ${(d.dichVu||[]).join(', ')}
+Mô tả: ${d.moTa||''} ${d.ghiChuKH||''}`;
+
+  // Replace the static report with standard report template
+  const rc = document.getElementById('reportContent');
+  rc.classList.remove('empty');
+  rc.innerHTML = `<div style="text-align:center;padding:40px;color:var(--txt3)">
+    <div class="loading-dots"><span></span><span></span><span></span></div>
+    <p style="margin-top:12px;font-size:.82rem">AI đang điền bảng chuẩn...</p>
+  </div>`;
+
+  try {
+    const raw = await callGemini(
+      'Bạn là chuyên gia CTXH. Chỉ trả về JSON thuần túy, không markdown, không backtick.',
+      REPORT_TEMPLATE_PROMPT(inputText), false, 'reportContent'
+    );
+    const parsed = safeParseJSON(raw, inputText);
+    currentCaseData = {...parsed, _sourceLabel: 'Nhập tay - Wizard'}; rc.innerHTML = renderStandardReport(parsed, 'Nhập tay - Wizard');
+  } catch(e) {
+    rc.innerHTML = `<div class="s-card red">⚠️ Lỗi: ${e.message}</div>`;
+    console.error(e);
+  }
+}
+
+// =================== REPORT EXPORT ===================
+function exportReportExcel() {
+  if (!caseData.tenTre && !caseData.maCA) { alert('Chưa có dữ liệu ca để xuất.'); return; }
+  const d = caseData;
+  const wb = XLSX.utils.book_new();
+  const rows = [
+    ['THẢO ĐÀN - BÁO CÁO QUẢN LÝ CA'],[''],
+    ['THÔNG TIN CA'],
+    ['Mã ca', d.maCA], ['Họ tên trẻ', d.tenTre], ['Giới tính', d.gioiTinh],
+    ['Tuổi/Ngày sinh', d.tuoi], ['Quê quán', d.queQuan], ['Địa chỉ', d.diaChi],
+    ['Ngày tiếp nhận', d.ngayTN], ['Nguồn tiếp nhận', d.nguonTN], ['NV phụ trách', d.nvPhuTrach],
+    [''],['GIA ĐÌNH'],
+    ['Tình trạng cha mẹ', d.tinhTrangCM], ['Kinh tế', d.kinhTe],
+    [''],['PHÂN LOẠI'],
+    ['Nhóm HCĐB', d.nhomHCDB.join(', ')], ['Nhu cầu 1', d.nhuCau1], ['Nhu cầu 2', d.nhuCau2],
+    ['Sức khỏe', d.sucKhoe], ['Tâm lý', d.tamLy],
+    [''],['RỦI RO'],
+    ['Mức độ rủi ro', d.ruiRo], ['An toàn khẩn', d.ruiRoAT],
+    ['Yếu tố rủi ro', d.yeuToRuiRo.join(', ')],
+    [''],['KẾ HOẠCH'],
+    ['Hình thức', d.hinhThuc], ['Thời gian', d.thoiGian],
+    ['Mục tiêu ngắn hạn', d.mucTieuNH], ['Mục tiêu dài hạn', d.mucTieuDH],
+    ['Dịch vụ cần kết nối', d.dichVu.join(', ')],
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:25},{wch:50}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Báo cáo ca');
+  XLSX.writeFile(wb, `BaoCao_${d.maCA || d.tenTre || 'Thaodan'}_${d.ngayTN || ''}.xlsx`);
+}
+
+// =================== UPLOAD ===================
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+}
+function handleFileSelect(input) {
+  if (input.files[0]) processFile(input.files[0]);
+}
+async function processFile(file) {
+  const status = document.getElementById('uploadStatus');
+  const msg = document.getElementById('uploadMsg');
+  status.style.display = 'block';
+  msg.textContent = `⏳ Đang xử lý: ${file.name}...`;
+
+  const ext = file.name.split('.').pop().toLowerCase();
+
+  if (ext === 'xlsx' || ext === 'xls') {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, {type:'binary'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(ws, {header:1});
+        uploadedData = json;
+        msg.textContent = `✅ Đã đọc: ${file.name} — ${json.length} dòng. Đang phân tích...`;
+        showPreviewTable(json, file.name);
+        setTimeout(() => aiAnalyzeUpload(), 300);
+      } catch(err) {
+        msg.textContent = '❌ Lỗi đọc file Excel: ' + err.message;
+      }
+    };
+    reader.readAsBinaryString(file);
+  } else if (ext === 'pdf') {
+    msg.textContent = `📄 Đã nhận PDF: ${file.name}. Gửi lên AI để phân tích...`;
+    const reader = new FileReader();
+    reader.onload = async e => {
+      const base64 = e.target.result.split(',')[1];
+      uploadedPDFText = base64;
+      document.getElementById('previewSection').style.display = 'none';
+      document.getElementById('pdfPreview').style.display = 'block';
+      document.getElementById('pdfText').textContent = 'PDF đã tải lên. Đang phân tích...';
+      msg.textContent = `✅ PDF sẵn sàng: ${file.name}. Đang phân tích...`;
+      setTimeout(() => aiAnalyzePDF(), 300);
+    };
+    reader.readAsDataURL(file);
+  } else {
+    msg.textContent = '❌ Định dạng không hỗ trợ. Vui lòng dùng .xlsx, .xls hoặc .pdf';
+  }
+}
+
+function showPreviewTable(data, filename) {
+  const section = document.getElementById('previewSection');
+  const table = document.getElementById('previewTable');
+  document.getElementById('previewTitle').textContent = `Xem trước: ${filename}`;
+  document.getElementById('importNote').textContent = `${data.length} dòng dữ liệu`;
+  document.getElementById('pdfPreview').style.display = 'none';
+
+  const maxCols = Math.max(...data.map(r => r.length));
+  let html = '';
+  data.slice(0, 20).forEach((row, i) => {
+    html += '<tr>';
+    row.forEach(cell => {
+      html += i === 0 ? `<th>${cell ?? ''}</th>` : `<td>${cell ?? ''}</td>`;
+    });
+    // Pad if needed
+    for (let c = row.length; c < maxCols; c++) html += i === 0 ? '<th></th>' : '<td></td>';
+    html += '</tr>';
+  });
+  if (data.length > 20) html += `<tr><td colspan="${maxCols}" style="text-align:center;color:var(--txt3);font-style:italic">... và ${data.length - 20} dòng nữa</td></tr>`;
+  table.innerHTML = html;
+  section.style.display = 'block';
+}
+
+async function aiAnalyzeUpload() {
+  if (!uploadedData) return;
+  const csvText = uploadedData.map(r => r.join('\t')).join('\n');
+  await generateStandardReport(csvText, 'File Excel');
+}
+
+async function aiAnalyzePDF() {
+  if (!uploadedPDFText) return;
+  showPanel('report', document.querySelectorAll('.nav-btn')[2]);
+  const rc = document.getElementById('reportContent');
+  rc.classList.remove('empty');
+  rc.innerHTML = '<div style="text-align:center;padding:40px;color:var(--txt3)"><div class="loading-dots"><span></span><span></span><span></span></div><p style="margin-top:12px;font-size:.85rem">Đang trích xuất PDF...</p></div>';
+  try {
+    // Step 1: Extract text from PDF using PDF.js
+    // Groq không hỗ trợ PDF trực tiếp - dùng PDF.js để extract text trước
+    const extractedText = await extractPDFText(uploadedPDFText);
+    if (!extractedText || extractedText.length < 20) throw new Error('Không đọc được nội dung PDF. Vui lòng thử file khác hoặc dán nội dung vào chat.');
+    // Step 2: Generate standard report from extracted text
+    await generateStandardReport(extractedText, 'File PDF');
+  } catch(e) {
+    rc.innerHTML = `<div class="s-card red">⚠️ Lỗi phân tích PDF: ${e.message}</div>`;
+  }
+}
+
+function importToWizard() {
+  if (!uploadedData || uploadedData.length < 2) { alert('Không có dữ liệu để import.'); return; }
+  // Try to map columns
+  const headers = uploadedData[0].map(h => (h || '').toString().toLowerCase());
+  const row = uploadedData[1];
+  const get = (keywords) => {
+    const idx = headers.findIndex(h => keywords.some(k => h.includes(k)));
+    return idx >= 0 ? (row[idx] || '') : '';
+  };
+  const setVal = (id, val) => { const el = document.getElementById(id); if(el && val) el.value = val; };
+  setVal('f_maCA', get(['mã ca','ma ca','case id','id']));
+  setVal('f_tenTre', get(['họ tên','ten tre','họ và tên','tên trẻ','name']));
+  setVal('f_tuoi', get(['tuổi','tuoi','age','ngày sinh','dob']));
+  setVal('f_gioiTinh', get(['giới tính','gioi tinh','gender']));
+  setVal('f_queQuan', get(['quê quán','que quan','nơi sinh']));
+  setVal('f_diaChi', get(['địa chỉ','dia chi','address']));
+  setVal('f_nvPhuTrach', get(['nhân viên','nhan vien','phụ trách','caseworker']));
+  showPanel('wizard', document.querySelectorAll('.nav-btn')[1]);
+  goStep(1);
+  alert('✅ Đã import dữ liệu từ dòng đầu tiên. Vui lòng kiểm tra và bổ sung thông tin còn thiếu.');
+}
+
+// =================== CHAT ===================
+const SYSTEM_PROMPT = `Bạn là trợ lý AI chuyên biệt của Cơ sở Bảo trợ Xã hội Thảo Đàn (TP.HCM), hỗ trợ nhân viên CTXH quản lý ca trẻ em HCĐB.
+
+NGUYÊN TẮC:
+- Luôn đưa CÁC BƯỚC THỰC HIỆN cụ thể, có thể thực thi ngay
+- Ưu tiên an toàn và lợi ích tốt nhất của trẻ
+- Tham chiếu Luật Trẻ em 2016 khi phù hợp
+- KHÔNG giải thích lý thuyết dài dòng
+
+ĐỊNH DẠNG HTML:
+- <div class="s-card green/amber/red/blue"><div class="s-title">Tiêu đề</div>nội dung</div>
+- <table class="rt"><thead><tr><th>Cột</th></tr></thead><tbody><tr><td>...</td></tr></tbody></table>
+- <div class="bdg-row"><span class="bdg gr/am/rd/bl">text</span></div>
+- <ol class="sl"><li>...</li></ol>
+- <h4 class="sh">Tiêu đề</h4>
+
+ĐỐI TƯỢNG: Trẻ lang thang, lao động sớm, HIV/AIDS, không nơi nương tựa tại TP.HCM dưới 18 tuổi.`;
+
+function clearChat() {
+  if (!confirm('Xóa toàn bộ lịch sử chat?')) return;
+  conversationHistory = [];
+  const area = document.getElementById('chatArea');
+  area.innerHTML = `
+  <div class="msg ai">
+    <div class="av ai">🌿</div>
+    <div class="bubble ai">
+      <strong>Chat đã được xóa.</strong> Tôi sẵn sàng hỗ trợ ca mới!<br><br>
+      Hãy mô tả tình huống hoặc chọn <strong>"Nhập ca từng bước"</strong> để bắt đầu.
+    </div>
+  </div>`;
+}
+
+function useChip(btn) {
+  document.getElementById('userInput').value = btn.textContent;
+  sendMessage();
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 110) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function appendMsg(role, html) {
+  const area = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  const ico = role === 'ai' ? '🌿' : '👤';
+  div.innerHTML = `<div class="av ${role}">${ico}</div><div class="bubble ${role}">${html}</div>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+  return div;
+}
+
+function appendLoading() {
+  const area = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'msg ai'; div.id = 'loadingMsg';
+  div.innerHTML = `<div class="av ai">🌿</div><div class="bubble ai"><div class="loading-dots"><span></span><span></span><span></span></div></div>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+// Auto-analyze when user pastes long text
+function handlePaste(e) {
+  setTimeout(() => {
+    const val = document.getElementById('userInput').value.trim();
+    if (val.length > 200) {
+      // Long paste: auto-generate report instead of just chat
+      autoPasteAnalyze(val);
+    }
+  }, 50);
+}
+
+async function autoPasteAnalyze(text) {
+  document.getElementById('userInput').value = '';
+  document.getElementById('userInput').style.height = 'auto';
+  await generateStandardReport(text, 'Dán thủ công');
+}
+
+const modePrompts = {
+  tiepnhan: 'Chế độ TIẾP NHẬN CA MỚI: hướng dẫn quy trình tiếp nhận, sàng lọc ban đầu.',
+  danhgia: 'Chế độ ĐÁNH GIÁ NHU CẦU: phân tích toàn diện nhu cầu, điểm mạnh, rủi ro.',
+  kehoach: 'Chế độ LẬP KẾ HOẠCH CAN THIỆP: xây dựng kế hoạch cụ thể, ưu tiên, phân công.',
+  theodoi: 'Chế độ THEO DÕI TIẾN ĐỘ: đánh giá tiến triển, điều chỉnh kế hoạch.',
+  baocao: 'Chế độ BÁO CÁO: tổng hợp, phân tích ca, chuẩn bị báo cáo định kỳ.',
+};
+
+async function sendMessage() {
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text) return;
+  const sendBtn = document.getElementById('sendBtn');
+  sendBtn.disabled = true;
+  input.value = ''; input.style.height = 'auto';
+  appendMsg('user', text);
+  conversationHistory.push({role:'user', content: text, parts:[{text}]});
+  appendLoading();
+  try {
+    const sysWithMode = SYSTEM_PROMPT + '\n\nCHẾ ĐỘ: ' + (modePrompts[currentMode] || '');
+    const geminiMsgs = conversationHistory.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{text: typeof m.content === 'string' ? m.content : (m.parts?.[0]?.text || '')}]
+    }));
+    let reply = '';
+    try {
+      reply = await callGemini(sysWithMode, geminiMsgs, true);
+    } catch(callErr) {
+      reply = `<div class="s-card red">⚠️ Lỗi: ${callErr.message}</div>`;
+    }
+    document.getElementById('loadingMsg')?.remove();
+    appendMsg('ai', reply);
+    conversationHistory.push({role:'assistant', content: reply});
+  } catch(e) {
+    document.getElementById('loadingMsg')?.remove();
+    appendMsg('ai', '<div class="s-card red">⚠️ Lỗi kết nối.</div>');
+  }
+  sendBtn.disabled = false;
+  input.focus();
+}
+</script>
+</body>
+</html>
