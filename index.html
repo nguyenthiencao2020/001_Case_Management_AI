@@ -1,0 +1,2753 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Thảo Đàn AI Case Assistant</title>
+<style>
+:root{--navy:#0f2d6b;--navy2:#1a3f8f;--org:#f07020;--org2:#d05a10;--cream:#f4f2ed;--white:#fff;--text:#1a1a2e;--t2:#4a5568;--t3:#718096;--bd:rgba(0,0,0,.09);--r:8px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--cream);color:var(--text);font-size:13px;line-height:1.5;}
+.hdr{background:linear-gradient(135deg,var(--navy),var(--navy2));padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:3px solid var(--org);}
+.logo-area{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.logo-img{width:50px;height:50px;border-radius:50%;border:2px solid rgba(255,255,255,.3);object-fit:contain;background:#fff;}
+.logo-txt .t1{font-size:19px;font-weight:800;color:#fff;letter-spacing:1px;}
+.logo-txt .t1 span{color:var(--org);}
+.logo-txt .t2{font-size:9px;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:2px;}
+.sep{width:1px;height:46px;background:rgba(255,255,255,.15);}
+.hdr-main{flex:1;min-width:0;display:flex;align-items:center;gap:10px;}
+.ta-wrap{flex:1;}
+.ta{width:100%;height:66px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:var(--r);padding:8px 12px;font-size:12px;color:#fff;font-family:inherit;resize:none;line-height:1.5;}
+.ta::placeholder{color:rgba(255,255,255,.4);}
+.ta:focus{outline:none;border-color:var(--org);background:rgba(255,255,255,.13);}
+.hdr-btns{display:flex;flex-direction:column;gap:5px;}
+.btn-go{background:linear-gradient(135deg,var(--org),var(--org2));color:#fff;border:none;padding:9px 18px;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.btn-go:disabled{background:#888;cursor:not-allowed;}
+.btn-clr{background:rgba(255,255,255,.07);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15);padding:6px 12px;border-radius:var(--r);font-size:11px;cursor:pointer;text-align:center;}
+.cc{font-size:10px;color:rgba(255,255,255,.4);text-align:right;margin-top:2px;}
+.prog{background:rgba(0,0,0,.2);padding:7px 16px;display:none;align-items:center;gap:10px;}
+.pbar{flex:1;height:4px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden;}
+.pfill{height:100%;background:var(--org);width:0;transition:width .4s;}
+.ptxt{font-size:11px;color:rgba(255,255,255,.6);min-width:200px;}
+.err{margin:8px 16px;padding:10px 14px;background:#fff5f5;border:1px solid #fecaca;border-left:3px solid #e53e3e;border-radius:var(--r);color:#c53030;font-size:12px;display:none;}
+.layout{display:flex;}
+.sb{width:184px;flex-shrink:0;background:var(--navy);overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent;}
+.sb-sec{padding:10px 12px 4px;font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.3);text-transform:uppercase;font-weight:700;}
+.sbi{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;border-left:3px solid transparent;color:rgba(255,255,255,.6);font-size:11px;transition:all .12s;border-bottom:1px solid rgba(255,255,255,.04);}
+.sbi:hover{background:rgba(255,255,255,.07);color:#fff;}
+.sbi.active{background:rgba(240,112,32,.18);border-left-color:var(--org);color:#fff;font-weight:700;}
+.sb-ico{width:26px;height:26px;border-radius:5px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;}
+.sbi.active .sb-ico{background:rgba(240,112,32,.3);}
+.sb-lbl{flex:1;line-height:1.3;}
+.sb-num{font-size:9px;opacity:.5;display:block;}
+.sb-ck{width:14px;height:14px;background:var(--org);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700;flex-shrink:0;}
+.cont{flex:1;overflow-y:auto;background:var(--cream);}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px 20px;text-align:center;color:var(--t3);}
+.empty-ring{width:70px;height:70px;border-radius:50%;background:rgba(15,45,107,.08);border:2px solid rgba(15,45,107,.15);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:30px;}
+.tip{background:#fff;border:1px solid var(--bd);border-left:3px solid var(--org);border-radius:var(--r);padding:14px 16px;max-width:380px;margin-top:16px;font-size:12px;color:var(--t2);line-height:1.8;text-align:left;}
+.fv{padding:14px 16px;}
+.fv-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+.fv-ttl{font-size:16px;font-weight:800;color:var(--navy);}
+.fv-meta{font-size:10.5px;color:var(--t3);margin-top:2px;}
+.fv-badge{font-size:10px;background:#eaf5ee;color:#1a7a4a;padding:3px 10px;border-radius:10px;border:1px solid #b7dfc9;margin-top:4px;display:inline-block;}
+.acts{display:flex;gap:7px;flex-wrap:wrap;}
+.btn-pr{background:#fff;color:var(--navy);border:1.5px solid var(--navy);padding:7px 12px;border-radius:var(--r);font-size:11px;font-weight:700;cursor:pointer;}
+.btn-pr:hover{background:rgba(15,45,107,.06);}
+.btn-dx{background:var(--navy);color:#fff;border:none;padding:7px 12px;border-radius:var(--r);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;}
+.btn-dx:hover{background:var(--navy2);}
+.btn-dx:disabled{background:#aaa;cursor:not-allowed;}
+.btn-dxa{background:var(--org);color:#fff;border:none;padding:7px 12px;border-radius:var(--r);font-size:11px;font-weight:700;cursor:pointer;}
+.btn-dxa:hover{background:var(--org2);}
+.sec{background:#fff;border:1px solid var(--bd);border-radius:var(--r);margin-bottom:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.sec-hd{background:var(--navy);color:#fff;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;}
+.sec-hl{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;}
+.btn-cp{background:rgba(255,255,255,.12);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.2);padding:3px 9px;border-radius:4px;font-size:11px;cursor:pointer;}
+.sec-bd{padding:12px 14px;}
+.dv{font-size:10px;font-weight:700;color:var(--navy);margin:12px 0 8px;padding-bottom:4px;border-bottom:2px solid rgba(240,112,32,.25);text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;gap:5px;}
+.dv::before{content:'';width:3px;height:10px;background:var(--org);border-radius:2px;}
+.fl{display:flex;align-items:flex-start;gap:8px;margin-bottom:7px;}
+.fl-ico{width:22px;height:22px;border-radius:50%;background:rgba(15,45,107,.07);color:var(--navy2);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;font-size:11px;}
+.fl-bd{flex:1;min-width:0;}
+.fl-lb{font-size:9.5px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;}
+.fl-vl{font-size:12.5px;padding:3px 9px;border-radius:4px;line-height:1.5;word-break:break-word;}
+.fl-vl.ok{background:#eaf7ee;color:#1a5c33;border-left:2px solid #3a9a5c;}
+.fl-vl.wo{background:#fffbeb;color:#7d5a00;border-left:2px solid #d4a017;}
+.fl-vl.no{background:#f8f8f8;color:var(--t3);border-left:2px solid #ddd;font-style:italic;}
+.tbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;}
+.tbl th{background:rgba(15,45,107,.08);color:var(--navy);padding:6px 9px;border:1px solid rgba(15,45,107,.12);font-size:10px;text-transform:uppercase;letter-spacing:.4px;font-weight:700;}
+.tbl td{padding:6px 9px;border:1px solid var(--bd);color:var(--t2);vertical-align:top;}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg)}}
+.pov{position:fixed;inset:0;z-index:999;background:rgba(10,20,50,.9);display:none;overflow-y:auto;padding:20px;}
+.psheet{background:#fff;max-width:700px;margin:0 auto;border-radius:6px;box-shadow:0 24px 64px rgba(0,0,0,.5);padding:32px 40px;position:relative;}
+.pclose{position:absolute;top:12px;right:12px;background:#f0f0f0;border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:14px;font-weight:700;}
+.pov-bar{display:flex;gap:10px;margin-bottom:16px;justify-content:flex-end;}
+.btn-dprint{background:var(--navy);color:#fff;border:none;padding:9px 20px;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;}
+.btn-cpov{background:#fff;color:#555;border:1px solid #ccc;padding:9px 14px;border-radius:var(--r);font-size:13px;cursor:pointer;}
+.ph-hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--navy);padding-bottom:12px;margin-bottom:18px;}
+.ph-nm{font-size:22px;font-weight:900;color:var(--navy);}
+.ph-nm span{color:var(--org);}
+.ph-sub{font-size:8px;letter-spacing:2px;color:#888;text-transform:uppercase;margin-top:2px;}
+.ph-meta{text-align:right;font-size:10.5px;color:#666;line-height:1.9;}
+.ph-ftl{font-size:13px;font-weight:700;color:var(--navy);margin:16pt 0 10pt;padding:7px 12px;background:rgba(15,45,107,.07);border-radius:4px;border-left:3px solid var(--org);}
+.ph-sec{font-size:10px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid #e0e0e0;margin:14px 0 6px;padding-bottom:4px;}
+.ph-f{display:flex;margin-bottom:7px;font-size:12px;gap:8px;}
+.ph-lb{min-width:145px;color:#555;font-weight:600;flex-shrink:0;}
+.ph-vl{flex:1;color:#111;}
+.ph-tbl{width:100%;border-collapse:collapse;font-size:11px;margin:6px 0;}
+.ph-tbl th{background:#e8eef8;color:var(--navy);border:1px solid #ccc;padding:5px 8px;font-weight:700;}
+.ph-tbl td{border:1px solid #ddd;padding:5px 8px;vertical-align:top;}
+.sgn{display:flex;gap:48px;margin-top:32px;}
+.sgn-b{text-align:center;min-width:110px;}
+.sgn-l{border-top:1px solid #333;padding-top:5px;margin-top:34px;font-size:11px;}
+@media print{
+  .hdr,.prog,.err,.acts,.pov-bar,.pclose{display:none!important;}
+  .pov{position:static!important;background:none!important;padding:0!important;}
+  .psheet{box-shadow:none!important;padding:20px!important;max-width:100%!important;}
+}
+
+
+/* ══ MAIN NAV TABS ══ */
+.main-nav{display:flex;background:var(--navy);border-bottom:3px solid var(--org);padding:0 16px;gap:4px;}
+.mnav{padding:10px 18px;cursor:pointer;color:rgba(255,255,255,.55);font-size:12px;font-weight:600;border-bottom:3px solid transparent;margin-bottom:-3px;letter-spacing:.5px;transition:all .15s;}
+.mnav:hover{color:rgba(255,255,255,.85);}
+.mnav.active{color:#fff;border-bottom-color:var(--org);}
+.mnav .mn-ico{margin-right:6px;font-size:14px;}
+
+/* ══ TAB PANELS ══ */
+.tab-panel{display:none;height:calc(100vh - 92px);min-height:400px;}
+.tab-panel.active{display:flex;height:calc(100vh - 92px);}
+
+/* ══ DASHBOARD ══ */
+.dash{display:flex;height:100%;overflow:hidden;min-height:0;}
+.dash-left{width:420px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--bd);background:#fff;min-height:0;overflow:hidden;}
+.dash-right{flex:1;display:flex;flex-direction:column;background:var(--cream);min-height:0;overflow:hidden;}
+.dash-section{padding:12px 14px;border-bottom:1px solid var(--bd);}
+.dash-label{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.dash-ta{width:100%;height:120px;border:1px solid var(--bd);border-radius:6px;padding:8px 10px;font-size:12px;font-family:inherit;resize:none;line-height:1.6;background:#f8f8fc;}
+.dash-ta:focus{outline:none;border-color:var(--org);}
+.dash-actions{display:flex;gap:8px;padding:10px 14px;background:#fff;border-bottom:1px solid var(--bd);}
+.btn-analyze{background:linear-gradient(135deg,var(--org),var(--org2));color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;flex:1;}
+.btn-analyze:disabled{background:#aaa;cursor:not-allowed;}
+.btn-save-case{background:#fff;color:var(--navy);border:1.5px solid var(--navy);padding:8px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;}
+.btn-save-case:hover{background:rgba(15,45,107,.06);}
+
+/* ══ REPORT PANEL ══ */
+.report-area{flex:1;overflow-y:auto;padding:14px;min-height:0;}
+.report-card{background:#fff;border:1px solid var(--bd);border-radius:8px;margin-bottom:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.report-card-hd{padding:8px 12px;font-size:11px;font-weight:700;letter-spacing:.5px;display:flex;align-items:center;gap:6px;}
+.rc-danger{background:#fef2f2;color:#b91c1c;border-bottom:1px solid #fee2e2;}
+.rc-strength{background:#f0fdf4;color:#166534;border-bottom:1px solid #bbf7d0;}
+.rc-plan{background:#eff6ff;color:#1e40af;border-bottom:1px solid #bfdbfe;}
+.rc-flag{background:#fffbeb;color:#92400e;border-bottom:1px solid #fde68a;}
+.rc-question{background:#faf5ff;color:#6b21a8;border-bottom:1px solid #e9d5ff;}
+.rc-neutral{background:#f8fafc;color:var(--navy);border-bottom:1px solid var(--bd);}
+.report-card-bd{padding:10px 12px;font-size:12.5px;line-height:1.7;color:#1a1a2e;}
+.report-card-bd ul{margin:4px 0;padding-left:18px;}
+.report-card-bd li{margin:2px 0;}
+.risk-badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;margin-left:6px;}
+.risk-high{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;}
+.risk-med{background:#fffbeb;color:#92400e;border:1px solid #fde68a;}
+.risk-low{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;}
+
+/* ══ CHAT PANEL ══ */
+.chat-panel{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
+.chat-hd{padding:8px 14px;font-size:11px;font-weight:700;color:var(--navy);border-bottom:1px solid var(--bd);background:#fff;display:flex;align-items:center;gap:6px;order:0;}
+.chat-msgs{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-height:0;order:2;}
+.chat-bubble{max-width:85%;padding:8px 12px;border-radius:10px;font-size:12.5px;line-height:1.6;word-break:break-word;}
+.cb-user{background:var(--navy);color:#fff;align-self:flex-end;border-bottom-right-radius:2px;}
+.cb-ai{background:#fff;color:#1a1a2e;border:1px solid var(--bd);align-self:flex-start;border-bottom-left-radius:2px;box-shadow:0 1px 2px rgba(0,0,0,.06);}
+.cb-ai strong{color:var(--navy);}
+.chat-input-row{padding:10px 14px;border-bottom:1px solid var(--bd);border-top:none;background:#fff;display:flex;gap:8px;order:1;}
+.chat-input{flex:1;border:1px solid var(--bd);border-radius:6px;padding:8px 10px;font-size:12px;font-family:inherit;resize:none;height:38px;line-height:1.4;}
+.chat-input:focus{outline:none;border-color:var(--org);}
+.btn-send{background:var(--navy);color:#fff;border:none;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;}
+.btn-send:disabled{background:#aaa;cursor:not-allowed;}
+.chat-empty{text-align:center;color:var(--t3);font-size:12px;padding:30px 20px;}
+
+/* ══ FORMS TAB ══ */
+.forms-tab{flex:1;display:flex;height:100%;min-height:0;overflow:hidden;}
+.forms-sidebar{width:220px;flex-shrink:0;background:var(--navy);overflow-y:auto;display:flex;flex-direction:column;}
+.stage-group{border-bottom:1px solid rgba(255,255,255,.08);}
+.stage-hd{padding:8px 12px 4px;font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.35);text-transform:uppercase;font-weight:700;}
+.form-item{display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;border-left:3px solid transparent;color:rgba(255,255,255,.6);font-size:11px;transition:all .12s;}
+.form-item:hover{background:rgba(255,255,255,.07);color:#fff;}
+.form-item.active{background:rgba(240,112,32,.18);border-left-color:var(--org);color:#fff;font-weight:700;}
+.form-item input[type=checkbox]{accent-color:var(--org);cursor:pointer;}
+.form-item .fi-ico{width:24px;height:24px;border-radius:4px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;}
+.form-item.active .fi-ico{background:rgba(240,112,32,.3);}
+.fi-lbl{flex:1;line-height:1.3;}
+.fi-num{font-size:9px;opacity:.5;display:block;}
+.fi-ck{width:13px;height:13px;background:var(--org);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:700;flex-shrink:0;}
+.forms-actions{padding:10px;border-top:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:6px;}
+.btn-stage{background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15);padding:6px 10px;border-radius:5px;font-size:10px;cursor:pointer;text-align:center;}
+.btn-stage:hover{background:rgba(255,255,255,.14);color:#fff;}
+.forms-content{flex:1;display:flex;flex-direction:column;background:var(--cream);min-height:0;overflow:hidden;}
+
+/* ══ CASES TAB ══ */
+.cases-tab{flex:1;display:flex;height:100%;min-height:0;overflow:hidden;}
+.cases-sidebar{width:260px;flex-shrink:0;background:#fff;border-right:1px solid var(--bd);display:flex;flex-direction:column;}
+.cases-search-row{padding:10px 12px;border-bottom:1px solid var(--bd);display:flex;gap:6px;}
+.cases-search{flex:1;border:1px solid var(--bd);border-radius:5px;padding:6px 8px;font-size:11px;font-family:inherit;}
+.cases-search:focus{outline:none;border-color:var(--org);}
+.btn-new-case{background:var(--org);color:#fff;border:none;padding:6px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.cases-list{flex:1;overflow-y:auto;}
+.case-item{padding:10px 12px;border-bottom:1px solid var(--bd);cursor:pointer;transition:background .1s;}
+.case-item:hover{background:#f8f8fc;}
+.case-item.active{background:rgba(15,45,107,.06);border-left:3px solid var(--org);}
+.ci-name{font-size:12.5px;font-weight:700;color:var(--text);}
+.ci-meta{font-size:10.5px;color:var(--t3);margin-top:2px;}
+.ci-badge{display:inline-block;font-size:9px;padding:1px 6px;border-radius:8px;margin-left:4px;font-weight:600;}
+.ci-open{background:#dbeafe;color:#1e40af;}
+.ci-closed{background:#f1f5f9;color:#64748b;}
+.cases-empty{padding:24px;text-align:center;color:var(--t3);font-size:12px;}
+.cases-main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.case-detail-hd{padding:12px 16px;border-bottom:1px solid var(--bd);background:#fff;display:flex;align-items:center;justify-content:space-between;}
+.case-detail-title{font-size:15px;font-weight:800;color:var(--navy);}
+.case-detail-meta{font-size:11px;color:var(--t3);margin-top:2px;}
+.case-detail-body{flex:1;overflow-y:auto;padding:14px 16px;}
+.case-timeline{display:flex;flex-direction:column;gap:10px;}
+.ct-item{background:#fff;border:1px solid var(--bd);border-radius:7px;padding:10px 12px;}
+.ct-date{font-size:10px;color:var(--t3);margin-bottom:4px;}
+.ct-notes{font-size:12px;color:#333;line-height:1.6;white-space:pre-wrap;}
+.ct-analysis{margin-top:8px;padding-top:8px;border-top:1px solid var(--bd);font-size:11.5px;color:#1a1a2e;}
+.case-detail-empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--t3);font-size:13px;}
+.case-actions{padding:10px 16px;border-top:1px solid var(--bd);background:#fff;display:flex;gap:8px;flex-wrap:wrap;}
+
+/* ══ MISC ══ */
+.dash-prog{height:3px;background:var(--org);width:0;transition:width .5s;border-radius:2px;}
+.typing-dot{display:inline-block;width:6px;height:6px;background:var(--t3);border-radius:50%;animation:td .8s infinite;margin:0 1px;}
+.typing-dot:nth-child(2){animation-delay:.15s;}
+.typing-dot:nth-child(3){animation-delay:.3s;}
+@keyframes td{0%,80%,100%{transform:scale(0.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+.md-bold{font-weight:700;}
+
+
+
+/* ══ FORM EDIT CHAT ══ */
+.form-preview{flex:1;overflow-y:auto;min-height:0;}
+.form-edit-chat{flex-shrink:0;background:#fafafa;border-top:1px solid #e5e7eb;display:flex;flex-direction:column;max-height:180px;transition:max-height .2s;}
+.form-edit-chat.fec-collapsed{max-height:32px;overflow:hidden;}
+.fec-hd{padding:5px 12px;background:#fff;border-bottom:1px solid #f0f0f0;color:#64748b;font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;letter-spacing:.2px;}
+.fec-hd:hover{background:#f8fafc;}
+.fec-hd .fec-badge{background:#f07020;color:#fff;font-size:9px;padding:1px 6px;border-radius:8px;font-weight:700;}
+.fec-hd .fec-toggle{margin-left:auto;font-size:9px;color:#94a3b8;}
+.fec-body{flex:1;overflow-y:auto;padding:6px 10px;display:flex;flex-direction:column;gap:4px;min-height:0;}
+.fec-hint{font-size:11px;color:#94a3b8;text-align:center;padding:6px 0;font-style:italic;}
+.fec-input-row{padding:5px 8px;border-top:1px solid #f0f0f0;display:flex;gap:5px;align-items:center;background:#fff;}
+.fec-input{flex:1;border:1px solid #e2e8f0;border-radius:16px;padding:5px 12px;font-size:12px;font-family:inherit;resize:none;height:30px;line-height:1.4;background:#f8fafc;transition:border-color .15s;}
+.fec-input:focus{outline:none;border-color:var(--org);background:#fff;}
+.btn-fec-send{background:var(--org);color:#fff;border:none;width:30px;height:30px;border-radius:50%;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.btn-fec-send:disabled{background:#d1d5db;cursor:not-allowed;}
+.fec-msg-ai{background:#fff;border:1px solid #e2e8f0;border-radius:8px;border-bottom-left-radius:2px;padding:6px 10px;font-size:12px;color:#374151;max-width:90%;align-self:flex-start;box-shadow:0 1px 2px rgba(0,0,0,.04);}
+.fec-msg-user{background:#0f2d6b;color:#fff;border-radius:8px;border-bottom-right-radius:2px;padding:6px 10px;font-size:12px;max-width:85%;align-self:flex-end;}
+.diff-card{background:#fff;border:1px solid #e2e8f0;border-left:3px solid #f07020;border-radius:6px;padding:7px 10px;font-size:12px;}
+.diff-field{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.diff-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.diff-old{color:#ef4444;text-decoration:line-through;font-size:11.5px;background:#fef2f2;padding:1px 5px;border-radius:3px;}
+.diff-new{color:#16a34a;font-weight:700;font-size:11.5px;background:#f0fdf4;padding:1px 5px;border-radius:3px;}
+.diff-arrow{color:#cbd5e1;font-size:10px;}
+.diff-btns{display:flex;gap:5px;margin-top:6px;}
+.btn-diff-ok{background:#16a34a;color:#fff;border:none;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;}
+.btn-diff-no{background:transparent;color:#94a3b8;border:1px solid #e2e8f0;padding:3px 8px;border-radius:12px;font-size:11px;cursor:pointer;}
+.fec-affected{font-size:10px;color:#f07020;margin-top:3px;}
+</style>
+<body>
+<!-- ══ PRINT OVERLAY (kept from v11) ══ -->
+<div id="pov" class="pov">
+  <div class="pov-bar">
+    <button class="btn-cpov" onclick="closePov()">✕ Đóng</button>
+    <button class="btn-dprint" onclick="window.print()">🖨 In (Ctrl+P)</button>
+  </div>
+  <div class="psheet" id="psheet">
+    <button class="pclose" onclick="closePov()">✕</button>
+    <div class="ph-hdr">
+      <div><div class="ph-nm">THẢO <span>ĐÀN</span></div><div class="ph-sub">Social Service Center · TP. Hồ Chí Minh</div></div>
+      <div class="ph-meta" id="ph-meta"></div>
+    </div>
+    <div id="ph-body"></div>
+  </div>
+</div>
+
+<!-- ══ HEADER ══ -->
+<div class="hdr">
+  <div class="logo-area">
+    <img class="logo-img" src="https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/main/ThaoDanSSC_Digital-01.png" alt="TD">
+    <div class="logo-txt"><div class="t1">THẢO <span>ĐÀN</span></div><div class="t2">AI Case Assistant</div></div>
+  </div>
+  <div class="sep"></div>
+  <!-- Case info in header -->
+  <div style="flex:1;display:flex;align-items:center;gap:12px;min-width:0;">
+    <div id="hdr-case-info" style="font-size:11px;color:rgba(255,255,255,.6);">
+      <span id="hdr-case-name" style="color:#fff;font-weight:700;"></span>
+      <span id="hdr-case-date"></span>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;padding-right:4px;">
+    <button class="btn-clr" onclick="newCase()" title="Tạo ca mới">＋ Ca mới</button>
+    <button class="btn-save-case" onclick="saveCaseNow()" title="Lưu ca hiện tại">💾 Lưu ca</button>
+  </div>
+</div>
+
+<!-- ══ MAIN NAV ══ -->
+<div class="main-nav">
+  <div class="mnav active" id="mnav-dash" onclick="switchMain('dash')"><span class="mn-ico">🔬</span>Dashboard & AI</div>
+  <div class="mnav" id="mnav-forms" onclick="switchMain('forms')"><span class="mn-ico">📋</span>Biểu mẫu QLTH</div>
+  <div class="mnav" id="mnav-cases" onclick="switchMain('cases')"><span class="mn-ico">🗂</span>Danh sách ca <span id="cases-count-badge" style="background:rgba(240,112,32,.3);color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:4px;"></span></div>
+</div>
+
+<div class="err" id="err"></div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- TAB 1: DASHBOARD                                          -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="tab-panel active" id="panel-dash">
+  <div class="dash">
+    <!-- Left: Input + Report -->
+    <div class="dash-left">
+      <div class="dash-section">
+        <div class="dash-label">📝 Ghi chép thô của NVXH</div>
+        <textarea id="dash-notes" class="dash-ta" placeholder="Paste ghi chép vãng gia, tiếp cận, phỏng vấn... AI sẽ phân tích sâu và gợi ý hỗ trợ toàn diện."></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+          <span id="dash-cc" style="font-size:10px;color:var(--t3);">0 ký tự</span>
+          <span id="dash-case-label" style="font-size:10px;color:var(--org);font-weight:600;"></span>
+        </div>
+      </div>
+      <div class="dash-actions">
+        <button class="btn-analyze" id="btn-analyze" onclick="runDashboard()">🔬 Phân tích & Gợi ý</button>
+        <button class="btn-save-case" onclick="fillFormsFromDash()" id="btn-fill-forms" title="Điền form từ kết quả phân tích" disabled>📋 Điền form</button>
+      </div>
+      <div style="height:3px;background:#eee;margin:0 14px;border-radius:2px;overflow:hidden;">
+        <div id="dash-prog" class="dash-prog"></div>
+      </div>
+      <!-- Report cards -->
+      <div id="report-area" class="report-area">
+        <div class="chat-empty" id="report-empty">
+          <div style="font-size:32px;margin-bottom:10px;">🔬</div>
+          <div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:6px;">Chưa có phân tích</div>
+          <div>Nhập ghi chép và nhấn <strong>Phân tích & Gợi ý</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Chat -->
+    <div class="dash-right">
+      <div class="chat-panel">
+        <div class="chat-hd">
+          <span>💬</span> Chat với AI — Hỏi thêm về ca này
+          <span style="margin-left:auto;font-size:10px;color:var(--t3);" id="chat-model-label">Groq LLaMA 3.3</span>
+        </div>
+        <div class="chat-msgs" id="chat-msgs">
+          <div class="chat-empty">
+            <div style="font-size:28px;margin-bottom:8px;">💬</div>
+            <div style="font-weight:600;margin-bottom:4px;">Chưa có phân tích</div>
+            <div>Sau khi phân tích, bạn có thể hỏi thêm bất kỳ điều gì về ca này.</div>
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <textarea id="chat-input" class="chat-input" placeholder="Hỏi thêm về ca này... (Enter để gửi)" onkeydown="chatKeydown(event)" disabled></textarea>
+          <button class="btn-send" id="btn-send" onclick="sendChat()" disabled>Gửi</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- TAB 2: FORMS                                              -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="tab-panel" id="panel-forms">
+  <div class="forms-tab">
+    <!-- Sidebar: form list with checkboxes + stage groups -->
+    <div class="forms-sidebar">
+      
+      <div class="stage-group">
+        <div class="stage-hd">Tiếp cận ban đầu</div>
+        <div class="form-item" id="fmi0" onclick="showFormTab(0)">
+          <input type="checkbox" id="fchk0" onclick="event.stopPropagation()">
+          <div class="fi-ico">📋</div>
+          <div class="fi-lbl"><span class="fi-num">Form 0</span>Hồ sơ xã hội</div>
+        </div>
+        <div class="form-item" id="fmi1" onclick="showFormTab(1)">
+          <input type="checkbox" id="fchk1" onclick="event.stopPropagation()">
+          <div class="fi-ico">👤</div>
+          <div class="fi-lbl"><span class="fi-num">Form 1</span>Phiếu tiếp cận</div>
+        </div>
+      </div>
+      <div class="stage-group">
+        <div class="stage-hd">Vãng gia & Đánh giá</div>
+        <div class="form-item" id="fmi2" onclick="showFormTab(2)">
+          <input type="checkbox" id="fchk2" onclick="event.stopPropagation()">
+          <div class="fi-ico">🏠</div>
+          <div class="fi-lbl"><span class="fi-num">Form 2</span>Phúc trình vãng gia</div>
+        </div>
+        <div class="form-item" id="fmi3" onclick="showFormTab(3)">
+          <input type="checkbox" id="fchk3" onclick="event.stopPropagation()">
+          <div class="fi-ico">⚠️</div>
+          <div class="fi-lbl"><span class="fi-num">Form 3a</span>Đánh giá khẩn cấp</div>
+        </div>
+        <div class="form-item" id="fmi4" onclick="showFormTab(4)">
+          <input type="checkbox" id="fchk4" onclick="event.stopPropagation()">
+          <div class="fi-ico">📊</div>
+          <div class="fi-lbl"><span class="fi-num">Form 3b</span>Đánh giá nhu cầu</div>
+        </div>
+      </div>
+      <div class="stage-group">
+        <div class="stage-hd">Kế hoạch & Tiến trình</div>
+        <div class="form-item" id="fmi5" onclick="showFormTab(5)">
+          <input type="checkbox" id="fchk5" onclick="event.stopPropagation()">
+          <div class="fi-ico">🎯</div>
+          <div class="fi-lbl"><span class="fi-num">Form 4</span>Kế hoạch can thiệp</div>
+        </div>
+        <div class="form-item" id="fmi6" onclick="showFormTab(6)">
+          <input type="checkbox" id="fchk6" onclick="event.stopPropagation()">
+          <div class="fi-ico">📈</div>
+          <div class="fi-lbl"><span class="fi-num">Form 5</span>Tiến độ thực hiện</div>
+        </div>
+        <div class="form-item" id="fmi7" onclick="showFormTab(7)">
+          <input type="checkbox" id="fchk7" onclick="event.stopPropagation()">
+          <div class="fi-ico">🔄</div>
+          <div class="fi-lbl"><span class="fi-num">Form 6</span>Cập nhật tiến trình</div>
+        </div>
+      </div>
+      <div class="stage-group">
+        <div class="stage-hd">Chuyển gửi & Kết thúc</div>
+        <div class="form-item" id="fmi8" onclick="showFormTab(8)">
+          <input type="checkbox" id="fchk8" onclick="event.stopPropagation()">
+          <div class="fi-ico">↗️</div>
+          <div class="fi-lbl"><span class="fi-num">Form 7</span>Phiếu chuyển gửi</div>
+        </div>
+        <div class="form-item" id="fmi9" onclick="showFormTab(9)">
+          <input type="checkbox" id="fchk9" onclick="event.stopPropagation()">
+          <div class="fi-ico">✅</div>
+          <div class="fi-lbl"><span class="fi-num">Form 8</span>Phiếu kết thúc ca</div>
+        </div>
+        <div class="form-item" id="fmi10" onclick="showFormTab(10)">
+          <input type="checkbox" id="fchk10" onclick="event.stopPropagation()">
+          <div class="fi-ico">📑</div>
+          <div class="fi-lbl"><span class="fi-num">Tổng hợp</span>Báo cáo QLTH</div>
+        </div>
+      </div>
+      <!-- Stage quick-select buttons -->
+      
+      <!-- Export selected -->
+      <div style="padding:10px;border-top:1px solid rgba(255,255,255,.08);">
+        <button class="btn-analyze" onclick="dlDocxSelected()" id="btn-export-selected" style="font-size:11px;padding:8px;">📄 Tải form đã chọn (.docx)</button>
+      </div>
+    </div>
+
+    <!-- Form content + edit chat -->
+    <div class="forms-content">
+      <div class="form-preview" id="form-preview-wrap">
+        <div class="fv" id="fv" style="">
+          <div class="empty" id="es">
+            <div class="empty-ring">📋</div>
+            <div style="font-size:16px;font-weight:700;color:var(--t2);margin-bottom:6px;">Chưa có dữ liệu</div>
+            <div style="font-size:13px;">Phân tích ghi chép trong tab <strong>Dashboard</strong> để điền form</div>
+          </div>
+        </div>
+      </div>
+      <!-- Form Edit Chat -->
+      <div class="form-edit-chat" id="form-edit-chat">
+        <div class="fec-hd" onclick="toggleFEC()">
+          <span style="font-size:12px;">✏️</span>
+          <span>Chỉnh sửa thông tin</span>
+          <span id="fec-context" style="font-size:10px;color:#94a3b8;"></span>
+          <span class="fec-badge">AI</span>
+          <span class="fec-toggle" id="fec-toggle-icon">▾</span>
+        </div>
+        <div id="fec-collapsible" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
+          <div class="fec-body" id="fec-msgs">
+            <div class="fec-hint">VD: "sửa họ tên thành Nguyễn Văn A" · "bổ sung địa chỉ 123 Q.1"</div>
+          </div>
+          <div class="fec-input-row">
+            <input id="fec-input" class="fec-input" type="text" placeholder="Sửa thông tin form này..." onkeydown="fecKeydown(event)">
+            <button class="btn-fec-send" id="btn-fec-send" onclick="sendFEC()" title="Gửi">➤</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- TAB 3: CASES                                              -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="tab-panel" id="panel-cases">
+  <div class="cases-tab">
+    <!-- Sidebar: case list -->
+    <div class="cases-sidebar">
+      <div class="cases-search-row">
+        <input type="text" id="cases-search" class="cases-search" placeholder="Tìm theo tên, mã ca..." oninput="renderCaseList()">
+        <button class="btn-new-case" onclick="newCase()">＋ Mới</button>
+      </div>
+      <div class="cases-list" id="cases-list">
+        <div class="cases-empty">Chưa có ca nào được lưu</div>
+      </div>
+    </div>
+
+    <!-- Main: case detail -->
+    <div class="cases-main" id="cases-main">
+      <div class="case-detail-empty">
+        <div style="text-align:center;color:var(--t3);">
+          <div style="font-size:36px;margin-bottom:12px;">🗂</div>
+          <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Chọn một ca để xem</div>
+          <div style="font-size:12px;">Hoặc tạo ca mới</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+
+
+
+
+
+
+
+
+
+
+// Maps form tab index → which D fields are editable
+const FORM_FIELDS = {
+  0: {  // Hồ sơ xã hội
+    'họ tên|tên trẻ|họ và tên': 'co_ban.ho_ten',
+    'giới tính': 'co_ban.gioi_tinh',
+    'ngày sinh|năm sinh': 'co_ban.ngay_sinh',
+    'tuổi': 'co_ban.tuoi',
+    'sđt trẻ|điện thoại trẻ': 'co_ban.sdt_tre',
+    'sđt người thân': 'co_ban.sdt_nguoi_than',
+    'địa chỉ thường trú': 'co_ban.dia_chi_thuong_tru',
+    'địa chỉ hiện tại|địa chỉ cư trú': 'co_ban.dia_chi_hien_tai',
+    'sống với': 'co_ban.song_voi',
+    'nhóm trẻ': 'co_ban.nhom_tre',
+    'người chăm sóc': 'gia_dinh.nguoi_cham_soc.ho_ten',
+    'nghề nghiệp.*chăm|chăm sóc.*nghề': 'gia_dinh.nguoi_cham_soc.nghe_nghiep',
+    'hoàn cảnh|kinh tế': 'gia_dinh.hoan_canh',
+    'nhận xét nvxh': 'danh_gia.nhan_xet_nvxh',
+  },
+  1: {
+    'họ tên|tên trẻ': 'co_ban.ho_ten',
+    'giới tính': 'co_ban.gioi_tinh',
+    'ngày sinh': 'co_ban.ngay_sinh',
+    'hoàn cảnh|gia đình': 'gia_dinh.hoan_canh',
+    'vấn đề|nguy cơ': 'danh_gia.nguy_co',
+    'mong muốn': 'danh_gia.yeu_cau_tre',
+  },
+  2: {
+    'ngày vãng gia': 'vang_gia.ngay_vang_gia',
+    'mục đích': 'vang_gia.muc_dich',
+    'môi trường|nhà ở': 'vang_gia.quan_sat_mt',
+    'đánh giá chung': 'vang_gia.danh_gia_chung',
+  },
+  4: {
+    'vấn đề thể chất': 'danh_gia.van_de_the_chat',
+    'vấn đề tâm lý': 'danh_gia.van_de_tam_ly',
+    'nhu cầu thể chất': 'danh_gia.nhu_cau_the_chat',
+    'nhu cầu tâm lý': 'danh_gia.nhu_cau_tam_ly',
+    'mong đợi|yêu cầu trẻ': 'danh_gia.yeu_cau_tre',
+    'nhận xét': 'danh_gia.nhan_xet_nvxh',
+  },
+};
+
+let fecOpen = true;
+
+function toggleFEC() {
+  fecOpen = !fecOpen;
+  const chat = document.getElementById('form-edit-chat');
+  const icon = document.getElementById('fec-toggle-icon');
+  if (chat) chat.classList.toggle('fec-collapsed', !fecOpen);
+  if (icon) icon.textContent = fecOpen ? '▾' : '▸';
+}
+
+function fecKeydown(e) {
+  if (e.key === 'Enter') { e.preventDefault(); sendFEC(); }
+}
+
+function getNestedVal(obj, path) {
+  return path.split('.').reduce((o, k) => (o && o[k] !== undefined ? o[k] : null), obj);
+}
+function setNestedVal(obj, path, val) {
+  const keys = path.split('.');
+  let cur = obj;
+  for (let i = 0; i < keys.length - 1; i++) {
+    if (!cur[keys[i]]) cur[keys[i]] = {};
+    cur = cur[keys[i]];
+  }
+  cur[keys[keys.length - 1]] = val;
+}
+
+async function sendFEC() {
+  if (!D) { showNotif('⚠️ Chưa có dữ liệu form', 'warn'); return; }
+  const input = document.getElementById('fec-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  input.focus();
+  const msgs = document.getElementById('fec-msgs');
+  const btn = document.getElementById('btn-fec-send');
+  btn.disabled = true;
+
+  // Add user message
+  msgs.innerHTML += `<div class="fec-msg-user">${esc(msg)}</div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+
+  // Build context from current form's fields
+  const formFields = FORM_FIELDS[curFormTab] || FORM_FIELDS[0] || {};
+  const currentVals = {};
+  Object.entries(formFields).forEach(([label, path]) => {
+    const v = getNestedVal(D, path);
+    if (v) currentVals[Object.keys(formFields).indexOf(label) + '. ' + path] = v;
+  });
+
+  const SYS_FEC = `Bạn là trợ lý chỉnh sửa biểu mẫu CTXH Thảo Đàn. 
+Người dùng muốn sửa thông tin trong form hiện tại.
+Dữ liệu hiện tại của form: ${JSON.stringify(currentVals, null, 2)}
+Đường dẫn field hợp lệ để sửa: ${JSON.stringify(Object.values(formFields))}
+
+Phân tích yêu cầu và trả về JSON DUY NHẤT (không có text khác):
+{
+  "understood": true/false,
+  "edits": [
+    {"path": "co_ban.ho_ten", "old_val": "giá trị cũ", "new_val": "giá trị mới", "label": "tên hiển thị"}
+  ],
+  "message": "giải thích ngắn nếu không hiểu"
+}`;
+
+  try {
+    const res = await fetch(GURL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GKEY},
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile', temperature: 0, max_tokens: 500,
+        messages: [{role: 'system', content: SYS_FEC}, {role: 'user', content: msg}]
+      })
+    });
+    const data = await res.json();
+    const raw = data.choices?.[0]?.message?.content || '{}';
+    let result;
+    try { result = robustJSON(raw); } catch(e) { result = {understood: false, message: raw}; }
+
+    if (!result.understood || !result.edits?.length) {
+      msgs.innerHTML += `<div class="fec-msg-ai">🤔 ${esc(result.message||'Không hiểu. VD: "sửa họ tên thành Nguyễn Văn A"')}</div>`;
+    } else {
+      // Show diff card for each edit
+      result.edits.forEach((edit, i) => {
+        const diffId = 'diff_' + Date.now() + '_' + i;
+        const oldDisplay = edit.old_val || '(trống)';
+        const newDisplay = edit.new_val || '(trống)';
+        // Count how many forms this field affects
+        const affectedForms = Object.entries(FORM_FIELDS).filter(([fi,fields])=>Object.values(fields).includes(edit.path)).length;
+        const affectedNote = affectedForms > 1 ? `<div class="fec-affected">⚡ Cập nhật ${affectedForms} form liên quan</div>` : '';
+        msgs.innerHTML += `
+          <div class="diff-card" id="${diffId}">
+            <div class="diff-field">${esc(edit.label || edit.path.split('.').pop())}</div>
+            <div class="diff-row">
+              <span class="diff-old">${esc(String(oldDisplay))}</span>
+              <span class="diff-arrow">→</span>
+              <span class="diff-new">${esc(String(newDisplay))}</span>
+            </div>
+            ${affectedNote}
+            <div class="diff-btns">
+              <button class="btn-diff-ok" onclick="applyEdit('${edit.path}','${edit.new_val.replace(/'/g,"\'")}','${diffId}')">✓ Xác nhận</button>
+              <button class="btn-diff-no" onclick="document.getElementById('${diffId}').remove()">Hủy</button>
+            </div>
+          </div>`;
+      });
+    }
+  } catch(e) {
+    msgs.innerHTML += `<div class="fec-msg-ai">❌ Lỗi: ${esc(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+}
+
+function applyEdit(path, newVal, diffId) {
+  if (!D) return;
+  setNestedVal(D, path, newVal);
+  // Re-render current form
+  showFormTab(curFormTab);
+  // Update diff card to show confirmed
+  const el = document.getElementById(diffId);
+  if (el) el.innerHTML = `<div style="color:#16a34a;font-size:12px;">✅ Đã cập nhật: <strong>${esc(path.split('.').pop())}</strong> = "${esc(newVal)}"</div>`;
+  showNotif('✅ Đã cập nhật — nhớ nhấn Lưu ca để lưu lại', 'info');
+}
+
+// FEC context update moved into showFormTab directly
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ════════════════════════════════════════════════════════════
+// THẢO ĐÀN v12 — NEW JS (Dashboard + Cases + Form Selection)
+// ════════════════════════════════════════════════════════════
+
+// ── CONSTANTS ──
+const GKEY = "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";
+const GURL = "https://api.groq.com/openai/v1/chat/completions";
+const LOGO_URL = "https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/main/ThaoDanSSC_Digital-01.png";
+const FOOTER_URL = "https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/3e05cff6b6a5f80355e7a378f7f82ffd790f81cc/Footer.png";
+const FTV = ["HỒ SƠ THÔNG TIN TRẺ","PHIẾU TIẾP CẬN","PHÚC TRÌNH VÃNG GIA","PHIẾU ĐÁNH GIÁ TÌNH TRẠNG CỦA TRẺ","ĐÁNH GIÁ VẤN ĐỀ VÀ NHU CẦU CỦA TRẺ","KẾ HOẠCH HỖ TRỢ CAN THIỆP","TIẾN ĐỘ THỰC HIỆN KẾ HOẠCH HỖ TRỢ CASE","PHIẾU CẬP NHẬT THÔNG TIN","PHIẾU CHUYỂN GỬI","PHIẾU KẾT THÚC CA","BÁO CÁO QUẢN LÝ TRƯỜNG HỢP"];
+const FF = ["Form0_Ho_so_xa_hoi","Form1_Phieu_tiep_can","Form2_Phuc_trinh_vang_gia","Form3a_Danh_gia_khan_cap","Form3b_Danh_gia_nhu_cau","Form4_Ke_hoach_can_thiep","Form5_Tien_do_thuc_hien","Form6_Cap_nhat_tien_trinh","Form7_Phieu_chuyen_gui","Form8_Phieu_ket_thuc_ca","BaoCao_QLTH"];
+
+// ── STATE ──
+let D = null;           // current analysis JSON
+let curTab = 0;         // current form tab
+let curMain = 'dash';   // current main tab
+let curCaseId = null;   // current case ID
+let chatHistory = [];   // chat history for context
+let docxLib = null;
+
+// ════════════════════════════════════════════════════════════
+// CASE STORAGE (localStorage)
+// ════════════════════════════════════════════════════════════
+const CASES_KEY = 'thaodan_cases_v1';
+
+// ── STORAGE: Simple, safe, no reference mutation ──
+let _casesMem = {}; // source of truth in memory
+
+function loadCases() {
+  return _casesMem;
+}
+function saveCases(cases) {
+  // Deep copy to avoid reference mutation
+  _casesMem = JSON.parse(JSON.stringify(cases));
+  // Persist: try multiple storage options
+  _persistCases();
+}
+function _persistCases() {
+  try {
+    const json = JSON.stringify(_casesMem);
+    // Try localStorage
+    try { localStorage.setItem(CASES_KEY, json); } catch(e) {}
+    // Try Artifact Storage (Claude.ai persistent)
+    if (window.storage) {
+      window.storage.set(CASES_KEY, json).catch(()=>{});
+    }
+  } catch(e) { console.error('[ThaoĐàn] Persist error:', e); }
+}
+async function initStorage() {
+  // 1. Try Artifact Storage (survives page reload in Claude.ai)
+  if (window.storage) {
+    try {
+      const r = await window.storage.get(CASES_KEY);
+      if (r && r.value) {
+        _casesMem = JSON.parse(r.value);
+        console.log('[ThaoĐàn] Loaded', Object.keys(_casesMem).length, 'cases from Artifact Storage');
+        return;
+      }
+    } catch(e) {}
+  }
+  // 2. Try localStorage
+  try {
+    const raw = localStorage.getItem(CASES_KEY);
+    if (raw) {
+      _casesMem = JSON.parse(raw);
+      console.log('[ThaoĐàn] Loaded', Object.keys(_casesMem).length, 'cases from localStorage');
+    }
+  } catch(e) {}
+}
+function genCaseId() {
+  return 'case_' + Date.now() + '_' + Math.random().toString(36).substr(2,5);
+}
+function genCaseCode() {
+  const n=new Date();
+  const yy=String(n.getFullYear()).slice(2);
+  const mm=String(n.getMonth()+1).padStart(2,'0');
+  const dd=String(n.getDate()).padStart(2,'0');
+  const cases=loadCases();
+  const pre='TD-'+yy+mm+dd;
+  const cnt=Object.values(cases).filter(c=>(c.code||'').startsWith(pre)).length;
+  return pre+'-'+String(cnt+1).padStart(3,'0');
+}
+function safeDate(iso) {
+  if (!iso) return new Date().toISOString();
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? new Date().toISOString() : iso;
+}
+function fmtVN(iso) {
+  const d = new Date(safeDate(iso));
+  return d.toLocaleDateString('vi-VN', {day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function getCaseById(id) {
+  return loadCases()[id] || null;
+}
+
+function newCase() {
+  const id = genCaseId();
+  const cases = loadCases();
+  const now = new Date();
+  cases[id] = {
+    id, code: genCaseCode(), name: 'Ca mới ' + now.toLocaleDateString('vi-VN'),
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+    status: 'open',
+    entries: []
+  };
+  saveCases(cases);
+  curCaseId = id;
+  D = null; chatHistory = [];
+  document.getElementById('dash-notes').value = '';
+  document.getElementById('dash-cc').textContent = '0 ký tự';
+  updateHeaderCase();
+  renderCaseList();
+  document.getElementById('report-area').innerHTML = '<div class="chat-empty" id="report-empty"><div style="font-size:32px;margin-bottom:10px;">🔬</div><div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:6px;">Ca mới — chưa có phân tích</div><div>Nhập ghi chép và nhấn <strong>Phân tích & Gợi ý</strong></div></div>';
+  document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">💬</div><div style="font-weight:600;margin-bottom:4px;">Sẵn sàng</div><div>Phân tích xong sẽ có thể chat tiếp.</div></div>';
+  document.getElementById('chat-input').disabled = true;
+  document.getElementById('btn-send').disabled = true;
+  document.getElementById('btn-fill-forms').disabled = true;
+  showCaseDetail(id);
+  switchMain('dash');
+  showNotif('✅ Đã tạo ca mới');
+}
+
+function saveCaseNow() {
+  if (!D && !document.getElementById('dash-notes').value.trim()) {
+    showNotif('⚠️ Chưa có dữ liệu để lưu', 'warn'); return;
+  }
+  const cases = loadCases();
+  if (!curCaseId) curCaseId = genCaseId();
+  const existing = cases[curCaseId] || {
+    id: curCaseId,
+    entries: [],
+    createdAt: new Date().toISOString(),
+    status: 'open',
+    name: 'Ca ' + new Date().toLocaleDateString('vi-VN')
+  };
+  const notes = document.getElementById('dash-notes').value.trim();
+  // Auto-name
+  const childName = D?.co_ban?.ho_ten || '';
+  if (childName) existing.name = childName;
+  existing.updatedAt = new Date().toISOString();
+  if (D) existing.lastAnalysis = D;
+  // Only add entry if has new notes (avoid duplicates)
+  if (notes) {
+    const lastEntry = existing.entries?.[existing.entries.length-1];
+    const isDupe = lastEntry && lastEntry.notes === notes && lastEntry.analysis === D;
+    if (!isDupe) {
+      existing.entries = existing.entries || [];
+      existing.entries.push({ date: new Date().toISOString(), notes, analysis: D||null });
+    }
+  }
+  cases[curCaseId] = existing;
+  saveCases(cases);
+  updateHeaderCase();
+  renderCaseList();
+  updateCasesCount();
+  showNotif('💾 Đã lưu: ' + existing.name);
+}
+
+function loadCaseIntoApp(id) {
+  const c = getCaseById(id);
+  if (!c) return;
+  curCaseId = id;
+  // lastAnalysis now always stores full D (saveCases deep copies it)
+  const analysisData = c.lastAnalysis && c.lastAnalysis.co_ban ? c.lastAnalysis : null;
+  if (analysisData) {
+    D = analysisData;
+    document.getElementById('btn-fill-forms').disabled = false;
+    document.getElementById('chat-input').disabled = false;
+    document.getElementById('btn-send').disabled = false;
+    if (c.entries && c.entries.length > 0) {
+      document.getElementById('dash-notes').value = c.entries[c.entries.length-1].notes || '';
+    }
+    renderReport(D._report || null);
+    // Mark forms as filled
+    for(let i=0;i<11;i++){
+      const el=document.getElementById('fmi'+i);
+      if(el&&!el.querySelector('.fi-ck')){const ck=document.createElement('span');ck.className='fi-ck';ck.textContent='✓';el.appendChild(ck);}
+    }
+  } else if (c.lastAnalysis && c.lastAnalysis._report) {
+    // Only have lean report data - show report but forms unavailable
+    D = c.lastAnalysis;
+    renderReport(D._report);
+    document.getElementById('chat-input').disabled = false;
+    document.getElementById('btn-send').disabled = false;
+    document.getElementById('btn-fill-forms').disabled = true;
+    showNotif('ℹ️ Chỉ có báo cáo tóm tắt — cần phân tích lại để điền form', 'warn');
+  }
+  chatHistory = [];
+  updateHeaderCase();
+  showNotif('📂 Đã mở: ' + c.name);
+}
+
+function updateHeaderCase() {
+  const c = getCaseById(curCaseId);
+  const nameEl = document.getElementById('hdr-case-name');
+  const dateEl = document.getElementById('hdr-case-date');
+  const dashLabel = document.getElementById('dash-case-label');
+  if (c) {
+    nameEl.textContent = c.name;
+    dateEl.textContent = ' — ' + fmtVN(c.updatedAt);
+    if (dashLabel) dashLabel.textContent = '📁 ' + c.name;
+  } else {
+    nameEl.textContent = '';
+    dateEl.textContent = '';
+    if (dashLabel) dashLabel.textContent = '';
+  }
+}
+
+function renderCaseList() {
+  const cases = loadCases();
+  const q = (document.getElementById('cases-search')?.value || '').toLowerCase();
+  const el = document.getElementById('cases-list');
+  const list = Object.values(cases).sort((a,b) => new Date(b.updatedAt)-new Date(a.updatedAt));
+  const filtered = q ? list.filter(c => c.name.toLowerCase().includes(q) || c.id.includes(q)) : list;
+  if (!filtered.length) {
+    el.innerHTML = '<div class="cases-empty">Chưa có ca nào' + (q?' phù hợp':'') + '</div>';
+    return;
+  }
+  el.innerHTML = filtered.map(c => `
+    <div class="case-item${c.id===curCaseId?' active':''}" onclick="selectCase('${c.id}')">
+      <div class="ci-name">${esc(c.name||c.code||'Không tên')}<span class="ci-badge ${c.status==='open'?'ci-open':'ci-closed'}">${c.status==='open'?'Đang mở':'Đã đóng'}</span></div>
+      ${c.code?`<div style="font-size:9.5px;color:#9ca3af;font-family:monospace;">${c.code}</div>`:''}
+      <div class="ci-meta">${fmtVN(c.updatedAt)} · ${(c.entries||[]).length} ghi chép</div>
+    </div>`).join('');
+}
+
+function selectCase(id) {
+  curCaseId = id;
+  renderCaseList();
+  showCaseDetail(id);
+}
+
+function showCaseDetail(id) {
+  const c = getCaseById(id);
+  const main = document.getElementById('cases-main');
+  if (!c) { main.innerHTML = '<div class="case-detail-empty"><div style="text-align:center;color:var(--t3)"><div style="font-size:36px;margin-bottom:12px;">🗂</div><div>Chọn ca để xem</div></div></div>'; return; }
+  const entries = (c.entries||[]).slice().reverse();
+  main.innerHTML = `
+    <div class="case-detail-hd">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><div class="case-detail-title">${esc(c.name||c.code||'?')}</div>${c.code?'<span style="font-size:10px;font-family:monospace;background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:6px;">'+esc(c.code)+'</span>':''}</div>
+        <div class="case-detail-meta">Tạo: ${fmtVN(c.createdAt)} · Cập nhật: ${fmtVN(c.updatedAt)} · ${(c.entries||[]).length} ghi chép</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn-pr" onclick="editCaseName('${id}')">✏️ Đổi tên</button>
+        <button class="btn-pr" onclick="loadCaseIntoApp('${id}');switchMain('dash')">🔬 Mở phân tích</button>
+        <button class="btn-dx" onclick="toggleCaseStatus('${id}')">${c.status==='open'?'✅ Đóng ca':'🔓 Mở lại'}</button>
+        <button style="background:#fee2e2;color:#b91c1c;border:none;padding:7px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;" onclick="deleteCase('${id}')">🗑 Xóa</button>
+      </div>
+    </div>
+    <div class="case-detail-body">
+      ${entries.length ? `<div class="case-timeline">${entries.map((e,i)=>renderEntry(e,i)).join('')}</div>`
+        : '<div style="text-align:center;padding:40px;color:var(--t3);font-size:13px;">Chưa có ghi chép nào</div>'}
+    </div>
+    <div class="case-actions">
+      <button class="btn-analyze" style="font-size:11px;flex:none;padding:7px 14px;" onclick="loadCaseIntoApp('${id}');switchMain('dash')">🔬 Phân tích tiếp</button>
+      <button class="btn-pr" onclick="exportCasePDF('${id}')">📄 Xuất tóm tắt</button>
+    </div>`;
+}
+
+function renderEntry(e, i) {
+  const d = fmtVN(e.date);
+  const risk = e.analysis && e.analysis._report && e.analysis._report.risk;
+  const riskHtml = risk ? `<span class="risk-badge risk-${risk==='Cao'?'high':risk==='Trung bình'?'med':'low'}">${risk}</span>` : '';
+  return `<div class="ct-item">
+    <div class="ct-date">📅 ${d} ${riskHtml}</div>
+    <div class="ct-notes">${esc(e.notes||'').substring(0,300)}${(e.notes||'').length>300?'...':''}</div>
+    ${e.analysis&&e.analysis._report?`<div class="ct-analysis"><strong>Phân tích:</strong> ${esc((e.analysis._report.summary||'').substring(0,200))}</div>`:''}
+  </div>`;
+}
+
+function editCaseName(id) {
+  const c = getCaseById(id);
+  const newName = prompt('Tên ca:', c.name);
+  if (!newName || newName===c.name) return;
+  const cases = loadCases();
+  cases[id].name = newName.trim();
+  saveCases(cases);
+  renderCaseList();
+  showCaseDetail(id);
+  if (curCaseId===id) updateHeaderCase();
+}
+
+function toggleCaseStatus(id) {
+  const cases = loadCases();
+  cases[id].status = cases[id].status==='open' ? 'closed' : 'open';
+  saveCases(cases);
+  renderCaseList();
+  showCaseDetail(id);
+}
+
+function deleteCase(id) {
+  if (!confirm('Xóa ca này? Không thể phục hồi.')) return;
+  const cases = loadCases();
+  delete cases[id];
+  saveCases(cases);
+  if (curCaseId===id) { curCaseId=null; updateHeaderCase(); }
+  renderCaseList();
+  updateCasesCount();
+  document.getElementById('cases-main').innerHTML = '<div class="case-detail-empty"><div style="text-align:center;color:var(--t3)"><div style="font-size:36px;margin-bottom:12px;">🗂</div><div>Đã xóa ca</div></div></div>';
+}
+
+function exportCasePDF(id) {
+  const c = getCaseById(id);
+  if (!c || !c.lastAnalysis) { showNotif('⚠️ Ca chưa có phân tích', 'warn'); return; }
+  D = c.lastAnalysis;
+  openPrint(true);
+}
+
+function updateCasesCount() {
+  const n = Object.keys(loadCases()).length;
+  const b = document.getElementById('cases-count-badge');
+  if (b) b.textContent = n || '';
+}
+
+// ════════════════════════════════════════════════════════════
+// DASHBOARD — ANALYSIS
+// ════════════════════════════════════════════════════════════
+
+const SYS_REPORT = `Bạn là chuyên gia Công tác Xã hội tại Thảo Đàn Social Service Center TP.HCM.
+Phân tích ghi chép NVXH và trả về JSON hợp lệ DUY NHẤT. Bắt đầu ngay bằng { không có text nào trước.
+Schema:
+{
+  "risk": "Cao|Trung bình|Thấp",
+  "risk_reason": "lý do 1-2 câu",
+  "summary": "tóm tắt 2-3 câu về trẻ và gia đình",
+  "red_flags": ["flag1","flag2",...],
+  "strengths": ["ưu thế1","ưu thế2",...],
+  "needs": ["nhu cầu1","nhu cầu2",...],
+  "suggestions": [{"priority":1,"action":"can thiệp","reason":"lý do"},...],
+  "next_questions": ["câu hỏi cần hỏi tiếp theo1",...],
+  "urgent": true|false,
+  "urgent_reason": "lý do khẩn cấp nếu có"
+}`;
+
+async function runDashboard() {
+  const notes = document.getElementById('dash-notes').value.trim();
+  if (!notes) { showNotif('⚠️ Nhập ghi chép trước', 'warn'); return; }
+  const btn = document.getElementById('btn-analyze');
+  btn.disabled = true; btn.textContent = '⏳ Đang phân tích...';
+  const prog = document.getElementById('dash-prog');
+  prog.style.width = '0'; prog.style.transition = 'width 3s';
+  setTimeout(()=>{ prog.style.width = '85%'; }, 50);
+
+  try {
+    // Step 1: Structured report
+    const reportRes = await fetch(GURL, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+GKEY},
+      body: JSON.stringify({
+        model:'llama-3.3-70b-versatile', temperature:0.3, max_tokens:2000,
+        messages:[{role:'system',content:SYS_REPORT},{role:'user',content:'Ghi chép:\n\n'+notes}]
+      })
+    });
+    const reportData = await reportRes.json();
+    const reportRaw = reportData.choices?.[0]?.message?.content || '{}';
+    let report = {};
+    try { report = robustJSON(reportRaw); } catch(e) { report = {risk:'Không xác định',summary:reportRaw}; }
+
+    prog.style.transition = 'width .3s';
+    prog.style.width = '50%';
+
+    // Step 2: Full form analysis (existing SYS)
+    const formRes = await fetch(GURL, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+GKEY},
+      body: JSON.stringify({
+        model:'llama-3.3-70b-versatile', temperature:0, max_tokens:4096,
+        messages:[{role:'system',content:SYS},{role:'user',content:'Ghi chép NVXH:\n\n'+notes}]
+      })
+    });
+    const formData = await formRes.json();
+    const formRaw = formData.choices?.[0]?.message?.content || '{}';
+    D = robustJSON(formRaw);
+    D._report = report;
+    D._notes = notes;
+    // Verify D has real form data
+    if (!D.co_ban) {
+      console.warn('[ThaoĐàn] Form JSON missing co_ban - API may have returned partial data');
+      D.co_ban = {};
+    }
+
+    prog.style.width = '100%';
+    setTimeout(()=>{ prog.style.width='0'; prog.style.transition='none'; }, 600);
+
+    renderReport(report);
+    // Enable chat + fill forms
+    document.getElementById('chat-input').disabled = false;
+    document.getElementById('btn-send').disabled = false;
+    document.getElementById('btn-fill-forms').disabled = false;
+    // Set chat context
+    chatHistory = [{role:'user',content:'Ghi chép:\n'+notes},{role:'assistant',content:'Đã phân tích. '+JSON.stringify(report)}];
+        // Report rendered by renderReport() above
+    // Mark forms as filled
+    for(let i=0;i<11;i++){
+      const el=document.getElementById('fmi'+i);
+      if(el&&!el.querySelector('.fi-ck')){const c=document.createElement('span');c.className='fi-ck';c.textContent='✓';el.appendChild(c);}
+    }
+    // No auto-save: user must click "Lưu ca" button
+    // Just update header if there's a current case
+    if (curCaseId) { updateHeaderCase(); }
+  } catch(e) {
+    showNotif('❌ Lỗi: '+e.message, 'error');
+    prog.style.width='0';
+  } finally {
+    btn.disabled=false; btn.textContent='🔬 Phân tích & Gợi ý';
+  }
+}
+
+function renderReport(report) {
+  if (!report && D && D._report) report = D._report;
+  if (!report) return;
+
+  const cb = (D && D.co_ban) || {};
+  const gd = (D && D.gia_dinh) || {};
+  const tt = (D && D.tinh_trang) || {};
+  const dg = (D && D.danh_gia) || {};
+  const kh = (D && D.ke_hoach) || {};
+  const ncs = gd.nguoi_cham_soc || {};
+  const hv = (tt && tt.hoc_van) || {};
+  const sk = (tt && tt.suc_khoe) || {};
+  const now = fmtVN(new Date().toISOString());
+  const caseCode = 'CASE-' + new Date().toLocaleDateString('vi-VN').replace(/\//g,'-');
+
+  const riskColor = report.risk==='Cao'?'#dc2626':report.risk==='Trung bình'?'#d97706':'#16a34a';
+  const riskBg    = report.risk==='Cao'?'#fef2f2':report.risk==='Trung bình'?'#fffbeb':'#f0fdf4';
+  const riskIcon  = report.risk==='Cao'?'🔴':report.risk==='Trung bình'?'🟡':'🟢';
+
+  function row(label,val) {
+    const v = (!val||val==='[Cần thu thập thêm]'||val==='//') ? '<span style="color:#bbb;font-style:italic;font-size:11px;">—</span>' : `<span style="color:#111827;">${esc(String(val))}</span>`;
+    return `<tr><td style="padding:6px 10px;font-weight:600;color:#374151;background:#f9fafb;border:1px solid #e5e7eb;width:30%;font-size:11.5px;">${label}</td><td style="padding:6px 10px;border:1px solid #e5e7eb;font-size:12px;">${v}</td></tr>`;
+  }
+  function row2(l1,v1,l2,v2) {
+    const fmt = v => { const cv=clean(String(v||'')); return cv ? `<span style="color:#111827;">${esc(cv)}</span>` : '<span style="color:#bbb;">—</span>'; };
+    return `<tr>
+      <td style="padding:6px 10px;font-weight:600;color:#374151;background:#f9fafb;border:1px solid #e5e7eb;width:20%;font-size:11.5px;white-space:nowrap;">${l1}</td>
+      <td style="padding:6px 10px;border:1px solid #e5e7eb;font-size:12px;width:30%;">${fmt(v1)}</td>
+      <td style="padding:6px 10px;font-weight:600;color:#374151;background:#f9fafb;border:1px solid #e5e7eb;width:20%;font-size:11.5px;white-space:nowrap;">${l2}</td>
+      <td style="padding:6px 10px;border:1px solid #e5e7eb;font-size:12px;width:30%;">${fmt(v2)}</td>
+    </tr>`;
+  }
+  function secHd(icon,num,title,color) {
+    color=color||'#1e3a5f';
+    return `<div style="display:flex;align-items:center;gap:8px;margin:14px 0 8px;padding:6px 10px;background:${color}0d;border-left:4px solid ${color};border-radius:0 6px 6px 0;">
+      <span style="font-size:15px;">${icon}</span>
+      <div style="display:flex;align-items:baseline;gap:6px;">
+        <span style="color:${color};font-size:11px;font-weight:800;">${num}</span>
+        <span style="font-size:13px;font-weight:800;color:${color};">${title}</span>
+      </div>
+    </div>`;
+  }
+  function badge(txt,bg,color) {
+    return `<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;background:${bg};color:${color};margin:2px 3px;">${esc(txt)}</span>`;
+  }
+  function chip(txt,color) {
+    const bg=color+'18';
+    return `<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:600;background:${bg};color:${color};border:1px solid ${color}33;margin:2px 3px;">${esc(txt)}</span>`;
+  }
+
+  let html = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.6;color:#1f2937;">
+
+  <!-- ══ HEADER ══ -->
+  <div style="background:linear-gradient(135deg,#0f2d6b 0%,#1a3f8f 60%,#f07020 100%);border-radius:12px;padding:16px 20px;margin-bottom:16px;color:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:22px;">🌿</div>
+      <div>
+        <div style="font-size:16px;font-weight:900;letter-spacing:.5px;">Báo cáo Quản lý Ca — Thảo Đàn</div>
+        <div style="font-size:11px;opacity:.7;margin-top:2px;">Nguồn: Dữ liệu thủ công · Ngày tạo: ${now}</div>
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:9px;opacity:.55;letter-spacing:1px;text-transform:uppercase;">Mã ca</div>
+      <div style="font-size:14px;font-weight:900;letter-spacing:1.5px;">${caseCode}</div>
+    </div>
+  </div>
+
+  <!-- ══ I. THÔNG TIN CÁ NHÂN & TIẾP NHẬN ══ -->
+  ${secHd('👤','I.','THÔNG TIN CÁ NHÂN & TIẾP NHẬN','#0f2d6b')}
+  ${cb.ho_ten ? `<table style="width:100%;border-collapse:collapse;border-radius:8px;overflow:hidden;margin-bottom:4px;">
+    ${row2('Họ và tên', cb.ho_ten, 'Giới tính', cb.gioi_tinh)}
+    ${row2('Tuổi / Năm sinh', [cf(cb.tuoi),cf(cb.ngay_sinh)].filter(Boolean).join(' / '), 'Quê quán', cb.dia_chi_thuong_tru)}
+    ${row2('Địa chỉ tạm trú', cb.dia_chi_hien_tai, 'Học vấn', [cf(hv.lop)?"Lớp "+cf(hv.lop):"",cf(hv.truong)].filter(Boolean).join(" — ")||clean(hv.bo_hoc?"Đã bỏ lớp "+hv.bo_hoc:""))}
+    ${row2('Ngày tiếp nhận', cb.ngay_tiep_can, 'NV phụ trách', 'NVXH-01')}
+    ${row('Tình trạng cha mẹ', ncs.suc_khoe||(gd.tinh_trang_hon_nhan||''))}
+    ${row('Kinh tế gia đình', gd.kinh_te)}
+    ${row('Người giám hộ', ncs.ho_ten?(ncs.ho_ten+(ncs.nghe_nghiep?' ('+ncs.nghe_nghiep+')':'')):(cb.song_voi||''))}
+    ${row('Mô tả ban đầu', dg.nhan_xet_nvxh)}
+  </table>` : `<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px 16px;margin-bottom:4px;text-align:center;">
+    <div style="font-size:13px;color:#0369a1;margin-bottom:6px;">ℹ️ Chỉ có dữ liệu báo cáo tóm tắt</div>
+    <div style="font-size:12px;color:#0284c7;">Nhấn <strong>🔬 Phân tích & Gợi ý</strong> để lấy thông tin đầy đủ</div>
+  </div>`}
+
+  <!-- ══ II. PHÂN LOẠI HOÀN CẢNH ĐẶC BIỆT (LUẬT TRẺ "—" 2016) ══ -->
+  ${secHd('📋','II.','PHÂN LOẠI HOÀN CẢNH ĐẶC BIỆT (LUẬT TRẺ "—" 2016)','#f07020')}
+  <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:12px 14px;margin-bottom:4px;">
+    <div style="margin-bottom:8px;font-size:11.5px;color:#78350f;">
+      Căn cứ <strong>Điều 10 Luật Trẻ em 2016</strong> — Trẻ em có hoàn cảnh đặc biệt:
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px;">
+      ${(report.red_flags||[]).map(f=>chip(f,'#c2410c')).join('')}
+      ${(!report.red_flags||!report.red_flags.length)?'<span style="color:#9ca3af;font-style:italic;font-size:12px;">Không phát hiện hoàn cảnh đặc biệt rõ ràng</span>':''}
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:#7c2d12;">
+      <strong>Nhóm phân loại:</strong>
+      ${cb.nhom_tre ? `<span style="background:#fef3c7;padding:2px 8px;border-radius:8px;">${esc(cb.nhom_tre)}</span>` : '<span style="color:#9ca3af;font-style:italic;">Cần xác định</span>'}
+    </div>
+  </div>
+
+  <!-- ══ III. ĐÁNH GIÁ RỦI RO ══ -->
+  ${secHd('⚠️','III.','ĐÁNH GIÁ RỦI RO','#dc2626')}
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;">
+    <div style="background:${riskBg};border:1.5px solid ${riskColor}44;border-left:4px solid ${riskColor};border-radius:8px;padding:12px 14px;">
+      <div style="font-size:10px;font-weight:700;color:${riskColor};letter-spacing:.7px;text-transform:uppercase;margin-bottom:6px;">Mức độ nguy cơ tổng thể</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:28px;">${riskIcon}</span>
+        <div>
+          <div style="font-size:18px;font-weight:900;color:${riskColor};">${report.risk||'Chưa xác định'}</div>
+          ${report.urgent?`<div style="font-size:11px;background:#dc2626;color:#fff;padding:2px 8px;border-radius:10px;margin-top:3px;display:inline-block;">⚠️ Khẩn cấp</div>`:''}
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:12px;color:#374151;">${esc(report.risk_reason||'')}</div>
+    </div>
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;">
+      <div style="font-size:10px;font-weight:700;color:#92400e;letter-spacing:.7px;text-transform:uppercase;margin-bottom:6px;">🚩 Red Flags (${(report.red_flags||[]).length})</div>
+      <ul style="margin:0;padding-left:15px;">${(report.red_flags||[]).map(f=>`<li style="font-size:12px;margin:2px 0;color:#78350f;">${esc(f)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic;">Không có</li>'}</ul>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;">
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 14px;">
+      <div style="font-size:10px;font-weight:700;color:#166534;letter-spacing:.7px;text-transform:uppercase;margin-bottom:6px;">💪 Ưu thế & Bảo vệ (${(report.strengths||[]).length})</div>
+      <ul style="margin:0;padding-left:15px;">${(report.strengths||[]).map(s=>`<li style="font-size:12px;margin:2px 0;color:#14532d;">${esc(s)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic;">Chưa xác định</li>'}</ul>
+    </div>
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;">
+      <div style="font-size:10px;font-weight:700;color:#1e40af;letter-spacing:.7px;text-transform:uppercase;margin-bottom:6px;">📌 Nhu cầu (${(report.needs||[]).length})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;">${(report.needs||[]).map(n=>badge(n,'#dbeafe','#1e40af')).join('')||'<span style="color:#9ca3af;font-style:italic;font-size:12px;">Chưa xác định</span>'}</div>
+    </div>
+  </div>
+
+  <!-- ══ IV. KẾ HOẠCH CAN THIỆP ══ -->
+  ${secHd('🎯','IV.','KẾ HOẠCH CAN THIỆP','#7c3aed')}
+  <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:12px 14px;margin-bottom:4px;">
+    ${report.urgent&&report.urgent_reason?`<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:#7f1d1d;"><strong>⚠️ Ưu tiên khẩn cấp:</strong> ${esc(report.urgent_reason)}</div>`:''}
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      ${(report.suggestions||[]).length?[...report.suggestions].sort((a,b)=>(a.priority||9)-(b.priority||9)).map((s,i)=>`
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:8px 10px;background:#fff;border:1px solid #e9d5ff;border-radius:7px;">
+          <div style="background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;margin-top:1px;">${i+1}</div>
+          <div style="flex:1;">
+            <div style="font-weight:700;color:#4c1d95;font-size:13px;">${esc(s.action)}</div>
+            <div style="font-size:12px;color:#6b21a8;margin-top:2px;">${esc(s.reason)}</div>
+          </div>
+        </div>`).join(''):'<div style="color:#9ca3af;font-style:italic;font-size:12px;padding:8px;">Chưa có gợi ý can thiệp</div>'}
+    </div>
+    ${(kh.nhu_cau_ho_tro||[]).filter(n=>n.uu_tien).length?`
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid #e9d5ff;">
+      <div style="font-size:11px;font-weight:700;color:#6b21a8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Mục tiêu QLTH</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;">${(kh.nhu_cau_ho_tro||[]).filter(n=>n.uu_tien).map(n=>badge('P'+n.uu_tien+': '+n.loai,'#ede9fe','#7c3aed')).join('')}</div>
+    </div>`:''}
+  </div>
+
+  <!-- ══ V. PHÂN TÍCH & KHUYẾN NGHỊ ══ -->
+  ${secHd('📊','V.','PHÂN TÍCH & KHUYẾN NGHỊ','#0f766e')}
+  <div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:8px;padding:12px 14px;margin-bottom:4px;">
+    <div style="font-size:13px;color:#134e4a;line-height:1.7;margin-bottom:10px;">${esc(report.summary||dg.nhan_xet_nvxh||'Chưa có phân tích.')}</div>
+    ${report.next_questions?.length?`
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid #99f6e4;">
+      <div style="font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">❓ Câu hỏi cần làm rõ tiếp theo</div>
+      <ol style="margin:0;padding-left:16px;">${report.next_questions.map(q=>`<li style="font-size:12px;margin:3px 0;font-style:italic;color:#134e4a;">${esc(q)}</li>`).join('')}</ol>
+    </div>`:''}
+    <div style="margin-top:10px;padding:8px 12px;background:#ccfbf1;border-radius:6px;font-size:11.5px;color:#0f766e;">
+      <strong>Đề xuất bước tiếp theo:</strong> ${esc(D&&D.de_xuat?D.de_xuat:'Cần thu thập thêm thông tin qua vãng gia.')}
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="text-align:center;padding:12px;color:#9ca3af;font-size:11px;border-top:1px solid #f3f4f6;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:16px;">
+    <span>💬 Hỏi thêm hoặc <strong style="color:#0f2d6b;">yêu cầu chỉnh sửa thông tin</strong></span>
+    <span>·</span>
+    <span>📋 Nhấn <strong style="color:#0f2d6b;">Điền form</strong> để xuất biểu mẫu</span>
+    <span>·</span>
+    <span>💾 <strong style="color:#0f2d6b;">Lưu ca</strong> để tra cứu sau</span>
+  </div>
+  </div>`;
+
+  // Render into chat panel
+  const chatEl = document.getElementById('chat-msgs');
+  if (chatEl) {
+    chatEl.innerHTML = `<div style="padding:8px 4px;width:100%;box-sizing:border-box;">${html}</div>`;
+    chatEl.scrollTop = 0;
+  }
+
+  // Mini summary left
+  const reportEl = document.getElementById('report-area');
+  if (reportEl) {
+    reportEl.innerHTML = `<div style="padding:10px 12px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;">
+      <div style="font-weight:700;color:#0f2d6b;margin-bottom:6px;">📋 Tóm tắt nhanh</div>
+      <div style="margin-bottom:5px;">${riskIcon} <span style="padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;background:${riskBg};color:${riskColor};">${report.risk||'?'}</span></div>
+      <div style="color:#374151;margin-top:6px;font-size:11.5px;">${esc((report.summary||'').substring(0,140))}${(report.summary||'').length>140?'...':''}</div>
+      <div style="margin-top:8px;padding-top:6px;border-top:1px solid #f3f4f6;font-size:10.5px;color:#9ca3af;">🚩${(report.red_flags||[]).length} · 💪${(report.strengths||[]).length} · 🎯${(report.suggestions||[]).length}</div>
+    </div>`;
+  }
+}
+
+function fillFormsFromDash() {
+  if (!D) return;
+  switchMain('forms');
+  setTimeout(()=>showFormTab(0), 100);
+}
+
+// ════════════════════════════════════════════════════════════
+// CHAT
+// ════════════════════════════════════════════════════════════
+
+const SYS_CHAT = `Bạn là chuyên gia CTXH tại Thảo Đàn TP.HCM. Trả lời ngắn gọn, thực tế, bằng tiếng Việt. Dùng **bold** để nhấn mạnh. Tập trung vào quyền lợi trẻ em và thực hành CTXH. Nếu người dùng muốn chỉnh sửa thông tin trong báo cáo, hãy xác nhận sửa đổi cụ thể và gợi ý họ nhấn 'Phân tích & Gợi ý' lại với ghi chép đã cập nhật.`;
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = ''; input.style.height='38px';
+  const el = document.getElementById('chat-msgs');
+  // Add user bubble
+  el.innerHTML += `<div class="chat-bubble cb-user">${esc(msg)}</div>`;
+  // Typing indicator
+  const typId = 'typ_'+Date.now();
+  el.innerHTML += `<div class="chat-bubble cb-ai" id="${typId}"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`;
+  el.scrollTop = el.scrollHeight;
+  document.getElementById('btn-send').disabled = true;
+
+  chatHistory.push({role:'user',content:msg});
+
+  const context = D ? `\n\nThông tin ca:\n${JSON.stringify({report:D._report,co_ban:D.co_ban,danh_gia:D.danh_gia})}` : '';
+  try {
+    const res = await fetch(GURL, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+GKEY},
+      body: JSON.stringify({
+        model:'llama-3.3-70b-versatile', temperature:0.4, max_tokens:1000,
+        messages:[
+          {role:'system',content:SYS_CHAT+context},
+          ...chatHistory.slice(-10)
+        ]
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || 'Không có phản hồi.';
+    chatHistory.push({role:'assistant',content:reply});
+    const typEl = document.getElementById(typId);
+    if (typEl) typEl.innerHTML = '<strong>AI Thảo Đàn:</strong> ' + formatMd(reply);
+  } catch(e) {
+    const typEl = document.getElementById(typId);
+    if (typEl) typEl.innerHTML = '❌ Lỗi: '+e.message;
+  } finally {
+    document.getElementById('btn-send').disabled = false;
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
+function chatKeydown(e) {
+  if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+}
+
+function formatMd(txt) {
+  return esc(txt).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+}
+
+// ════════════════════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════════════════════
+
+function switchMain(tab) {
+  curMain = tab;
+  ['dash','forms','cases'].forEach(t=>{
+    document.getElementById('panel-'+t)?.classList.toggle('active', t===tab);
+    document.getElementById('mnav-'+t)?.classList.toggle('active', t===tab);
+  });
+  if (tab==='cases') { renderCaseList(); }
+}
+
+// ════════════════════════════════════════════════════════════
+// FORMS TAB
+// ════════════════════════════════════════════════════════════
+
+let curFormTab = 0;
+
+function showFormTab(idx) {
+  curFormTab = idx; curTab = idx;
+  // Update sidebar active state
+  document.querySelectorAll('.form-item').forEach((el,i)=>el.classList.toggle('active',i===idx));
+  const fv = document.getElementById('fv');
+  if (!fv) return;
+  const hasFormData = D && D.co_ban; // full analysis required
+  if (!hasFormData) {
+    const msg = D && D._report
+      ? '<div style="padding:30px;text-align:center;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;margin:20px;"><div style="font-size:28px;margin-bottom:8px;">⚠️</div><div style="font-weight:700;font-size:14px;margin-bottom:6px;">Chỉ có báo cáo tóm tắt</div><div style="font-size:12px;">Nhấn <strong>Phân tích & Gợi ý</strong> lại trong Dashboard để điền form đầy đủ</div></div>'
+      : '<div style="padding:40px;text-align:center;color:#9ca3af;"><div style="font-size:36px;margin-bottom:12px;">📋</div><div style="font-weight:700;margin-bottom:6px;">Chưa có dữ liệu</div><div style="font-size:12px;">Phân tích ghi chép trong tab <strong>Dashboard</strong> trước</div></div>';
+    fv.innerHTML = msg;
+    fv.style.display='block';
+    return;
+  }
+  // Ensure forms panel is visible
+  const panel = document.getElementById('panel-forms');
+  if (panel && !panel.classList.contains('active')) {
+    switchMain('forms');
+    // Re-fix heights after panel becomes visible, then re-render
+    setTimeout(() => { fixHeights(); showTab(idx); fv.style.display='block'; }, 50);
+    return;
+  }
+  // Update FEC context label
+  const fecCtx = document.getElementById('fec-context');
+  if (fecCtx) {
+    const formNames = ['Hồ sơ XH','Tiếp cận','Vãng gia','ĐG KCấp','ĐG Nhu cầu','KH Can thiệp','Tiến độ','Cập nhật','Chuyển gửi','Kết thúc','Báo cáo'];
+    fecCtx.textContent = '— ' + (formNames[idx] || 'Form ' + idx);
+  }
+  // showTab writes to #fv
+  try {
+    showTab(idx);
+    fv.style.display='block';
+    // Scroll to top
+    const fp = document.getElementById('form-preview-wrap');
+    if (fp) fp.scrollTop = 0;
+  } catch(e) {
+    console.error('[ThaoĐàn] showTab error form', idx, e);
+    fv.innerHTML = '<div style="padding:20px;color:#dc2626;font-size:13px;">⚠️ Lỗi render form ' + idx + ': ' + e.message + '</div>';
+    fv.style.display = 'block';
+  }
+}
+
+function selectStage(stage) {
+  const stages = {
+    'tiep-can':[0,1], 'vang-gia':[2,3,4], 'ke-hoach':[5,6,7], 'ket-thuc':[8,9],
+    'all':[0,1,2,3,4,5,6,7,8,9,10], 'none':[]
+  };
+  const selected = stages[stage] || [];
+  for(let i=0;i<11;i++) {
+    const chk = document.getElementById('fchk'+i);
+    if (chk) chk.checked = selected.includes(i);
+  }
+}
+
+function quickExportDialog(currentIdx) {
+  // Show a simple overlay to pick forms to export
+  const overlay = document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  const box = document.createElement('div');
+  box.style.cssText='background:#fff;border-radius:10px;padding:20px 24px;max-width:420px;width:90%;font-family:Segoe UI,sans-serif;';
+  const stages=[
+    {label:'📌 Tiếp cận ban đầu',forms:[0,1]},
+    {label:'🏠 Vãng gia & Đánh giá',forms:[2,3,4]},
+    {label:'🎯 Kế hoạch & Tiến trình',forms:[5,6,7]},
+    {label:'✅ Chuyển gửi & Kết thúc',forms:[8,9]},
+    {label:'📑 Báo cáo tổng hợp',forms:[10]},
+  ];
+  const FTV2=["Hồ sơ xã hội","Phiếu tiếp cận","Phúc trình vãng gia","ĐG khẩn cấp","ĐG nhu cầu","Kế hoạch can thiệp","Tiến độ","Cập nhật","Chuyển gửi","Kết thúc ca","Báo cáo QLTH"];
+  let html='<div style="font-size:15px;font-weight:800;color:#0f2d6b;margin-bottom:14px;">📄 Chọn form để tải (.docx)</div>';
+  stages.forEach(s=>{
+    html+=`<div style="margin-bottom:8px;"><div style="font-size:11px;font-weight:700;color:#f07020;margin-bottom:4px;">${s.label}</div><div style="display:flex;flex-wrap:wrap;gap:6px;">`;
+    s.forms.forEach(fi=>{
+      html+=`<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;background:#f8fafc;border:1px solid #e2e8f0;padding:3px 8px;border-radius:5px;"><input type="checkbox" data-fi="${fi}" checked style="accent-color:#0f2d6b;"> ${FTV2[fi]}</label>`;
+    });
+    html+='</div></div>';
+  });
+  html+=`<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+    <button onclick="this.closest('[data-qe]').remove()" style="background:#f1f5f9;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:12px;">Hủy</button>
+    <button id="qe-dl-btn" style="background:#0f2d6b;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;">⬇ Tải xuống</button>
+  </div>`;
+  box.setAttribute('data-qe','1');
+  box.innerHTML=html;
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+  box.querySelector('#qe-dl-btn').onclick=async function(){
+    const checked=[...box.querySelectorAll('input[data-fi]:checked')].map(el=>parseInt(el.dataset.fi));
+    if(!checked.length){alert('Chưa chọn form nào');return;}
+    overlay.remove();
+    let lib;try{lib=await loadDocxLib();}catch(e){showNotif('❌ '+e.message,'error');return;}
+    const imgs=await Promise.all([fetchImg(LOGO_URL),fetchImg(FOOTER_URL)]);
+    showNotif('📄 Đang tạo '+checked.length+' file...');
+    for(const i of checked){
+      try{
+        const doc=await buildDocxDoc(i,imgs[0],imgs[1]);
+        const blob=await lib.Packer.toBlob(doc);
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');a.href=url;a.download='ThaoDan_'+FF[i]+'.docx';a.click();
+        URL.revokeObjectURL(url);
+        await new Promise(r=>setTimeout(r,350));
+      }catch(e){console.error(e);}
+    }
+    showNotif('✅ Đã xuất '+checked.length+' form');
+  };
+}
+async function dlDocxSelected() {
+  if (!D) { showNotif('⚠️ Chưa có dữ liệu', 'warn'); return; }
+  const selected = [];
+  for(let i=0;i<11;i++) {
+    const chk = document.getElementById('fchk'+i);
+    if (chk?.checked) selected.push(i);
+  }
+  if (!selected.length) { showNotif('⚠️ Chưa chọn form nào', 'warn'); return; }
+  let lib;
+  try { lib = await loadDocxLib(); } catch(e) { showNotif('❌ '+e.message,'error'); return; }
+  const imgs = await Promise.all([fetchImg(LOGO_URL), fetchImg(FOOTER_URL)]);
+  showNotif('📄 Đang tạo '+selected.length+' file...');
+  for(const i of selected) {
+    try {
+      const doc = await buildDocxDoc(i, imgs[0], imgs[1]);
+      const blob = await lib.Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='ThaoDan_'+FF[i]+'.docx'; a.click();
+      URL.revokeObjectURL(url);
+      await new Promise(r=>setTimeout(r,350));
+    } catch(e) { console.error('Form '+i+':', e.message); }
+  }
+  showNotif('✅ Đã xuất '+selected.length+' form');
+}
+
+// ════════════════════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════════════════════
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+let notifTimer = null;
+function showNotif(msg, type) {
+  const el = document.getElementById('err');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.background = type==='error'?'#fff5f5':type==='warn'?'#fffbeb':'#f0fdf4';
+  el.style.borderColor = type==='error'?'#fecaca':type==='warn'?'#fde68a':'#bbf7d0';
+  el.style.color = type==='error'?'#b91c1c':type==='warn'?'#92400e':'#166534';
+  el.style.borderLeft = '3px solid '+(type==='error'?'#e53e3e':type==='warn'?'#f59e0b':'#10b981');
+  if (notifTimer) clearTimeout(notifTimer);
+  notifTimer = setTimeout(()=>{ el.style.display='none'; }, 3500);
+}
+
+// ════════════════════════════════════════════════════════════
+// CHAR COUNTER
+// ════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  const ta = document.getElementById('dash-notes');
+  if (ta) ta.addEventListener('input', function(e) {
+    document.getElementById('dash-cc').textContent = e.target.value.length + ' ký tự';
+  });
+  // Fix heights dynamically
+  function fixHeights() {
+    const hdr = document.querySelector('.hdr');
+    const nav = document.querySelector('.main-nav');
+    const hdrH = hdr ? hdr.offsetHeight : 60;
+    const navH = nav ? nav.offsetHeight : 44;
+    const h = window.innerHeight - hdrH - navH;
+    const w = document.documentElement.clientWidth;
+    document.querySelectorAll('.tab-panel').forEach(el => {
+      el.style.height = h + 'px';
+      el.style.width = w + 'px';
+      el.style.maxHeight = h + 'px';
+      el.style.overflow = 'hidden';
+    });
+    // Explicitly set child heights for forms tab
+    const formsTab = document.querySelector('.forms-tab');
+    if (formsTab) formsTab.style.height = h + 'px';
+    const formsContent = document.querySelector('.forms-content');  
+    if (formsContent) formsContent.style.height = h + 'px';
+    const formPreview = document.getElementById('form-preview-wrap');
+    if (formPreview) formPreview.style.height = (h - 36) + 'px'; // 36 = fec header
+    if (hdr) hdr.style.width = w + 'px';
+    if (nav) nav.style.width = w + 'px';
+  }
+  fixHeights();
+  window.addEventListener('resize', fixHeights);
+  // Load storage then render
+  initStorage().then(() => {
+    updateCasesCount();
+    renderCaseList();
+    // Show last case in header but DON'T set D (user must analyze fresh or open case)
+    const cases = loadCases();
+    const caseList = Object.values(cases).sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
+    if (caseList.length > 0) {
+      curCaseId = caseList[0].id;
+    }
+    updateHeaderCase();
+    fixHeights();
+  });
+});
+
+
+// ═══ v11 CORE ═══
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function robustJSON(raw){
+  let t=(raw||"").trim();
+  const fence="```";
+  t=t.replace(new RegExp("^"+fence+"json\\s*","im"),"").replace(new RegExp("\\s*"+fence+"\\s*$","im"),"");
+  t=t.replace(new RegExp("^"+fence+"\\s*","im"),"").replace(new RegExp("\\s*"+fence+"\\s*$","im"),"").trim();
+  try{return JSON.parse(t);}catch(e){}
+  const s=t.indexOf("{");
+  if(s<0)throw new Error("Không tìm thấy JSON");
+  let depth=0,inStr=false,esc=false;
+  for(let i=s;i<t.length;i++){
+    const c=t[i];
+    if(esc){esc=false;continue;}
+    if(c==="\\"&&inStr){esc=true;continue;}
+    if(c==='"'){inStr=!inStr;continue;}
+    if(inStr)continue;
+    if(c==="{")depth++;
+    else if(c==="}"&&--depth===0){try{return JSON.parse(t.slice(s,i+1));}catch(e){throw new Error("JSON lỗi: "+e.message);}}
+  }
+  throw new Error("JSON không hoàn chỉnh");
+}
+
+const SYS='Ban la chuyen gia CTXH Thao Dan Social Service Center TP.HCM. Phan tich ghi chep NVXH. Tra ve JSON hop le duy nhat, KHONG them bat ky text nao truoc hoac sau JSON. Bat dau ngay bang dau { va ket thuc bang dau }. QUAN TRONG: Moi truong ngay thang nam phai dinh dang dd/mm/yyyy (vi du: 21/10/2010). Khong dung dinh dang HH:MM hay ISO.\nNHU CAU=khach quan boi canh. YEU CAU=chu quan TC/GD. Nhan uu the truoc van de. Thieu->"[Cần thu thập thêm]". Khong bia.\n'+
+'{"co_ban":{"ho_ten":"","gioi_tinh":"","ngay_sinh":"","tuoi":"","dia_chi_thuong_tru":"","dia_chi_hien_tai":"","sdt_tre":"","sdt_nguoi_than":"","song_voi":"","nhom_tre":"","ngay_tiep_can":"","noi_tiep_can":"","nguoi_tiep_can":""},"gia_dinh":{"nguoi_cham_soc":{"ho_ten":"","quan_he":"","ngay_sinh":"","nghe_nghiep":"","sdt":"","suc_khoe":""},"thanh_vien":[{"ho_ten":"","quan_he":"","nam_sinh":"","suc_khoe":"","nghe_nghiep":"","ghi_chu":""}],"hoan_canh":"","loai_hinh":"","tinh_trang_hon_nhan":"","bau_khi":"","moi_quan_he_voi_tre":"","kinh_te":"","nha_o":"","cong_dong":""},"tinh_trang":{"cong_viec":"","thoi_gian_lam_viec":"","bat_dau_lam_tu":"","giay_khai_sinh":{"co":"","ly_do":""},"thuong_tru":{"co":"","ly_do":""},"cccd":{"co":"","ly_do":""},"hoc_van":{"lop":"","truong":"","ket_qua":"","bo_hoc":"","nam_bo_hoc":"","ly_do_bo_hoc":"","hoc_nghe":"","so_thich":"","uoc_mo":""},"suc_khoe":{"tinh_trang":"","bhyt":"","can_nang":"","chieu_cao":"","benh_trong_6t":""},"tam_ly":{"tang_dong":"Không","bi_quan":"Không","tu_ton_thuong":"Không","mo_ta":""}},"danh_gia":{"van_de_the_chat":"","van_de_tam_ly":"","van_de_nhan_thuc":"","nhu_cau_the_chat":"","nhu_cau_tam_ly":"","nhu_cau_nhan_thuc":"","yeu_cau_tre":"","yeu_cau_gia_dinh":"","uu_the_tre":"","uu_the_gia_dinh":"","nguon_luc_tre":"","nguy_co":"","muc_khan_cap":"Không khẩn cấp","yeu_to_bao_ve":"","nhan_xet_nvxh":""},"vang_gia":{"nguoi_tiep_xuc":"","quan_he_voi_tre":"","sdt":"","ngay_vang_gia":"","lan_vang_gia":"","co_gap_tc":"","muc_dich":"","quan_sat_mt":"","loai_hinh_gd":"","bau_khi_gd":"","tinh_trang_hn":"","quan_he_tre_gd":"","cach_tuong_tac":"","van_de_giao_duc":"","van_de_suc_khoe":"","van_de_kinh_te":"","van_de_hanh_chinh":"","van_de_cong_dong":"","van_de_khac":"","danh_gia_chung":"","phat_hien_khac":""},"ke_hoach":{"bat_dau_case":"","thoi_gian_kh":"","nhu_cau_ho_tro":[{"loai":"Học bổng","uu_tien":"","muc_tieu":""},{"loai":"Học nghề/Việc làm","uu_tien":"","muc_tieu":""},{"loai":"Chăm sóc sức khỏe","uu_tien":"","muc_tieu":""},{"loai":"Nâng cao kỹ năng sống","uu_tien":"","muc_tieu":""},{"loai":"Quan hệ GĐ và XH","uu_tien":"","muc_tieu":""},{"loai":"Tâm lý","uu_tien":"","muc_tieu":""},{"loai":"Hòa nhập cộng đồng","uu_tien":"","muc_tieu":""},{"loai":"Nhu cầu khác","uu_tien":"","muc_tieu":""}],"hoat_dong":[{"muc_tieu_so":"","noi_dung":"","thoi_gian":"","nguon_luc":"","nguon_luc_gd":"","nguon_luc_cs":""}],"nguon_luc_ket_noi":"","xem_xet":[""]},"nguon_luc_xa_hoi":{"quan_phuong":"","ton_giao":"","to_chuc":"","duong_di":""},"cap_nhat":[{"thoi_gian":"","van_de":"","muc_tieu":"","ket_qua":""}],"tien_trinh":{"nhan_xet":"","de_xuat_tiep_theo":""},"chuyen_gui":{"nguoi_chuyen":"","chuc_danh":"","don_vi_chuyen":"","sdt_chuyen":"","don_vi_nhan":"","nguoi_nhan":"","dia_chi_nhan":"","sdt_nhan":""},"ket_thuc":{"nguoi_nuoi_duong":"","quan_he":"","nam_sinh_nd":"","nghe_nghiep_nd":"","sdt_nd":"","nvxh_phu_trach":"","sdt_nvxh":"","ket_qua_dat":"","ket_qua_chua_dat":"","ly_do":"","ke_hoach_theo_doi":""},"timeline":"","de_xuat":""}';
+
+const MSGS=["Kết nối Groq LLaMA 3.3...","Phân tích bối cảnh gia đình...","Nhận diện ưu thế trẻ...","Phân tích nhu cầu...","Đánh giá nguy cơ...","Xây dựng kế hoạch...","Điền 11 biểu mẫu Thảo Đàn..."];
+
+async function runAI(){
+  const notes=document.getElementById("notes").value.trim();
+  if(!notes)return;
+  const btn=document.getElementById("btn-go"),ico=document.getElementById("bico");
+  btn.disabled=true;ico.className="spin";
+  document.getElementById("err").style.display="none";
+  const prog=document.getElementById("prog");prog.style.display="flex";
+  const pfill=document.getElementById("pfill"),ptxt=document.getElementById("ptxt");
+  let mi=0;
+  const timer=setInterval(function(){pfill.style.width=Math.min(92,++mi*14)+"%";ptxt.textContent=MSGS[Math.min(mi,MSGS.length-1)];},600);
+  try{
+    const res=await fetch(GURL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+GKEY},
+      body:JSON.stringify({model:"llama-3.3-70b-versatile",temperature:0,max_tokens:4096,
+        messages:[{role:"system",content:SYS},{role:"user",content:"Ghi chep NVXH:\n\n"+notes}]})});
+    clearInterval(timer);pfill.style.width="100%";ptxt.textContent="Hoàn tất!";
+    const result=await res.json();
+    if(!res.ok)throw new Error((result.error&&result.error.message)||"Groq loi "+res.status);
+    D=robustJSON((result.choices&&result.choices[0]&&result.choices[0].message&&result.choices[0].message.content)||"");
+    setTimeout(function(){prog.style.display="none";},800);
+    for(let i=0;i<11;i++){
+      const el=document.getElementById("sbi"+i);
+      if(el&&!el.querySelector(".sb-ck")){const c=document.createElement("span");c.className="sb-ck";c.textContent="v";el.appendChild(c);}
+    }
+    document.getElementById("es").style.display="none";
+    document.getElementById("fv").style.display="block";
+    showTab(0);
+  }catch(e){
+    clearInterval(timer);prog.style.display="none";
+    const er=document.getElementById("err");er.textContent="Lỗi: "+e.message;er.style.display="block";
+  }finally{btn.disabled=false;ico.className="";ico.textContent=">";}
+}
+
+function clean(v){
+  if(!v) return '';
+  const s=String(v);
+  // Remove placeholder anywhere in string
+  let r=s.replace(/\[Cần thu thập thêm\]/gi,'').replace(/\/\//g,'');
+  // Remove orphan separators: "Lớp —", "Lớp /", "— Trường", etc.
+  r=r.replace(/\s*[—\-\/|]\s*[—\-\/|]?\s*/g,' ');
+  // Remove trailing/leading separators and whitespace  
+  r=r.replace(/^[\s—\-\/|]+|[\s—\-\/|]+$/g,'').replace(/\s+/g,' ').trim();
+  // If only prefix words remain with no real value (e.g. "Lớp" or "Năm"), clear
+  if(/^(Lớp|Lop|Năm|Nam|Trường|Truong|Tại)\s*$/i.test(r)) return '';
+  return r;
+}
+// cf: clean a single field value (returns '' if placeholder/empty)
+function cf(v){
+  const s=String(v||'');
+  if(!s||s.includes('[Cần thu thập thêm]')||s==='//') return '';
+  return s.trim();
+}
+function fmtDateUI(v){
+  if(!v||typeof v!=="string")return v;
+  v=v.trim();
+  // Already formatted dd/mm/yyyy
+  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v))return v;
+  // ISO: 2026-03-23
+  let m=v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m)return m[3].padStart(2,"0")+"/"+m[2].padStart(2,"0")+"/"+m[1];
+  // yyyy/mm/dd
+  m=v.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+  if(m)return m[3].padStart(2,"0")+"/"+m[2].padStart(2,"0")+"/"+m[1];
+  // dd.mm.yyyy or dd-mm-yyyy
+  m=v.match(/^(\d{1,2})[.\-](\d{1,2})[.\-](\d{4})$/);
+  if(m)return m[1].padStart(2,"0")+"/"+m[2].padStart(2,"0")+"/"+m[3];
+  // dd mm yyyy (spaces)
+  m=v.match(/^(\d{1,2})\s+(\d{1,2})\s+(\d{4})$/);
+  if(m)return m[1].padStart(2,"0")+"/"+m[2].padStart(2,"0")+"/"+m[3];
+  // Handle "23/03/2026" already in string but with extra content
+  m=v.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+  if(m)return m[1].padStart(2,"0")+"/"+m[2].padStart(2,"0")+"/"+m[3];
+  m=v.match(/^(\d{1,2}):(\d{2}):(\d{4})$/);
+  if(m)return m[1].padStart(2,"0")+"/"+m[2]+"/"+m[3];
+  m=v.match(/^(\d{1,2}):(\d{2})$/);
+  if(m&&parseInt(m[1])<=31&&parseInt(m[2])<=12)return m[1].padStart(2,"0")+"/"+m[2]+" (cần bổ sung năm)";
+  return v;
+}
+function F(lbl,val,ic){
+  ic=ic||"-";
+  const raw0 = val===undefined||val===null||val==="undefined"||val==="null" ? "" : String(val);
+  const s=fmtDateUI(clean(raw0));
+  const ok=s&&s.trim();const wo=false;
+  return '<div class="fl"><div class="fl-ico">'+ic+'</div><div class="fl-bd"><div class="fl-lb">'+lbl+'</div><div class="fl-vl '+(wo?"wo":ok?"ok":"no")+'">'+(s||"—")+"</div></div></div>";
+}
+function Sec(ttl,id,body,ic){
+  ic=ic||"#";
+  return '<div class="sec"><div class="sec-hd"><div class="sec-hl"><span>'+ic+"</span>"+ttl+'</div><button class="btn-cp" onclick="cp(\''+id+'\')">Copy</button></div><div class="sec-bd" id="'+id+'">'+body+"</div></div>";
+}
+function Dv(t){return '<div class="dv">'+t+"</div>";}
+function TBL(hs,rows){
+  return "<table class=\"tbl\"><thead><tr>"+hs.map(function(h){return"<th>"+h+"</th>";}).join("")+"</tr></thead><tbody>"+
+    rows.map(function(r){return"<tr>"+r.map(function(c){
+      const cv=clean(String(c||''));
+      return"<td>"+(cv||"—")+"</td>";
+    }).join("")+"</tr>";}).join("")+"</tbody></table>";
+}
+
+function showTab(idx){
+  curTab=idx;
+  // Update both old (sbi) and new (fmi) sidebar items
+  for(let i=0;i<11;i++){
+    const e=document.getElementById("sbi"+i);if(e)e.className="sbi"+(i===idx?" active":"");
+    const f=document.getElementById("fmi"+i);if(f)f.classList.toggle("active",i===idx);
+  }
+  if(!D||!D.co_ban){
+    document.getElementById("fv").innerHTML='<div style="padding:40px;text-align:center;color:#9ca3af;"><div style="font-size:36px;margin-bottom:12px;">📋</div><div style="font-weight:700;margin-bottom:6px;">Không có dữ liệu form</div><div style="font-size:12px;">Vui lòng phân tích lại trong tab <strong>Dashboard</strong></div></div>';
+    return;
+  }
+  const cb=D.co_ban||{},gd=D.gia_dinh||{},tt=D.tinh_trang||{},dg=D.danh_gia||{},vg=D.vang_gia||{},kh=D.ke_hoach||{},ktu=D.ket_thuc||{};
+  const ncs=(gd&&gd.nguoi_cham_soc)||{};
+  const hv=(tt&&tt.hoc_van)||{};const sk=(tt&&tt.suc_khoe)||{};const tl=(tt&&tt.tam_ly)||{};
+  const gks=(tt&&tt.giay_khai_sinh)||{};const tr=(tt&&tt.thuong_tru)||{};const cc=(tt&&tt.cccd)||{};
+  const nlxh=D.nguon_luc_xa_hoi||{};const cg=D.chuyen_gui||{};
+  const mo=new Date().getMonth()+1,yr=new Date().getFullYear();
+  let h='<div class="fv-top"><div><div class="fv-ttl">'+FTV[idx]+'</div><div class="fv-meta">Mã hồ sơ: DADH2025/00001 | Số TT: TĐ-00020 | Tháng '+mo+"/"+yr+'</div><span class="fv-badge">Groq LLaMA 3.3 — AI Thảo Đàn</span></div>'
+    +'<div class="acts">'
+    +'<button class="btn-dx" id="btn-dx'+idx+'" onclick="dlDocx('+idx+')"><span id="dx-ico'+idx+'">.docx</span> Tải form này</button>'
+    +'<button class="btn-dxa" onclick="quickExportDialog('+idx+')">☑ Chọn form xuất</button></div></div>';
+
+  if(idx===0){
+    h+=Sec("A. Thông tin trẻ","s0a",
+      F("Ngày tiếp cận đầu tiên",cb.ngay_tiep_can,">")+F("Họ tên trẻ",cb.ho_ten,">")+F("Giới tính",cb.gioi_tinh)+F("Ngày/tháng/năm sinh",cb.ngay_sinh)+F("Tuổi",cb.tuoi)+
+      F("SĐT trẻ",cb.sdt_tre)+F("SĐT người thân",cb.sdt_nguoi_than)+F("Địa chỉ thường trú",cb.dia_chi_thuong_tru)+F("Địa chỉ hiện tại",cb.dia_chi_hien_tai)+
+      F("Sống với",cb.song_voi)+F("Nhóm trẻ",cb.nhom_tre));
+    const tvR=(gd.thanh_vien||[]).map(function(tv){return[tv.ho_ten,tv.quan_he,tv.nam_sinh,tv.suc_khoe,tv.nghe_nghiep,tv.ghi_chu];});
+    h+=Sec("B. Thông tin gia đình trẻ","s0b",
+      Dv("Người chăm sóc chính")+F("Họ tên",ncs.ho_ten)+F("Quan hệ",ncs.quan_he)+F("Ngày sinh",ncs.ngay_sinh)+F("Điện thoại",ncs.sdt)+F("Nghề nghiệp",ncs.nghe_nghiep)+F("Sức khỏe",ncs.suc_khoe)+
+      Dv("Gia đình (cha/mẹ, anh/chị/em và người sống cùng)")+TBL(["Họ và tên","Quan hệ với trẻ","Năm sinh","Tình trạng SK","Nghề nghiệp","Ghi chú"],tvR)+
+      Dv("Hoàn cảnh gia đình")+F("Kinh tế / Nhà ở",[gd.kinh_te,gd.nha_o].filter(v=>v&&v!=="[Cần thu thập thêm]").join(" | ")||"")+F("Hoàn cảnh gia đình",gd.hoan_canh));
+    h+=Sec("C. Tình trạng của trẻ","s0c",
+      Dv("Lao động")+F("Công việc hiện tại",tt.cong_viec)+F("Thời gian làm (h/ngày)",tt.thoi_gian_lam_viec)+F("Bắt đầu từ năm",tt.bat_dau_lam_tu)+
+      Dv("Giấy tờ pháp lý")+F("Giấy khai sinh",[cf(gks.co),cf(gks.ly_do)].filter(Boolean).join(" — "))+F("Đăng ký thường trú",[cf(tr.co),cf(tr.ly_do)].filter(Boolean).join(" — "))+F("Căn cước công dân",[cf(cc.co),cf(cc.ly_do)].filter(Boolean).join(" — "))+
+      Dv("Giáo dục")+F("Sở thích / Năng khiếu",hv.so_thich)+F("Đang học lớp / Trường",[cf(hv.lop)?"Lớp "+cf(hv.lop):"",cf(hv.truong)].filter(Boolean).join(" — "))+F("Kết quả học tập",hv.ket_qua)+
+      F("Đã bỏ học",[cf(hv.bo_hoc)?"Lớp "+cf(hv.bo_hoc):"",cf(hv.nam_bo_hoc)?"Năm "+cf(hv.nam_bo_hoc):""].filter(Boolean).join(" — "))+F("Lý do bỏ học",hv.ly_do_bo_hoc)+F("Học nghề",hv.hoc_nghe)+F("Ước mơ nghề nghiệp",hv.uoc_mo)+
+      Dv("Sức khỏe")+F("Tình trạng SK",sk.tinh_trang)+F("BHYT",sk.bhyt)+F("Cân nặng / Chiều cao",(sk.can_nang||sk.chieu_cao)?(((sk.can_nang||"?")+"kg / "+(sk.chieu_cao||"?")+"cm")):"")+F("Bệnh 6 tháng qua",sk.benh_trong_6t)+
+      Dv("Tâm lý - xã hội")+F("Tăng động / Quấy phá",tl.tang_dong)+F("Bi quan / Mất niềm tin",tl.bi_quan)+F("Tự làm tổn thương",tl.tu_ton_thuong)+F("Mô tả tâm lý",tl.mo_ta)+
+      Dv("Nhận xét NVXH & Đề xuất")+F("Nhận xét",dg.nhan_xet_nvxh)+F("Nguồn lực quận/phường",nlxh.quan_phuong)+F("Nhà thờ / Chùa",nlxh.ton_giao)+F("Tổ chức / Ân nhân",nlxh.to_chuc)+F("Đường đi đến nhà trẻ",nlxh.duong_di));
+  }else if(idx===1){
+    h+=Sec("A. Thông tin trẻ","s1a",
+      F("Họ tên",cb.ho_ten)+F("Giới tính",cb.gioi_tinh)+F("Ngày sinh",cb.ngay_sinh)+F("Tuổi",cb.tuoi)+
+      F("SĐT trẻ",cb.sdt_tre)+F("SĐT người thân",cb.sdt_nguoi_than)+F("Địa chỉ thường trú",cb.dia_chi_thuong_tru)+F("Địa chỉ hiện tại",cb.dia_chi_hien_tai)+
+      F("Sống với",cb.song_voi)+F("Nhóm trẻ",cb.nhom_tre)+
+      Dv("Giấy tờ tùy thân")+F("Giấy khai sinh",[cf(gks.co),cf(gks.ly_do)].filter(Boolean).join(" — "))+F("Thường trú",[cf(tr.co),cf(tr.ly_do)].filter(Boolean).join(" — "))+F("CCCD",[cf(cc.co),cf(cc.ly_do)].filter(Boolean).join(" — "))+
+      Dv("Học vấn")+F("Lớp / Trường",[cf(hv.lop)?"Lớp "+cf(hv.lop):"",cf(hv.truong)].filter(Boolean).join(" — "))+F("Đã bỏ học",[cf(hv.bo_hoc)?"Lớp "+cf(hv.bo_hoc):"",cf(hv.nam_bo_hoc)?"Năm "+cf(hv.nam_bo_hoc):""].filter(Boolean).join(" — "))+F("Lý do bỏ học",hv.ly_do_bo_hoc)+F("Học nghề",hv.hoc_nghe)+
+      F("Người chăm sóc / SĐT",[cf(ncs.ho_ten),cf(ncs.sdt)].filter(Boolean).join(" — "))+F("Nam sinh / Nghề nghiệp / Quan hệ",[ncs.ngay_sinh,ncs.nghe_nghiep,ncs.quan_he].filter(v=>v&&v!=="[Cần thu thập thêm]").join(" | ")||""));
+    h+=Sec("B. Hoàn cảnh gia đình","s1b",F("Hoàn cảnh",gd.hoan_canh)+F("Bầu khí gia đình",gd.bau_khi));
+    h+=Sec("C. Tình trạng hiện tại","s1c",F("Công việc kiếm sống",tt.cong_viec)+F("Sức khỏe the chat",sk.tinh_trang)+F("Tinh thần / Thái độ",tl.mo_ta)+F("Vấn đề / Nguy cơ",dg.nguy_co)+F("Mong muốn của trẻ",dg.yeu_cau_tre));
+    h+=Sec("D. Thông tin người tiếp cận","s1d",F("Họ tên người tiếp cận",cb.nguoi_tiep_can)+F("Số điện thoại",cb.sdt_nguoi_than)+F("Ngày tiếp cận",cb.ngay_tiep_can)+F("Nơi tiếp cận",cb.noi_tiep_can));
+  }else if(idx===2){
+    h+=Sec("Thông tin vãng gia","s2a",
+      F("Họ và tên trẻ",cb.ho_ten)+F("Năm sinh trẻ",cb.ngay_sinh)+F("Địa chỉ thường trú",cb.dia_chi_thuong_tru)+F("Địa chỉ hiện tại",cb.dia_chi_hien_tai)+
+      Dv("Người tiếp xúc")+F("Họ tên",vg.nguoi_tiep_xuc)+F("Quan hệ với trẻ",vg.quan_he_voi_tre)+F("SDT",vg.sdt)+F("Ngày vãng gia",vg.ngay_vang_gia)+F("Lần vãng gia thứ",vg.lan_vang_gia)+F("Có gặp TC",vg.co_gap_tc)+
+      F("Mục đích vãng gia",vg.muc_dich)+F("Phát hiện khác của NVXH",vg.phat_hien_khac));
+    h+=Sec("Quan sát về hoàn cảnh gia đình trẻ","s2b",
+      Dv("Điều kiện môi trường sống")+F("Nhà ở và điều kiện sinh hoạt",vg.quan_sat_mt)+
+      Dv("Điều kiện liên quan đến gia đình trẻ")+
+      F("Loại hình gia đình",vg.loai_hinh_gd||gd.loai_hinh)+F("Bầu khí và mối quan hệ",vg.bau_khi_gd||gd.bau_khi)+F("Tình trạng hôn nhân cha mẹ",vg.tinh_trang_hn||gd.tinh_trang_hon_nhan)+
+      F("Quan hệ tre va nguoi song cung",vg.quan_he_tre_gd||gd.moi_quan_he_voi_tre)+F("Cách tương tác / giao tiếp",vg.cach_tuong_tac)+F("Vấn đề GĐ / GĐ mở rộng",vg.van_de_khac)+
+      F("Quan hệ cong dong",vg.van_de_cong_dong||gd.cong_dong)+F("Vấn đề giáo dục",vg.van_de_giao_duc)+F("Vấn đề sức khỏe",vg.van_de_suc_khoe)+F("Vấn đề hành chính",vg.van_de_hanh_chinh)+F("Vấn đề kinh tế GĐ",vg.van_de_kinh_te)+
+      F("Vấn đề nêu từ GĐ (ngoài lý do ban đầu)",vg.phat_hien_khac)+Dv("Đánh giá chung")+F("Đánh giá NVXH",vg.danh_gia_chung));
+  }else if(idx===3){
+    h+=Sec("Phiếu đánh giá tình trạng khẩn cấp","s3a",
+      F("Họ tên trẻ",cb.ho_ten)+F("Tuổi",cb.tuoi)+F("Giới tính",cb.gioi_tinh)+F("Địa điểm lúc nhận thông báo",cb.dia_chi_hien_tai)+
+      F("Họ tên cha / me",ncs.ho_ten)+F("Hoàn cảnh gia đình",gd.hoan_canh)+F("Tình trạng hiện tại của trẻ",dg.nhan_xet_nvxh)+
+      Dv("Đánh giá tổn thương và nguy cơ")+F("Những tổn thương (mức độ nghiêm trọng)",[(dg.van_de_the_chat||""),(dg.van_de_tam_ly||"")].filter(Boolean).join(" | "))+F("Tác động đến sự phát triển của trẻ",dg.van_de_nhan_thuc)+
+      F("Các yếu tố có khả năng gây tổn thương thêm",dg.nguy_co)+F("Cần can thiệp khẩn cấp? (24h/32h/72h)",dg.muc_khan_cap)+F("Người chăm sóc / giám hộ hiện tại",ncs.ho_ten||"")+
+      F("Thuận lợi và khó khăn trong môi trường bảo vệ trẻ",dg.yeu_to_bao_ve)+Dv("Nhận xét và đề xuất NVXH")+F("Nhận xét / Đề xuất",dg.nhan_xet_nvxh));
+  }else if(idx===4){
+    h+=Sec("1. Thông tin về trẻ","s4_0",F("Họ tên trẻ",cb.ho_ten)+F("Tuổi",cb.tuoi)+F("Giới tính",cb.gioi_tinh)+F("Địa điểm",cb.dia_chi_hien_tai)+F("Hoàn cảnh gia đình",gd.hoan_canh));
+    h+=Sec("2. Đánh giá vấn đề của trẻ (Hãy mô tả vấn đề!)","s4a",Dv("Về thể chất")+F("Vấn đề thể chất",dg.van_de_the_chat)+Dv("Về tâm lý / Tình cảm")+F("Vấn đề tâm lý",dg.van_de_tam_ly)+Dv("Về nhận thức")+F("Vấn đề nhận thức",dg.van_de_nhan_thuc));
+    h+=Sec("3. Xác định nhu cầu của trẻ (Hãy mô tả nhu cầu!)","s4b",Dv("NHU CẦU = khách quan do bối cảnh đặt ra")+Dv("Về thể chất")+F("Nhu cầu thể chất",dg.nhu_cau_the_chat)+Dv("Về tâm lý / Tình cảm")+F("Nhu cầu tâm lý",dg.nhu_cau_tam_ly)+Dv("Về nhận thức")+F("Nhu cầu nhận thức",dg.nhu_cau_nhan_thuc));
+    h+=Sec("4. Mong đợi và đề xuất của trẻ","s4c",Dv("YÊU CẦU = chủ quan của TC và GĐ")+F("Mong đợi và đề xuất của trẻ",dg.yeu_cau_tre)+F("Mong đợi của gia đình",dg.yeu_cau_gia_dinh));
+    h+=Sec("5. Nhận xét - dinh huong NVXH","s4d",F("Nhận xét dinh huong",dg.nhan_xet_nvxh));
+  }else if(idx===5){
+    const ncR=(kh.nhu_cau_ho_tro||[]).map(function(nc,i){return[String(i+1),nc.loai,nc.uu_tien||"-",nc.muc_tieu||"-"];});
+    const hdR=(kh.hoat_dong||[]).map(function(hd,i){return[hd.muc_tieu_so||String(i+1),hd.noi_dung,hd.thoi_gian,hd.nguon_luc,hd.nguon_luc_gd,hd.nguon_luc_cs];});
+    h+=Sec("I. Các nhu cầu cần hỗ trợ","s5a",TBL(["TT","Nhu cầu cần hỗ trợ","Mức độ ưu tiên (1,2,3)","Mục tiêu cụ thể cần đạt được"],ncR));
+    h+=Sec("II. Các hoạt động trợ giúp","s5b",TBL(["Mục tiêu số","Hoạt động","Thời gian","Nguồn lực/Kinh phí","Nguồn lực GĐ","Nguồn lực CS"],hdR));
+    h+=Sec("III. Nguồn lực kết nối hỗ trợ","s5c",F("Nguồn lực",kh.nguon_luc_ket_noi));
+    h+=Sec("IV. Đánh giá nhận xét NVXH","s5d",F("Nhận xét",dg.nhan_xet_nvxh));
+    h+=Sec("V. Ngày xem xét và điều chỉnh kế hoạch","s5e",TBL(["Lần 1 (ngày/tháng/năm)","Lần 2 (ngày/tháng/năm)","Lần 3 (ngày/tháng/năm)"],[["","",""]]));
+  }else if(idx===6){
+    const tdR=(kh.nhu_cau_ho_tro||[]).filter(function(nc){return nc.muc_tieu;}).map(function(nc){return[nc.loai,nc.muc_tieu,"",""];});
+    while(tdR.length<9)tdR.push(["","","",""]);
+    h+=Sec("Tiến độ thực hiện kế hoạch hỗ trợ CASE","s6a",TBL(["Nhu cầu can thiệp, trợ giúp","Các hoạt động can thiệp, trợ giúp","Thời gian","Nhận xét của NVXH"],tdR));
+  }else if(idx===7){
+    const cuR=(D.cap_nhat||[]).map(function(cu){return[cu.thoi_gian,cu.van_de,cu.muc_tieu,cu.ket_qua];});
+    while(cuR.length<4)cuR.push(["","","",""]);
+    h+=Sec("Cập nhật tình hình tiến trình can thiệp","s7a",F("Nhân viên XH phụ trách case",ktu.nvxh_phu_trach)+TBL(["Thời gian","Vấn đề của trẻ","Mục tiêu can thiệp","Kết quả thực tế"],cuR));
+    h+=Sec("Nhận xét de xuat NVXH","s7b",F("Nhận xét / Đề xuất",(D.tien_trinh&&D.tien_trinh.nhan_xet)||dg.nhan_xet_nvxh));
+  }else if(idx===8){
+    h+=Sec("1. Thông tin trẻ cần chuyển gửi","s8a",F("Họ và tên trẻ",cb.ho_ten)+F("Ngày tháng năm sinh",cb.ngay_sinh)+F("Giới tính",cb.gioi_tinh)+F("Họ tên người chăm sóc",ncs.ho_ten)+F("Quan hệ với trẻ",ncs.quan_he)+F("Địa chỉ",cb.dia_chi_hien_tai)+F("Số điện thoại",cb.sdt_nguoi_than));
+    h+=Sec("2. Thông tin người chuyển gửi","s8b",F("Họ và tên người chuyển gửi",cg.nguoi_chuyen)+F("Chức danh / Vai trò",cg.chuc_danh)+F("Tên đơn vị / Cơ quan chuyển gửi",cg.don_vi_chuyen)+F("Số điện thoại",cg.sdt_chuyen));
+    h+=Sec("3 & 4. Tóm tắt và nội dung cần hỗ trợ","s8c",F("Tóm tắt trường hợp",dg.nhan_xet_nvxh)+F("Nội dung cần được hỗ trợ",D.de_xuat));
+    h+=Sec("5. Nơi nhận chuyển gửi","s8d",F("Tên đơn vị nhận",cg.don_vi_nhan)+F("Người nhận",cg.nguoi_nhan)+F("Địa chỉ",cg.dia_chi_nhan)+F("Số điện thoại",cg.sdt_nhan));
+  }else if(idx===9){
+    h+=Sec("Thông tin ca","s9a",F("Họ và tên trẻ",cb.ho_ten)+F("Giới tính",cb.gioi_tinh)+F("Năm sinh",cb.ngay_sinh)+F("Thời gian bắt đầu case",ktu.bat_dau_case||cb.ngay_tiep_can)+F("Người nuôi dưỡng trẻ",ktu.nguoi_nuoi_duong||ncs.ho_ten)+F("Quan hệ với trẻ",ktu.quan_he||ncs.quan_he)+F("Nam sinh / Nghề nghiệp",[cf(ktu.nam_sinh_nd),cf(ktu.nghe_nghiep_nd)].filter(Boolean).join(" — "))+F("SDT",ktu.sdt_nd)+F("NVXH phụ trách",ktu.nvxh_phu_trach)+F("SĐT NVXH",ktu.sdt_nvxh));
+    h+=Sec("1. Tóm lược kết quả quá trình hỗ trợ","s9b",Dv("Kết quả đạt được")+F("Kết quả đạt",ktu.ket_qua_dat)+Dv("Kết quả chưa đạt")+F("Chưa đạt",ktu.ket_qua_chua_dat));
+    h+=Sec("2. Lý do kết thúc hỗ trợ","s9c",F("Lý do",ktu.ly_do));
+    h+=Sec("3. Kế hoạch theo dõi sau khi kết thúc","s9d",F("Kế hoạch",ktu.ke_hoach_theo_doi));
+  }else{
+    h+=Sec("PHẦN I - Thông tin cơ bản","sbc1",
+      F("Họ tên trẻ",cb.ho_ten)+F("Ngày sinh",cb.ngay_sinh)+F("Trình độ học vấn","Lớp "+(hv.lop||"?"))+
+      Dv("Thông tin thân nhân trẻ")+TBL(["Họ tên","Mối quan hệ","Năm sinh","Cách liên hệ","Ghi chú"],(gd.thanh_vien||[]).map(function(tv){return[tv.ho_ten,tv.quan_he,tv.nam_sinh,"",tv.ghi_chu];}))+
+      Dv("Yêu cầu của trẻ và gia đình")+F("Yêu cầu",[cf(dg.yeu_cau_tre),cf(dg.yeu_cau_gia_dinh)].filter(Boolean).join(" | "))+Dv("Đánh giá nguy cơ nhanh từ NVXH")+F("Nguy cơ",dg.nguy_co));
+    h+=Sec("PHẦN II - Tiến trình làm việc với thân chủ","sbc2",
+      F("Bối cảnh gia đình",gd.hoan_canh)+F("Timeline sự kiện",D.timeline)+
+      Dv("Nhu cầu sau làm việc với GĐ")+F("Thể chất",dg.nhu_cau_the_chat)+F("Tâm lý",dg.nhu_cau_tam_ly)+F("Nhận thức",dg.nhu_cau_nhan_thuc)+
+      Dv("Uu the - Nguồn lực")+F("Ưu thế trẻ",dg.uu_the_tre)+F("Ưu thế GĐ",dg.uu_the_gia_dinh)+
+      Dv("Kế hoạch ho tro - Muc tieu")+
+      (kh.nhu_cau_ho_tro||[]).filter(function(nc){return nc.uu_tien;}).map(function(nc,i){return F("Mục tiêu "+(i+1)+" — "+nc.loai,nc.muc_tieu);}).join("")+
+      Dv("Lượng giá & Đề xuất")+F("Kết quả đạt",ktu.ket_qua_dat)+F("Nhận xét NVXH",dg.nhan_xet_nvxh)+F("Đề xuất tổng hợp",D.de_xuat));
+  }
+  const fvEl=document.getElementById("fv");
+  if(fvEl){fvEl.innerHTML=h;fvEl.style.display="block";}
+}
+
+function cp(id){
+  const el=document.getElementById(id);if(!el)return;
+  navigator.clipboard.writeText(el.innerText).then(function(){
+    document.querySelectorAll(".btn-cp").forEach(function(b){
+      if(b.getAttribute("onclick")==="cp('"+id+"')"){b.textContent="Đã copy!";setTimeout(function(){b.textContent="Copy";},2000);}
+    });
+  });
+}
+
+function buildPH(tabIdx,all){
+  if(!D)return"";
+  const cb=D.co_ban||{},gd=D.gia_dinh||{},tt=D.tinh_trang||{},dg=D.danh_gia||{},kh=D.ke_hoach||{},ktu=D.ket_thuc||{};
+  const ncs=(gd.nguoi_cham_soc)||{};const sk=(tt.suc_khoe)||{};const tl=(tt.tam_ly)||{};const hv=(tt.hoc_van)||{};
+  const vg=D.vang_gia||{};const cg=D.chuyen_gui||{};const gks=(tt.giay_khai_sinh)||{};
+  const tr_doc=(tt.thuong_tru)||{};const ccd=(tt.cccd)||{};const nlxh=D.nguon_luc_xa_hoi||{};
+  const mo=new Date().getMonth()+1,yr=new Date().getFullYear();
+  const TNR="font-family:'Times New Roman',serif;";
+
+  function PF(l,v){
+    const cv_pf=typeof clean!=='undefined'?clean(v||''):(v||'').replace(/\[Cần thu thập thêm\]/g,'').trim();
+    const vt=!cv_pf
+      ? `<span style="color:#aaa;">—</span>`
+      : `<span style="color:#1a3a6b;">${esc(String(v))}</span>`;
+    return `<div style="${TNR}display:flex;margin:4px 0;font-size:12pt;line-height:1.5;">
+      <span style="min-width:200px;font-weight:600;color:#333;flex-shrink:0;">${esc(l)}:</span>
+      <span style="flex:1;">${vt}</span>
+    </div>`;
+  }
+  function PF2(l1,v1,l2,v2){
+    const fmt=v=>(!v||v==="[Cần thu thập thêm]"||v==="//")
+      ?`<span style="color:#aaa;">—</span>`:`<span style="color:#1a3a6b;">${esc(String(v))}</span>`;
+    return `<div style="${TNR}display:flex;margin:4px 0;font-size:12pt;line-height:1.5;gap:16px;">
+      <div style="flex:1;display:flex;"><span style="min-width:140px;font-weight:600;color:#333;flex-shrink:0;">${esc(l1)}:</span><span>${fmt(v1)}</span></div>
+      <div style="flex:1;display:flex;"><span style="min-width:140px;font-weight:600;color:#333;flex-shrink:0;">${esc(l2)}:</span><span>${fmt(v2)}</span></div>
+    </div>`;
+  }
+  function PS(t,color){
+    color=color||'#0f2d6b';
+    return `<div style="${TNR}font-size:13pt;font-weight:800;color:${color};border-bottom:2px solid ${color};margin:16px 0 8px;padding-bottom:4px;">${t}</div>`;
+  }
+  function PSB(t){
+    return `<div style="${TNR}font-size:11pt;font-weight:700;color:#0f2d6b;margin:10px 0 5px;padding-left:8px;border-left:3px solid #f07020;">${t}</div>`;
+  }
+  function SGN(ls){
+    const w=Math.floor(100/ls.length);
+    return `<div style="display:flex;gap:20px;margin-top:36px;">${ls.map(l=>`
+      <div style="flex:1;text-align:center;">
+        <div style="${TNR}font-size:11pt;font-weight:700;border-top:1px solid #333;padding-top:4px;margin-top:28px;">${l}</div>
+        <div style="${TNR}font-size:10pt;font-style:italic;color:#666;">(Ký, ghi rõ họ tên)</div>
+      </div>`).join('')}</div>`;
+  }
+
+  const tabs=all?[0,1,2,3,4,5,6,7,8,9,10]:[tabIdx];
+  let out=`<style>
+    @media print { .pov-bar,.pclose{display:none!important;} }
+    body{margin:0;}
+  </style>`;
+
+  tabs.forEach(function(i,fi){
+    if(fi>0) out+=`<div style="page-break-before:always;height:1px;margin:0;padding:0;"></div>`;
+
+    // Form header
+    out+=`<div style="background:linear-gradient(135deg,#0f2d6b,#1a3f8f);padding:12px 18px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;border-radius:6px;">
+      <div>
+        <div style="${TNR}font-size:16pt;font-weight:900;color:#fff;">${FTV[i]}</div>
+        <div style="${TNR}font-size:9pt;color:rgba(255,255,255,.6);margin-top:2px;">Mã hồ sơ: DADH2025/00001 &nbsp;·&nbsp; Số TT: TĐ-00020 &nbsp;·&nbsp; Tháng ${mo}/${yr}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="${TNR}font-size:9pt;color:rgba(255,255,255,.5);">Groq LLaMA 3.3 — AI Thảo Đàn</div>
+        <div style="${TNR}font-size:10pt;font-weight:700;color:#f07020;">${cb.ho_ten||'—'}</div>
+      </div>
+    </div>`;
+
+    if(i===0){
+      out+=PS("A. Thông tin trẻ");
+      out+=PF("Ngày tiếp cận đầu tiên",cb.ngay_tiep_can);
+      out+=PF2("Họ tên trẻ",cb.ho_ten,"Giới tính",cb.gioi_tinh);
+      out+=PF2("Ngày/tháng/năm sinh",cb.ngay_sinh,"Tuổi",cb.tuoi);
+      out+=PF2("SĐT trẻ",cb.sdt_tre,"SĐT người thân",cb.sdt_nguoi_than);
+      out+=PF("Địa chỉ thường trú",cb.dia_chi_thuong_tru);
+      out+=PF("Địa chỉ cư trú hiện tại",cb.dia_chi_hien_tai);
+      out+=PF("Trẻ hiện đang sống với",cb.song_voi);
+      out+=PS("B. Thông tin về gia đình trẻ");
+      out+=PF2("Người chăm sóc chính",ncs.ho_ten,"Quan hệ với trẻ",ncs.quan_he);
+      out+=PF2("Ngày sinh",ncs.ngay_sinh,"Điện thoại",ncs.sdt);
+      out+=PF2("Nghề nghiệp",ncs.nghe_nghiep,"Sức khỏe",ncs.suc_khoe);
+      out+=PF("Hoàn cảnh gia đình",gd.hoan_canh);
+      out+=PS("C. Tình trạng của trẻ");
+      out+=PF2("Giấy khai sinh",(gks.co||'')+(gks.ly_do?' — '+gks.ly_do:''),"Thường trú",(tr_doc.co||'')+(tr_doc.ly_do?' — '+tr_doc.ly_do:''));
+      out+=PF2("CCCD",(ccd.co||'')+(ccd.ly_do?' — '+ccd.ly_do:''),"BHYT",sk.bhyt);
+      out+=PF2("Đang học lớp",[cf(hv.lop)?'Lớp '+cf(hv.lop):'',cf(hv.truong)].filter(Boolean).join(' — ')||'Không',"Kết quả",hv.ket_qua);
+      out+=PF2("Đã bỏ học",hv.bo_hoc?('Lớp '+hv.bo_hoc+(hv.nam_bo_hoc?' / '+hv.nam_bo_hoc:'')):'','Lý do bỏ học',hv.ly_do_bo_hoc);
+      out+=PF2("Tăng động / Quấy phá",tl.tang_dong,"Bi quan / Mất niềm tin",tl.bi_quan);
+      out+=PF("Tình trạng tâm lý",tl.mo_ta);
+      out+=PF("Nhận xét NVXH",dg.nhan_xet_nvxh);
+      out+=PF("Nguồn lực quận/phường",nlxh.quan_phuong);
+      out+=SGN(["Giám sát","Nhân viên xã hội"]);
+    } else if(i===1){
+      out+=PS("A. Thông tin trẻ");
+      out+=PF2("Họ tên",cb.ho_ten,"Giới tính",cb.gioi_tinh);
+      out+=PF2("Ngày sinh",cb.ngay_sinh,"Tuổi",cb.tuoi);
+      out+=PF("Sống với",cb.song_voi);
+      out+=PF2("Giấy khai sinh",gks.co,"Lý do",gks.ly_do);
+      out+=PF2("Lớp / Trường",[cf(hv.lop)?'Lớp '+cf(hv.lop):'',cf(hv.truong)].filter(Boolean).join(' — ')||'',
+               "Người chăm sóc",(ncs.ho_ten||'')+(ncs.sdt?' — '+ncs.sdt:''));
+      out+=PS("B. Hoàn cảnh gia đình");
+      out+=PF("Hoàn cảnh",gd.hoan_canh);
+      out+=PS("C. Tình trạng hiện tại");
+      out+=PF("Vấn đề / Nguy cơ",dg.nguy_co);
+      out+=PF("Mong muốn của trẻ",dg.yeu_cau_tre);
+      out+=SGN(["Giám sát","Nhân viên xã hội TC"]);
+    } else if(i===2){
+      out+=PS("Thông tin vãng gia");
+      out+=PF2("Ngày đi vãng gia",vg.ngay_vang_gia,"Có gặp TC",vg.co_gap_tc);
+      out+=PF2("Người tiếp xúc",vg.nguoi_tiep_xuc,"Quan hệ",vg.quan_he_voi_tre);
+      out+=PF("Mục đích vãng gia",vg.muc_dich);
+      out+=PS("Quan sát gia đình trẻ");
+      out+=PF("Môi trường sống",vg.quan_sat_mt);
+      out+=PF2("Loại hình GĐ",vg.loai_hinh_gd||gd.loai_hinh,"Bầu khí GĐ",vg.bau_khi_gd||gd.bau_khi);
+      out+=PF("Tình trạng hôn nhân cha mẹ",vg.tinh_trang_hn||gd.tinh_trang_hon_nhan);
+      out+=PF2("Vấn đề giáo dục",vg.van_de_giao_duc,"Vấn đề kinh tế",vg.van_de_kinh_te);
+      out+=PF("Đánh giá chung",vg.danh_gia_chung);
+      out+=SGN(["Giám sát","Nhân viên xã hội"]);
+    } else if(i===3){
+      out+=PS("Thông tin trẻ & Đánh giá khẩn cấp");
+      out+=PF2("Họ tên",cb.ho_ten,"Tuổi",cb.tuoi);
+      out+=PF("Hoàn cảnh gia đình",gd.hoan_canh);
+      out+=PF("Tình trạng hiện tại",dg.nhan_xet_nvxh);
+      out+=PF2("Tổn thương thể chất",dg.van_de_the_chat,"Tổn thương tâm lý",dg.van_de_tam_ly);
+      out+=PF2("Nguy cơ",dg.nguy_co,"Mức khẩn cấp",dg.muc_khan_cap);
+      out+=PF("Yếu tố bảo vệ",dg.yeu_to_bao_ve);
+      out+=SGN(["Giám sát","Nhân viên xã hội"]);
+    } else if(i===4){
+      out+=PS("Đánh giá vấn đề & Nhu cầu");
+      out+=PSB("Vấn đề");
+      out+=PF("Thể chất",dg.van_de_the_chat);
+      out+=PF("Tâm lý",dg.van_de_tam_ly);
+      out+=PF("Nhận thức",dg.van_de_nhan_thuc);
+      out+=PSB("Nhu cầu (NHU CẦU = khách quan do bối cảnh đặt ra)");
+      out+=PF("Thể chất",dg.nhu_cau_the_chat);
+      out+=PF("Tâm lý",dg.nhu_cau_tam_ly);
+      out+=PF("Nhận thức",dg.nhu_cau_nhan_thuc);
+      out+=PF("Mong đợi của trẻ",dg.yeu_cau_tre);
+      out+=PF("Mong đợi của gia đình",dg.yeu_cau_gia_dinh);
+      out+=PF("Nhận xét NVXH",dg.nhan_xet_nvxh);
+      out+=SGN(["Giám sát","Nhân viên xã hội TC"]);
+    } else if(i===5){
+      out+=PS("Kế hoạch hỗ trợ can thiệp");
+      out+=PSB("I. Các nhu cầu cần hỗ trợ");
+      (kh.nhu_cau_ho_tro||[]).forEach(function(nc,idx2){
+        out+=PF2("Mục tiêu "+(idx2+1)+" — "+nc.loai,nc.muc_tieu,"Ưu tiên",nc.uu_tien);
+      });
+      out+=PSB("II. Nguồn lực kết nối");
+      out+=PF("Nguồn lực",kh.nguon_luc_ket_noi);
+      out+=PF("Nhận xét NVXH",dg.nhan_xet_nvxh);
+      out+=SGN(["Giám sát","Phụ huynh / Thân chủ","Nhân viên xã hội"]);
+    } else if(i===6){
+      out+=PS("Tiến độ thực hiện kế hoạch");
+      (kh.nhu_cau_ho_tro||[]).filter(nc=>nc.muc_tieu).forEach(function(nc,idx2){
+        out+=PF("Mục tiêu "+(idx2+1)+" — "+nc.loai,nc.muc_tieu);
+      });
+      out+=SGN(["Giám sát","Nhân viên xã hội"]);
+    } else if(i===7){
+      out+=PS("Cập nhật tiến trình can thiệp");
+      out+=PF("NVXH phụ trách",ktu.nvxh_phu_trach);
+      (D.cap_nhat||[]).forEach(function(cu,idx2){
+        if(cu.van_de) out+=PF("Lần "+(idx2+1)+": "+cu.thoi_gian,cu.van_de+" → "+cu.ket_qua);
+      });
+      out+=SGN(["Giám sát","Nhân viên xã hội"]);
+    } else if(i===8){
+      out+=PS("Phiếu chuyển gửi");
+      out+=PF2("Họ và tên trẻ",cb.ho_ten,"Ngày sinh",cb.ngay_sinh);
+      out+=PF2("Địa chỉ",cb.dia_chi_hien_tai,"SĐT",cb.sdt_nguoi_than);
+      out+=PF2("Người chuyển gửi",cg.nguoi_chuyen,"Đơn vị",cg.don_vi_chuyen);
+      out+=PF("Tóm tắt trường hợp",dg.nhan_xet_nvxh);
+      out+=PF("Nội dung cần hỗ trợ",D.de_xuat);
+      out+=PF2("Đơn vị nhận",cg.don_vi_nhan,"Người nhận",cg.nguoi_nhan);
+      out+=SGN(["Xác nhận từ nơi nhận","Nhân viên xã hội"]);
+    } else if(i===9){
+      out+=PS("Phiếu kết thúc ca");
+      out+=PF2("Họ và tên trẻ",cb.ho_ten,"Thời gian bắt đầu",ktu.bat_dau_case||cb.ngay_tiep_can);
+      out+=PF2("Người nuôi dưỡng",ktu.nguoi_nuoi_duong||ncs.ho_ten,"Quan hệ",ktu.quan_he||ncs.quan_he);
+      out+=PF("NVXH phụ trách",ktu.nvxh_phu_trach);
+      out+=PSB("Kết quả đạt được"); out+=PF("",ktu.ket_qua_dat);
+      out+=PSB("Kết quả chưa đạt"); out+=PF("",ktu.ket_qua_chua_dat);
+      out+=PSB("Lý do kết thúc"); out+=PF("",ktu.ly_do);
+      out+=PSB("Kế hoạch theo dõi"); out+=PF("",ktu.ke_hoach_theo_doi);
+      out+=SGN(["Giám sát case","Nhân viên xã hội"]);
+    } else {
+      out+=PS("BÁO CÁO QUẢN LÝ TRƯỜNG HỢP");
+      out+=PSB("PHẦN I: Thông tin cơ bản");
+      out+=PF2("Họ tên trẻ",cb.ho_ten,"Ngày sinh",cb.ngay_sinh);
+      out+=PF("Yêu cầu của trẻ",dg.yeu_cau_tre);
+      out+=PF("Đánh giá nguy cơ",dg.nguy_co);
+      out+=PSB("PHẦN II: Tiến trình làm việc với thân chủ");
+      out+=PF("Bối cảnh gia đình",gd.hoan_canh);
+      out+=PF("Nhu cầu thể chất",dg.nhu_cau_the_chat);
+      out+=PF("Nhu cầu tâm lý",dg.nhu_cau_tam_ly);
+      out+=PF("Ưu thế trẻ",dg.uu_the_tre);
+      out+=PF("Ưu thế gia đình",dg.uu_the_gia_dinh);
+      out+=PF("Đề xuất",D.de_xuat);
+      out+=SGN(["Giám sát CASE"]);
+    }
+  });
+  return out;
+}
+
+function openPrint(all){
+  if(!D)return;
+  const d=new Date();
+  document.getElementById("ph-meta").innerHTML="Mã hồ sơ: DADH2025/00001<br>Số TT: TĐ-00020<br>Tháng "+(d.getMonth()+1)+"/"+d.getFullYear();
+  const body=buildPH(curFormTab!=null?curFormTab:curTab,all);
+  document.getElementById("ph-body").innerHTML=body;
+  // Apply print styles to psheet
+  const sheet=document.getElementById("psheet");
+  if(sheet){sheet.style.fontFamily="'Times New Roman',serif";sheet.style.fontSize="12pt";}
+  document.getElementById("pov").style.display="block";
+}
+function closePov(){document.getElementById("pov").style.display="none";}
+
+async function loadDocxLib(){
+  if(docxLib)return docxLib;
+  return new Promise(function(res,rej){
+    const s=document.createElement("script");
+    s.src="https://unpkg.com/docx@8.5.0/build/index.umd.js";
+    s.onload=function(){docxLib=window.docx;res(docxLib);};
+    s.onerror=function(){rej(new Error("Không tải được docx.js"));};
+    document.head.appendChild(s);
+  });
+}
+async function fetchImg(url){
+  try{const r=await fetch(url,{mode:"cors"});if(!r.ok)return null;return new Uint8Array(await r.arrayBuffer());}catch(e){return null;}
+}
+
+async function buildDocxDoc(fi,logoData,footerData){
+  const lib=docxLib;
+  const{Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,AlignmentType,BorderStyle,WidthType,ShadingType,VerticalAlign,ImageRun,UnderlineType}=lib;
+  const PW=11906,PH=16838,MG=1134,CW=11906-2*1134;
+  const TNR="Times New Roman",NAVY="0F2D6B";
+  function bdr(c){return{style:BorderStyle.SINGLE,size:1,color:c||"CCCCCC"};}
+  function ba(c){const b=bdr(c);return{top:b,bottom:b,left:b,right:b};}
+  const bn={style:BorderStyle.NONE,size:0,color:"FFFFFF"};
+  const bna={top:bn,bottom:bn,left:bn,right:bn};
+
+  // ── TYPOGRAPHY CONSTANTS ──
+  const T_BODY   = 24;  // 12pt - body text (chuẩn VN hành chính)
+  const T_SUB_H  = 24;  // 12pt bold - sub-header
+  const T_SECT   = 26;  // 13pt bold - section header A/B/C
+  const T_TITLE  = 32;  // 16pt bold - form title
+  const T_LOGO   = 28;  // 14pt bold - logo header
+  const T_TABLE  = 22;  // 11pt - table cells
+  const T_SMALL  = 20;  // 10pt - footnotes, signatures
+  const T_META   = 18;  // 9pt  - metadata (mã hồ sơ, tháng...)
+  const T_EMPTY  = 22;  // 11pt gray - empty placeholder
+
+  // ── LINE SPACING (1.15 = 276 twips) ──
+  const LS = {value:276,rule:"auto"};
+
+  function fmtDate(v){
+    if(!v||typeof v!=="string") return v;
+    v=v.trim();
+    let m=v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if(m) return m[3].padStart(2,"0")+"/"+m[2].padStart(2,"0")+"/"+m[1];
+    if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v)) return v;
+    m=v.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+    if(m) return m[3].padStart(2,"0")+"/"+m[2].padStart(2,"0")+"/"+m[1];
+    m=v.match(/^(\d{1,2})[.\-](\d{1,2})[.\-](\d{4})$/);
+    if(m) return m[1].padStart(2,"0")+"/"+m[2].padStart(2,"0")+"/"+m[3];
+    m=v.match(/^(\d{1,2}):(\d{2}):(\d{4})$/);
+    if(m) return m[1].padStart(2,"0")+"/"+m[2]+"/"+m[3];
+    m=v.match(/^(\d{1,2}):(\d{2})$/);
+    if(m&&parseInt(m[1])<=31&&parseInt(m[2])<=12)
+      return m[1].padStart(2,"0")+"/"+m[2]+" (cần bổ sung năm)";
+    m=v.match(/^(\d{1,2})\s+(\d{1,2})\s+(\d{4})$/);
+    if(m) return m[1].padStart(2,"0")+"/"+m[2].padStart(2,"0")+"/"+m[3];
+    m=v.match(/(\d{1,2})[\/ ](\d{1,2})[\/ ](\d{4})/);
+    if(m) return m[1].padStart(2,"0")+"/"+m[2].padStart(2,"0")+"/"+m[3];
+    return v;
+  }
+
+  // R: base text run
+  function R(txt,o){
+    o=o||{};
+    return new TextRun(Object.assign({text:txt||"",font:TNR,size:T_BODY},o));
+  }
+  // V: AI-filled value (blue) or empty (//)
+  function V(val){
+    const cv=typeof clean!=='undefined'?clean(val||''):(val||'').replace(/\[Cần thu thập thêm\]/g,'').trim();
+    if(!cv) return R("—",{color:"CCCCCC",size:T_BODY});
+    return R(fmtDate(cv),{color:"1A4A8A",size:T_BODY});
+  }
+  // P: paragraph wrapper
+  function P(ch,o){
+    o=o||{};
+    return new Paragraph(Object.assign(
+      {children:Array.isArray(ch)?ch:[ch],spacing:{before:80,after:40},line:LS},o));
+  }
+  // FL: single field line  "Label: value"
+  function FL(lbl,val){
+    return new Paragraph({
+      children:[
+        R(lbl+": ",{size:T_BODY}),
+        (!val||val==="[Cần thu thập thêm]")
+          ? R("—",{color:"CCCCCC",size:T_BODY})
+          : R(fmtDate(val),{color:"1A4A8A",size:T_BODY})
+      ],
+      spacing:{before:80,after:40},line:LS
+    });
+  }
+  // FLM: multiple fields on one line  "Label1: val1     Label2: val2"
+  function FLM(){
+    const ch=[];
+    const args=Array.from(arguments);
+    for(let i=0;i<args.length;i++){
+      if(i>0) ch.push(R("     ",{size:T_BODY}));
+      ch.push(R(args[i][0]+": ",{size:T_BODY}));
+      const val=args[i][1];
+      const cv_flm=(typeof clean!=='undefined'?clean(val||''):(val||'').replace(/\[Cần thu thập thêm\]/g,'').trim());
+      ch.push(!cv_flm
+        ? R("—",{color:"CCCCCC",size:T_BODY})
+        : R(fmtDate(cv_flm),{color:"1A4A8A",size:T_BODY}));
+    }
+    return new Paragraph({children:ch,spacing:{before:80,after:40},line:LS});
+  }
+  // SH: section header (A. / B. / I. / PHẦN I...)  13pt bold + bottom border
+  function SH(txt){
+    return new Paragraph({
+      children:[R(txt,{bold:true,color:NAVY,size:T_SECT})],
+      spacing:{before:300,after:120},line:LS,
+      border:{bottom:{style:BorderStyle.SINGLE,size:2,color:NAVY}}
+    });
+  }
+  // SUB: sub-section label  12pt bold indented, orange left bar
+  function SUB(txt){
+    return new Paragraph({
+      children:[R(txt,{bold:true,color:NAVY,size:T_SUB_H})],
+      spacing:{before:160,after:60},line:LS,
+      indent:{left:200},
+      border:{left:{style:BorderStyle.SINGLE,size:6,color:"F07020"}}
+    });
+  }
+  // ML: multi-line text area (filled or blank lines)
+  function ML(val,n){
+    n=n||2;const rows=[];
+    if(val&&val!=="[Cần thu thập thêm]"){
+      rows.push(new Paragraph({
+        children:[R(fmtDate(val),{color:"1A4A8A",size:T_BODY})],
+        spacing:{before:60,after:40},line:LS
+      }));
+    } else {
+      for(let i=0;i<n;i++){
+        rows.push(new Paragraph({
+          children:[new TextRun({text:" ",font:TNR,size:T_BODY})],
+          spacing:{before:0,after:80},
+          border:{bottom:{style:BorderStyle.SINGLE,size:2,color:"DDDDDD",space:1}},
+          line:LS
+        }));
+      }
+    }
+    return rows;
+  }
+  // CB: checkbox line
+  function CB(opts,sel){
+    const ch=[];
+    opts.forEach(function(opt,i){
+      if(i>0) ch.push(R("   ",{size:T_BODY}));
+      const chk=sel&&sel.toLowerCase().includes(opt.toLowerCase().substring(0,5));
+      ch.push(R(chk?"[x] ":"[ ] ",{font:"Arial",size:T_BODY}));
+      ch.push(R(opt,{size:T_BODY}));
+    });
+    return P(ch);
+  }
+  // TITLE: centered form title  16pt bold
+  function TITLE(txt,sub){
+    const ps=[new Paragraph({
+      children:[R(txt,{bold:true,size:T_TITLE,color:NAVY})],
+      alignment:AlignmentType.CENTER,
+      spacing:{before:80,after:sub?40:140}
+    })];
+    if(sub) ps.push(new Paragraph({
+      children:[R(sub,{size:T_BODY,color:"555555",italics:true})],
+      alignment:AlignmentType.CENTER,
+      spacing:{before:0,after:120}
+    }));
+    return ps;
+  }
+  // HR: horizontal divider
+  function HR(){
+    return new Paragraph({
+      border:{bottom:{style:BorderStyle.SINGLE,size:2,color:NAVY}},
+      spacing:{before:80,after:80}
+    });
+  }
+  // SGN: signature row
+  function SGN(ls){
+    const w=Math.floor(CW/ls.length);
+    const cws=ls.map(function(){return w;}); cws[ls.length-1]=CW-w*(ls.length-1);
+    return new Table({width:{size:CW,type:WidthType.DXA},columnWidths:cws,rows:[
+      new TableRow({children:ls.map(function(){
+        return new TableCell({
+          children:[P([R("")])],
+          height:{value:700,rule:"exact"},
+          borders:{top:{style:BorderStyle.NONE,size:0,color:"FFFFFF"},
+                   bottom:{style:BorderStyle.NONE,size:0,color:"FFFFFF"},
+                   left:{style:BorderStyle.NONE,size:0,color:"FFFFFF"},
+                   right:{style:BorderStyle.NONE,size:0,color:"FFFFFF"}},
+          margins:{top:60,bottom:60,left:100,right:100}
+        });
+      })}),
+      new TableRow({children:ls.map(function(l){
+        return new TableCell({
+          children:[
+            new Paragraph({
+              children:[R(l,{bold:true,size:T_BODY})],
+              alignment:AlignmentType.CENTER,
+              border:{top:{style:BorderStyle.SINGLE,size:2,color:"333333"}}
+            }),
+            new Paragraph({
+              children:[R("(Ký, ghi rõ họ tên)",{italics:true,size:T_SMALL,color:"888888"})],
+              alignment:AlignmentType.CENTER
+            })
+          ],
+          borders:{top:{style:BorderStyle.NONE,size:0,color:"FFFFFF"},
+                   bottom:{style:BorderStyle.NONE,size:0,color:"FFFFFF"},
+                   left:{style:BorderStyle.NONE,size:0,color:"FFFFFF"},
+                   right:{style:BorderStyle.NONE,size:0,color:"FFFFFF"}}
+        });
+      })})
+    ]});
+  }
+  function mkCell(txt,isH,w){
+    // Empty cells: blank (no placeholder text)
+    const isEmpty = !isH && (!txt || txt==="[Cần thu thập thêm]" || txt==="//");
+    const display = isEmpty ? "" : (txt||"");
+    return new TableCell({
+      children:[new Paragraph({
+        children:[R(display,{bold:isH,color:isH?"FFFFFF":"333333",size:T_TABLE})],
+        alignment:isH?AlignmentType.CENTER:AlignmentType.LEFT,
+        spacing:{before:60,after:60},line:LS
+      })],
+      width:{size:w,type:WidthType.DXA},borders:ba("BBBBBB"),
+      shading:{fill:isH?NAVY:"FFFFFF",type:ShadingType.CLEAR},
+      margins:{top:80,bottom:80,left:120,right:120}
+    });
+  }
+  function TBLF(hs,rows,cws){
+    const n=hs.length;
+    if(!cws){const w=Math.floor(CW/n);cws=[];for(let i=0;i<n;i++)cws.push(w);cws[n-1]=CW-w*(n-1);}
+    return new Table({width:{size:CW,type:WidthType.DXA},columnWidths:cws,
+      rows:[new TableRow({children:hs.map(function(h,i){return mkCell(h,true,cws[i]);}),tableHeader:true})].concat(
+        rows.map(function(r){return new TableRow({children:r.map(function(c,i){return mkCell(c,false,cws[Math.min(i,cws.length-1)]);})})}))});
+  }
+  function SGN(ls){
+    const w=Math.floor(CW/ls.length);const cws=ls.map(function(){return w;});cws[ls.length-1]=CW-w*(ls.length-1);
+    return new Table({width:{size:CW,type:WidthType.DXA},columnWidths:cws,rows:[
+      new TableRow({children:ls.map(function(){return new TableCell({children:[P([R("")])],height:{value:700,rule:"exact"},borders:bna,margins:{top:80,bottom:80,left:120,right:120}});})}),
+      new TableRow({children:ls.map(function(l){return new TableCell({children:[
+        new Paragraph({children:[R(l,{bold:true,size:24})],alignment:AlignmentType.CENTER,border:{top:{style:BorderStyle.SINGLE,size:2,color:"333333"}}}),
+        new Paragraph({children:[R("(Ký, ghi rõ họ tên)",{italics:true,size:20,color:"888888"})],alignment:AlignmentType.CENTER})
+      ],borders:bna});})})
+    ]});
+  }
+  function HR(){return new Paragraph({border:{bottom:{style:BorderStyle.SINGLE,size:2,color:NAVY}},spacing:{before:80,after:80}});}
+  function TITLE(txt,sub){
+    const ps=[new Paragraph({children:[R(txt,{bold:true,size:30,color:NAVY})],alignment:AlignmentType.CENTER,spacing:{before:80,after:sub?40:140}})];
+    if(sub)ps.push(new Paragraph({children:[R(sub,{size:22,color:"555555",italics:true})],alignment:AlignmentType.CENTER,spacing:{before:0,after:120}}));
+    return ps;
+  }
+
+  const cb=D.co_ban,gd=D.gia_dinh,tt=D.tinh_trang,dg=D.danh_gia,vg=D.vang_gia,kh=D.ke_hoach,ktu=D.ket_thuc;
+  const ncs=(gd&&gd.nguoi_cham_soc)||{};const hv=(tt&&tt.hoc_van)||{};const sk=(tt&&tt.suc_khoe)||{};const tl=(tt&&tt.tam_ly)||{};
+  const gks=(tt&&tt.giay_khai_sinh)||{};const tr=(tt&&tt.thuong_tru)||{};const cc=(tt&&tt.cccd)||{};const nlxh=D.nguon_luc_xa_hoi||{};const cg=D.chuyen_gui||{};
+  const mo=new Date().getMonth()+1,yr=new Date().getFullYear();
+  const body=[];
+
+  if(logoData){
+    try{
+      const lC=new TableCell({children:[new Paragraph({children:[new ImageRun({data:logoData,transformation:{width:60,height:60},type:"png"})],alignment:AlignmentType.LEFT})],width:{size:800,type:WidthType.DXA},borders:bna,verticalAlign:VerticalAlign.CENTER});
+      const tC=new TableCell({children:[new Paragraph({children:[R("THẢO ĐÀN",{bold:true,size:T_LOGO,color:NAVY})],spacing:{before:0,after:20}}),new Paragraph({children:[R("Social Service Center · TP. Hồ Chí Minh",{size:T_META,color:"888888"})],spacing:{before:0,after:0}})],width:{size:CW-800-2200,type:WidthType.DXA},borders:bna,verticalAlign:VerticalAlign.CENTER});
+      const iC=new TableCell({children:[new Paragraph({children:[R("Mã hồ sơ: DADH2025/00001",{size:T_META,bold:true})],alignment:AlignmentType.RIGHT,spacing:{before:0,after:20}}),new Paragraph({children:[R("Số TT: TĐ-00020",{size:T_META,bold:true})],alignment:AlignmentType.RIGHT,spacing:{before:0,after:20}}),new Paragraph({children:[R("Tháng "+mo+"/"+yr,{size:18})],alignment:AlignmentType.RIGHT})],width:{size:2200,type:WidthType.DXA},borders:bna,verticalAlign:VerticalAlign.CENTER});
+      body.push(new Table({width:{size:CW,type:WidthType.DXA},columnWidths:[800,CW-800-2200,2200],rows:[new TableRow({children:[lC,tC,iC]})]}));
+    }catch(e){body.push(new Paragraph({children:[R("Mã hồ sơ: DADH2025/00001   Số TT: TĐ-00020",{bold:true,size:T_TABLE})],alignment:AlignmentType.RIGHT}));}
+  }else{body.push(new Paragraph({children:[R("Mã hồ sơ: DADH2025/00001   Số TT: TĐ-00020",{bold:true,size:T_TABLE})],alignment:AlignmentType.RIGHT}));}
+  body.push(HR());
+
+  if(fi===0){
+    body.push(...TITLE("HỒ SƠ THÔNG TIN TRẺ"));
+    body.push(SH("A. THÔNG TIN TRẺ:"));
+    body.push(FL("Ngày tiếp cận đầu tiên",cb.ngay_tiep_can));
+    body.push(FLM(["Họ tên trẻ",cb.ho_ten],["Giới tính",cb.gioi_tinh]));
+    body.push(FLM(["Ngày/tháng/năm sinh",cb.ngay_sinh],["Tuổi",cb.tuoi]));
+    body.push(FLM(["SĐT trẻ",cb.sdt_tre],["SĐT người thân",cb.sdt_nguoi_than]));
+    body.push(FL("Địa chỉ thường trú (theo sổ hộ khẩu)",cb.dia_chi_thuong_tru));
+    body.push(FL("Địa chỉ cư trú hiện tại",cb.dia_chi_hien_tai));
+    body.push(P([R("Trẻ hiện đang sống với:")]));
+    body.push(CB(["cha mẹ","ông bà","họ hàng","anh chị","một mình","khác"],cb.song_voi));
+    body.push(FL("Quá trình trẻ sống sau khi rời gia đình",""));
+    body.push(...ML("",1));
+    body.push(FL("Mối quan hệ trẻ với người sống cùng",gd.moi_quan_he_voi_tre));
+    body.push(SH("B. THÔNG TIN VỀ GIA ĐÌNH TRẺ:"));
+    body.push(FLM(["Họ tên người chăm sóc chính",ncs.ho_ten],["Giới tính",""]));
+    body.push(FLM(["Ngày/tháng/năm sinh",ncs.ngay_sinh],["Điện thoại",ncs.sdt]));
+    body.push(FLM(["Nghề nghiệp",ncs.nghe_nghiep],["Quan hệ với trẻ",ncs.quan_he]));
+    body.push(FL("Tình trạng sức khỏe",ncs.suc_khoe));
+    body.push(P([R("Gia đình (cha/mẹ, anh/chị/em ruột và những người hiện nay sống cùng):",{bold:true})]));
+    const tvR=(gd.thanh_vien||[]).map(function(tv){return[tv.ho_ten,tv.quan_he,tv.nam_sinh,tv.suc_khoe,tv.nghe_nghiep,tv.ghi_chu];});
+    while(tvR.length<3)tvR.push(["","","","","",""]);
+    body.push(TBLF(["Họ và tên","Quan hệ với trẻ","Năm sinh","Tình trạng SK","Nghề nghiệp","Ghi chú"],tvR,[1600,1400,900,1400,1500,1838]));
+    body.push(P([R("Hoàn cảnh gia đình của trẻ:",{bold:true})]));
+    body.push(P([V(gd.hoan_canh)]));body.push(...ML("",2));
+    body.push(SH("C. TÌNH TRẠNG CỦA TRẺ"));
+    body.push(CB(["Trẻ có nguy cơ rơi vào hoàn cảnh đặc biệt","Trẻ có HCĐB"],cb.nhom_tre));
+    body.push(FL("Công việc trẻ đang làm",tt.cong_viec));
+    body.push(FL("Thời gian làm việc mỗi ngày (h/ngày)",tt.thoi_gian_lam_viec));
+    body.push(FL("Thời gian bắt đầu làm việc (bắt đầu từ năm nào)",tt.bat_dau_lam_tu));
+    body.push(P([R("Tình trạng giấy tờ pháp lý:",{bold:true})]));
+    body.push(FLM(["Giấy khai sinh",gks.co],["Lý do không có",gks.ly_do]));
+    body.push(FLM(["Đăng ký thường trú",tr.co],["Lý do",tr.ly_do]));
+    body.push(FLM(["Căn cước công dân",cc.co],["Lý do",cc.ly_do]));
+    body.push(P([R("Tình trạng giáo dục:",{bold:true})]));
+    body.push(FL("Trẻ có sở thích / năng khiếu",hv.so_thich));
+    body.push(FLM(["Đang đi học Lớp",hv.lop],["Trường",hv.truong]));
+    body.push(FL("Kết quả học tập",hv.ket_qua));
+    body.push(FLM(["Đã bỏ học Lớp",hv.bo_hoc],["Vào năm",hv.nam_bo_hoc]));
+    body.push(FL("Lý do bỏ học hay không đi học",hv.ly_do_bo_hoc));
+    body.push(FL("Ước mơ nghề nghiệp",hv.uoc_mo));
+    body.push(P([R("Tình trạng sức khỏe:",{bold:true})]));
+    body.push(CB(["Bình thường","Khuyết tật","Bệnh nan y","Khác"],sk.tinh_trang));
+    body.push(FLM(["Trẻ có đi học nghề",tt.hoc_van?.hoc_nghe],["Nghề đã học",tt.hoc_van?.hoc_nghe]));
+    body.push(FLM(["Trẻ có BHYT",sk.bhyt],["Cân nặng",sk.can_nang],["Chiều cao",sk.chieu_cao]));
+    body.push(FL("Khi trẻ có bệnh có được khám/chữa bệnh không",sk.bhyt?"Có BHYT":""));
+    body.push(FL("Trong 6 tháng qua trẻ có bệnh gì",sk.benh_trong_6t));
+    body.push(P([R("Tình trạng tâm lý — xã hội:",{bold:true})]));
+    body.push(FLM(["Tăng động / Quấy phá",tl.tang_dong]));
+    body.push(FLM(["Bi quan / Mất niềm tin",tl.bi_quan]));
+    body.push(FLM(["Biểu hiện tâm lý bất thường / Tự làm tổn thương",tl.tu_ton_thuong]));
+    body.push(P([R("Vấn đề / Nhu cầu hiện tại của trẻ:",{bold:true})]));
+    body.push(P([V(dg.nhan_xet_nvxh)]));
+    body.push(P([R("Nhận xét của NVXH và đề xuất hướng hỗ trợ trẻ:",{bold:true})]));
+    body.push(P([V(D.de_xuat)]));
+    body.push(P([R("Các nguồn lực trẻ đã tiếp cận được:",{bold:true})]));
+    body.push(FL("Tại quận/phường",nlxh.quan_phuong));
+    body.push(FL("Tại nhà thờ/chùa",nlxh.ton_giao));
+    body.push(FL("Tổ chức / Ân nhân",nlxh.to_chuc));
+    body.push(FL("Mô tả đường đi tới nhà trẻ",nlxh.duong_di));
+    body.push(new Paragraph({children:[R("TP.HCM, ngày......tháng......năm......")],alignment:AlignmentType.RIGHT,spacing:{before:200,after:100}}));
+    body.push(SGN(["Giám sát","Nhân viên xã hội"]));
+  }else if(fi===1){
+    body.push(...TITLE("PHIẾU TIẾP CẬN"));
+    body.push(SH("A. THÔNG TIN TRẺ:"));
+    body.push(FLM(["Họ tên trẻ",cb.ho_ten],["Giới tính",cb.gioi_tinh]));
+    body.push(FLM(["Ngày/tháng/năm sinh",cb.ngay_sinh],["Tuổi",cb.tuoi]));
+    body.push(FLM(["SĐT trẻ",cb.sdt_tre],["SĐT người thân",cb.sdt_nguoi_than]));
+    body.push(FL("Địa chỉ thường trú",cb.dia_chi_thuong_tru));
+    body.push(FL("Địa chỉ cư trú hiện tại",cb.dia_chi_hien_tai));
+    body.push(CB(["cha mẹ","ông bà","họ hàng","anh chị","một mình","khác"],cb.song_voi));
+    body.push(CB(["Trẻ có hoàn cảnh đặc biệt","Trẻ có nguy cơ HCĐB"],cb.nhom_tre));
+    body.push(SUB("Về giấy tờ tùy thân của trẻ:"));
+    body.push(FLM(["Giấy khai sinh",gks.co],["Lý do không có",gks.ly_do]));
+    body.push(FLM(["Đăng ký thường trú",tr.co],["Lý do",tr.ly_do]));
+    body.push(FLM(["Mã định danh/CCCD",cc.co],["Lý do",cc.ly_do]));
+    body.push(SUB("Về học vấn của trẻ:"));
+    body.push(FLM(["Lớp",hv.lop],["Trường",hv.truong]));
+    body.push(FLM(["Đã bỏ học lớp",hv.bo_hoc],["Năm",hv.nam_bo_hoc]));
+    body.push(FL("Lý do bỏ học/không đi học",hv.ly_do_bo_hoc));
+    body.push(FLM(["Họ tên người chăm sóc chính",ncs.ho_ten],["ĐT",ncs.sdt]));
+    body.push(FLM(["Năm sinh",ncs.ngay_sinh],["Nghề nghiệp",ncs.nghe_nghiep],["Quan hệ",ncs.quan_he]));
+    body.push(SH("B. HOÀN CẢNH GIA ĐÌNH CỦA TRẺ:"));
+    body.push(P([V(gd.hoan_canh)]));body.push(...ML("",3));
+    body.push(SH("C. TÌNH TRẠNG CỦA TRẺ HIỆN TẠI"));
+    body.push(FL("Trẻ đang kiếm sống bằng công việc gì",tt.cong_viec));
+    body.push(FLM(["Tình trạng sức khỏe",sk.tinh_trang],["Bệnh lý",sk.benh_trong_6t]));
+    body.push(FL("Tinh thần thái độ trẻ",tl.mo_ta));
+    body.push(FL("Trẻ đang gặp vấn đề hay nguy cơ gì",dg.nguy_co));
+    body.push(CB(["đi học","học nghề","kiếm việc làm","chỗ ở","khác"],dg.yeu_cau_tre));
+    body.push(SH("D. THÔNG TIN NGƯỜI TIẾP CẬN:"));
+    body.push(FLM(["Họ tên",cb.nguoi_tiep_can],["SDT",cb.sdt_nguoi_than]));
+    body.push(FLM(["Ngày tiếp cận",cb.ngay_tiep_can],["Nơi tiếp cận",cb.noi_tiep_can]));
+    body.push(new Paragraph({children:[R("Ngày......tháng......năm......")],alignment:AlignmentType.RIGHT,spacing:{before:200,after:60}}));
+    body.push(SGN(["Giám sát","Nhân viên xã hội TC"]));
+  }else if(fi===2){
+    body.push(...TITLE("PHÚC TRÌNH VÃNG GIA"));
+    body.push(FLM(["Họ và tên trẻ",cb.ho_ten],["Giới tính",cb.gioi_tinh]));
+    body.push(FLM(["Phiếu tiếp cận số",""],["Năm sinh trẻ",cb.ngay_sinh]));
+    body.push(FL("Địa chỉ thường trú",cb.dia_chi_thuong_tru));
+    body.push(FL("Địa chỉ cư trú hiện tại",cb.dia_chi_hien_tai));
+    body.push(FL("Trước khi đến vãng gia, NVXH đã liên hệ với",vg.nguoi_tiep_xuc));
+    body.push(FLM(["Họ tên người tiếp xúc",vg.nguoi_tiep_xuc],["Quan hệ với trẻ",vg.quan_he_voi_tre]));
+    body.push(FLM(["Ngày đi vãng gia",vg.ngay_vang_gia],["Lần vãng gia thứ",vg.lan_vang_gia],["Có gặp TC",vg.co_gap_tc]));
+    body.push(FL("Mục đích buổi vãng gia",vg.muc_dich));
+    body.push(FL("Những phát hiện khác của NVXH",vg.phat_hien_khac));
+    body.push(P([R("Những quan sát của NVXH về hoàn cảnh gia đình trẻ:",{bold:true})]));
+    body.push(SUB("Điều kiện về môi trường sống:"));
+    body.push(P([V(vg.quan_sat_mt)]));body.push(...ML("",2));
+    body.push(FL("Loại hình gia đình",vg.loai_hinh_gd||gd.loai_hinh));
+    body.push(FL("Bầu khí và mối quan hệ trong gia đình",vg.bau_khi_gd||gd.bau_khi));
+    body.push(FL("Tình trạng hôn nhân của cha mẹ",vg.tinh_trang_hn||gd.tinh_trang_hon_nhan));
+    body.push(FL("Mối quan hệ giữa trẻ và người đang sống cùng",vg.quan_he_tre_gd));
+    body.push(FL("Cách tương tác/giao tiếp của các thành viên gia đình",vg.cach_tuong_tac));
+    body.push(FL("Vấn đề liên quan đến gia đình hoặc gia đình mở rộng",vg.van_de_khac));
+    body.push(FL("Mối quan hệ với cộng đồng xung quanh",vg.van_de_cong_dong));
+    body.push(FL("Vấn đề liên quan đến giáo dục",vg.van_de_giao_duc));
+    body.push(FL("Vấn đề liên quan đến sức khỏe",vg.van_de_suc_khoe));
+    body.push(FL("Vấn đề liên quan đến hành chính",vg.van_de_hanh_chinh));
+    body.push(FL("Vấn đề liên quan đến kinh tế gia đình",vg.van_de_kinh_te));
+    body.push(FL("Đánh giá chung của NVXH để theo dõi/hỗ trợ",vg.danh_gia_chung));
+    body.push(...ML("",2));
+    body.push(new Paragraph({children:[R("Ngày......tháng......năm......")],alignment:AlignmentType.RIGHT,spacing:{before:180,after:60}}));
+    body.push(SGN(["Giám sát","Nhân viên xã hội"]));
+  }else if(fi===3){
+    body.push(...TITLE("PHIẾU ĐÁNH GIÁ TÌNH TRẠNG CỦA TRẺ","Tháng "+mo+"/"+yr+" (Đối với trẻ cần hỗ trợ khẩn cấp)"));
+    body.push(FLM(["Họ tên",cb.ho_ten],["Tuổi",cb.tuoi]));
+    body.push(FL("Địa điểm (trẻ đang ở đâu vào thời điểm nhận được thông báo)",cb.dia_chi_hien_tai));
+    body.push(FLM(["Họ tên cha",""],["Năm sinh",""],["Nghề nghiệp",""]));
+    body.push(FLM(["Họ tên mẹ",""],["Năm sinh",""],["Nghề nghiệp",""]));
+    body.push(FL("Hoàn cảnh gia đình",gd.hoan_canh));
+    body.push(FL("Tình trạng hiện tại của trẻ",dg.nhan_xet_nvxh));body.push(...ML("",2));
+    body.push(P([R("Những tổn thương của trẻ (nghiêm trọng không? Như thế nào?):",{bold:true})]));
+    body.push(P([V([(dg.van_de_the_chat||""),(dg.van_de_tam_ly||"")].filter(Boolean).join(" | "))]));body.push(...ML("",1));
+    body.push(FL("Tác động của các hành vi/yếu tố gây tổn thương đến sự phát triển của trẻ",dg.van_de_nhan_thuc));
+    body.push(FL("Các yếu tố khác có khả năng gây tổn thương thêm cho trẻ",dg.nguy_co));
+    body.push(FL("Trẻ có cần được can thiệp khẩn cấp không? (24h/32h/72h)",dg.muc_khan_cap));
+    body.push(FL("Hiện tại ai là người chăm sóc giám hộ cho trẻ?",ncs.ho_ten||""));
+    body.push(FL("Những thuận lợi và khó khăn trong môi trường bảo vệ trẻ",dg.yeu_to_bao_ve));
+    body.push(P([R("Nhận xét đề xuất của NVXH:",{bold:true})]));
+    body.push(P([V(dg.nhan_xet_nvxh)]));body.push(...ML("",1));
+    body.push(new Paragraph({children:[R("Ngày......tháng......năm......")],alignment:AlignmentType.RIGHT,spacing:{before:140,after:60}}));
+    body.push(SGN(["Giám sát","Nhân viên xã hội"]));
+  }else if(fi===4){
+    body.push(...TITLE("ĐÁNH GIÁ VẤN ĐỀ VÀ NHU CẦU CỦA TRẺ","Tháng "+mo+"/"+yr));
+    body.push(SH("1. Thông tin về trẻ"));
+    body.push(FL("Họ tên trẻ",cb.ho_ten));body.push(FLM(["Tuổi",cb.tuoi],["Giới tính",cb.gioi_tinh]));
+    body.push(FL("Địa điểm",cb.dia_chi_hien_tai));body.push(FL("Họ tên cha của trẻ",""));body.push(FL("Họ tên mẹ của trẻ",""));
+    body.push(FL("Hoàn cảnh gia đình",gd.hoan_canh));body.push(...ML("",2));
+    body.push(SH("2. Đánh giá vấn đề của trẻ (Trẻ có những vấn đề gì? Hãy mô tả vấn đề!)"));
+    body.push(SUB("Về thể chất"));body.push(P([V(dg.van_de_the_chat)]));body.push(...ML("",2));
+    body.push(SUB("Về Tâm lý/Tình cảm"));body.push(P([V(dg.van_de_tam_ly)]));body.push(...ML("",2));
+    body.push(SUB("Về nhận thức"));body.push(P([V(dg.van_de_nhan_thuc)]));body.push(...ML("",1));
+    body.push(SH("3. Xác định nhu cầu của trẻ (trẻ có những nhu cầu gì? Hãy mô tả nhu cầu!)"));
+    body.push(SUB("Về thể chất"));body.push(P([V(dg.nhu_cau_the_chat)]));body.push(...ML("",1));
+    body.push(SUB("Về tâm lý/tình cảm"));body.push(P([V(dg.nhu_cau_tam_ly)]));body.push(...ML("",1));
+    body.push(SUB("Về nhận thức"));body.push(P([V(dg.nhu_cau_nhan_thuc)]));body.push(...ML("",1));
+    body.push(SH("4. Mong đợi và đề xuất của trẻ:"));
+    body.push(P([V(dg.yeu_cau_tre)]));body.push(...ML("",1));
+    body.push(SH("5. Nhận xét — định hướng của NVXH"));
+    body.push(P([V(dg.nhan_xet_nvxh)]));body.push(...ML("",2));
+    body.push(new Paragraph({children:[R("Ngày......tháng......năm......")],alignment:AlignmentType.RIGHT,spacing:{before:140,after:60}}));
+    body.push(SGN(["Giám sát","Nhân viên xã hội TC"]));
+  }else if(fi===5){
+    body.push(...TITLE("KẾ HOẠCH HỖ TRỢ CAN THIỆP"));
+    body.push(FLM(["Họ và tên trẻ",cb.ho_ten],["Giới tính",cb.gioi_tinh]));
+    body.push(FLM(["Hồ sơ xã hội","DADH2025/00001"],["Năm sinh",cb.ngay_sinh]));
+    body.push(FLM(["Thời gian bắt đầu case",kh.bat_dau_case||cb.ngay_tiep_can],["Thời gian thực hiện KH",kh.thoi_gian_kh]));
+    body.push(SH("I. Các nhu cầu cần hỗ trợ:"));
+    const nc5=(kh.nhu_cau_ho_tro||[]).map(function(nc,i){return[String(i+1),nc.loai,nc.uu_tien||"",nc.muc_tieu||""];});
+    body.push(TBLF(["TT","Nhu cầu cần hỗ trợ","Mức độ ưu tiên (1, 2, 3)","Mục tiêu cụ thể cần đạt được"],nc5,[400,2500,1800,4938]));
+    body.push(SH("II. Các hoạt động trợ giúp"));
+    const hd5=(kh.hoat_dong||[]).map(function(h,i){return[h.muc_tieu_so||String(i+1),h.noi_dung,h.thoi_gian,h.nguon_luc,h.nguon_luc_gd,h.nguon_luc_cs];});
+    while(hd5.length<4)hd5.push(["","","","","",""]);
+    body.push(TBLF(["Mục tiêu số","Hoạt động","Thời gian","Nguồn lực/kinh phí","GD","Cơ sở"],hd5,[600,2800,1400,1600,1300,1938]));
+    body.push(SH("III. Nguồn lực kết nối hỗ trợ:"));
+    body.push(P([V(kh.nguon_luc_ket_noi)]));body.push(...ML("",1));
+    body.push(SH("IV. Đánh giá nhận xét của nhân viên xã hội:"));
+    body.push(P([V(dg.nhan_xet_nvxh)]));body.push(...ML("",2));
+    body.push(SH("V. Ngày xem xét và điều chỉnh kế hoạch (tối thiểu 3-6 tháng)"));
+    const w3=Math.floor(CW/3);
+    body.push(TBLF(["Lần 1 (ngày/tháng/năm)","Lần 2 (ngày/tháng/năm)","Lần 3 (ngày/tháng/năm)"],[["","",""]],[w3,w3,CW-2*w3]));
+    body.push(new Paragraph({children:[R("Ngày......tháng......năm......")],alignment:AlignmentType.RIGHT,spacing:{before:140,after:60}}));
+    body.push(SGN(["Giám sát","Phụ huynh / Thân chủ","Nhân viên xã hội"]));
+  }else if(fi===6){
+    body.push(...TITLE("TIẾN ĐỘ THỰC HIỆN KẾ HOẠCH HỖ TRỢ CASE"));
+    body.push(FLM(["Họ và tên trẻ",cb.ho_ten],["Giới tính",cb.gioi_tinh]));
+    body.push(FLM(["Hồ sơ xã hội","DADH2025/00001"],["Năm sinh",cb.ngay_sinh]));
+    body.push(FLM(["Thời gian bắt đầu case",cb.ngay_tiep_can],["Thời gian thực hiện KH",""]));
+    const td6=(kh.nhu_cau_ho_tro||[]).filter(function(nc){return nc.muc_tieu;}).map(function(nc){return[nc.loai,nc.muc_tieu,"",""];});
+    while(td6.length<9)td6.push(["","","",""]);
+    body.push(TBLF(["Nhu cầu can thiệp, trợ giúp","Các hoạt động can thiệp, trợ giúp","Thời gian","Nhận xét của NVXH"],td6,[2200,3000,1200,3238]));
+    body.push(new Paragraph({children:[R("Ngày......tháng......năm......")],alignment:AlignmentType.RIGHT,spacing:{before:140,after:60}}));
+    body.push(SGN(["Giám sát","Nhân viên xã hội"]));
+  }else if(fi===7){
+    body.push(...TITLE("PHIẾU CẬP NHẬT THÔNG TIN"));
+    body.push(FLM(["Họ và tên trẻ",cb.ho_ten],["Giới tính",cb.gioi_tinh]));
+    body.push(FLM(["Hồ sơ xã hội","DADH2025/00001"],["Năm sinh",cb.ngay_sinh]));
+    body.push(FLM(["Thời gian bắt đầu case",cb.ngay_tiep_can],["Thời gian thực hiện KH",""]));
+    body.push(FL("Nhân viên XH phụ trách case",ktu.nvxh_phu_trach));
+    const cu7=(D.cap_nhat||[]).map(function(cu){return[cu.thoi_gian,cu.van_de,cu.muc_tieu,cu.ket_qua];});
+    while(cu7.length<4)cu7.push(["","","",""]);
+    body.push(TBLF(["Thời gian","Vấn đề của trẻ","Mục tiêu can thiệp","Kết quả thực tế"],cu7,[1200,2700,2500,3238]));
+    body.push(P([R("Nhận xét đề xuất của NVXH: ",{bold:true}),V((D.tien_trinh&&D.tien_trinh.nhan_xet)||"")]));
+    body.push(...ML("",2));
+    body.push(new Paragraph({children:[R("Ngày......tháng......năm......")],alignment:AlignmentType.RIGHT,spacing:{before:140,after:60}}));
+    body.push(SGN(["Giám sát","Nhân viên xã hội"]));
+  }else if(fi===8){
+    body.push(...TITLE("PHIẾU CHUYỂN GỬI"));
+    body.push(SH("1. Thông tin trẻ cần chuyển gửi:"));
+    body.push(FL("Họ và tên trẻ",cb.ho_ten));
+    body.push(FLM(["Ngày tháng năm sinh",cb.ngay_sinh],["Giới tính",cb.gioi_tinh]));
+    body.push(FLM(["Họ tên người chăm sóc",ncs.ho_ten],["Mối quan hệ với trẻ",ncs.quan_he]));
+    body.push(FLM(["Địa chỉ",cb.dia_chi_hien_tai],["SDT",cb.sdt_nguoi_than]));
+    body.push(SH("2. Thông tin người chuyển gửi:"));
+    body.push(FL("Họ và tên người chuyển gửi",cg.nguoi_chuyen));
+    body.push(FL("Chức danh/vai trò/mối quan hệ với trẻ cần chuyển gửi",cg.chuc_danh));
+    body.push(FL("Tên đơn vị/cơ quan/tổ chức chuyển gửi",cg.don_vi_chuyen));
+    body.push(FL("Số điện thoại",cg.sdt_chuyen));
+    body.push(SH("3. Tóm tắt trường hợp trẻ cần chuyển gửi:"));
+    body.push(P([V(dg.nhan_xet_nvxh)]));body.push(...ML("",3));
+    body.push(SH("4. Nội dung cần được hỗ trợ"));
+    body.push(P([V(D.de_xuat)]));body.push(...ML("",2));
+    body.push(SH("5. Nơi nhận chuyển gửi:"));
+    body.push(FL("Họ tên người nhận",cg.nguoi_nhan));
+    body.push(FL("Tên đơn vị/cơ quan nhận chuyển gửi",cg.don_vi_nhan));
+    body.push(FL("Địa chỉ",cg.dia_chi_nhan));
+    body.push(FL("Số điện thoại liên hệ",cg.sdt_nhan));
+    body.push(new Paragraph({children:[R("TP. HCM, ngày......tháng......năm......")],alignment:AlignmentType.RIGHT,spacing:{before:180,after:60}}));
+    body.push(SGN(["Xác nhận từ nơi nhận chuyển gửi","Nhân viên xã hội"]));
+  }else if(fi===9){
+    body.push(...TITLE("PHIẾU KẾT THÚC CA","Tháng "+mo+"/"+yr));
+    body.push(FLM(["Họ và tên trẻ",cb.ho_ten],["Giới tính",cb.gioi_tinh]));
+    body.push(FLM(["Hồ sơ xã hội","DADH2025/00001"],["Năm sinh",cb.ngay_sinh]));
+    body.push(FLM(["Thời gian bắt đầu case",ktu.bat_dau_case||cb.ngay_tiep_can],["Thời gian thực hiện KH",""]));
+    body.push(FL("Địa điểm",cb.dia_chi_hien_tai));
+    body.push(FLM(["Người nuôi dưỡng trẻ",ktu.nguoi_nuoi_duong||ncs.ho_ten],["Quan hệ với trẻ",ktu.quan_he||ncs.quan_he]));
+    body.push(FLM(["Năm sinh",ktu.nam_sinh_nd],["Nghề nghiệp",ktu.nghe_nghiep_nd],["SDT",ktu.sdt_nd]));
+    body.push(FLM(["Nhân viên XH phụ trách case",ktu.nvxh_phu_trach],["SDT",ktu.sdt_nvxh]));
+    body.push(SH("1. TÓM LƯỢC KẾT QUẢ QUÁ TRÌNH HỖ TRỢ"));
+    body.push(SUB("Kết quả đạt được"));body.push(P([V(ktu.ket_qua_dat)]));body.push(...ML("",2));
+    body.push(SUB("Kết quả chưa đạt"));body.push(P([V(ktu.ket_qua_chua_dat)]));body.push(...ML("",2));
+    body.push(SH("2. LÝ DO KẾT THÚC HỖ TRỢ"));
+    body.push(P([V(ktu.ly_do)]));body.push(...ML("",4));
+    body.push(SH("3. KẾ HOẠCH THEO DÕI SAU KHI KẾT THÚC HỖ TRỢ:"));
+    body.push(P([V(ktu.ke_hoach_theo_doi)]));body.push(...ML("",3));
+    body.push(new Paragraph({children:[R("TP. HCM, ngày......tháng......năm......")],alignment:AlignmentType.RIGHT,spacing:{before:140,after:60}}));
+    body.push(SGN(["Giám sát case","Nhân viên xã hội"]));
+  }else{
+    body.push(...TITLE("BÁO CÁO QUẢN LÝ TRƯỜNG HỢP","Mã hồ sơ: DADH2025/00001"));
+    body.push(SH("PHẦN I: THÔNG TIN CƠ BẢN"));
+    body.push(FL("1. Họ tên trẻ",cb.ho_ten));body.push(FL("2. Ngày sinh",cb.ngay_sinh));
+    body.push(FL("3. Trình độ học vấn","Lớp "+(hv.lop||"?")));
+    body.push(P([R("4. Thông tin thân nhân trẻ:",{bold:true})]));
+    const tv10=(gd.thanh_vien||[]).map(function(tv){return[tv.ho_ten,tv.quan_he,tv.nam_sinh,"",tv.ghi_chu];});
+    while(tv10.length<3)tv10.push(["","","","",""]);
+    body.push(TBLF(["Họ tên","Mối quan hệ","Năm sinh","Cách thức liên hệ","Ghi chú"],tv10,[2000,1500,900,2000,2838]));
+    body.push(FL("5. Yêu cầu của trẻ và gia đình",[cf(dg.yeu_cau_tre),cf(dg.yeu_cau_gia_dinh)].filter(Boolean).join(" | ")));
+    body.push(FL("6. Đánh giá nguy cơ nhanh từ NVXH",dg.nguy_co));
+    body.push(SH("PHẦN II: TIẾN TRÌNH LÀM VIỆC VỚI THÂN CHỦ"));
+    body.push(FL("Bối cảnh gia đình",gd.hoan_canh));body.push(FL("Timeline sự kiện",D.timeline));
+    body.push(SUB("Nhu cầu của trẻ và gia đình sau khi NVXH làm việc:"));
+    body.push(FL("Thể chất",dg.nhu_cau_the_chat));body.push(FL("Tâm lý",dg.nhu_cau_tam_ly));body.push(FL("Nhận thức",dg.nhu_cau_nhan_thuc));
+    body.push(SUB("Ưu thế và nguồn lực:"));
+    body.push(FL("Ưu thế của trẻ",dg.uu_the_tre));body.push(FL("Ưu thế của gia đình",dg.uu_the_gia_dinh));
+    body.push(SUB("Kế hoạch hỗ trợ — Mục tiêu:"));
+    (kh.nhu_cau_ho_tro||[]).filter(function(nc){return nc.uu_tien;}).forEach(function(nc,i){body.push(FL("Mục tiêu "+(i+1)+" — "+nc.loai,nc.muc_tieu));});
+    body.push(SH("Lượng giá"));
+    body.push(FL("Kết quả đạt được",ktu.ket_qua_dat));body.push(FL("Nhận xét",dg.nhan_xet_nvxh));body.push(FL("Đề xuất",D.de_xuat));
+    body.push(...ML("",2));body.push(SGN(["Giám sát case"]));
+  }
+
+  // Build footer section - full width, correct aspect ratio
+  // Footer image: 2862x285px, ratio=10.04:1
+  // A4 content width: 9638 DXA = 6120130 EMU
+  // Footer: full page width (including margins)
+  // A4=11906 DXA, at 96dpi → 11906/1440*96 = 794px; ratio 2862:285=10.04:1 → 79px tall
+  // Paragraph uses negative indent to bleed into margins: -MG each side
+  const FTR_PX_W = 794, FTR_PX_H = 79;
+  let footerSection = {};
+  if(footerData){
+    try{
+      const{Footer:FooterClass}=lib;
+      footerSection={
+        default: new FooterClass({
+          children:[new Paragraph({
+            children:[new ImageRun({
+              data:footerData,
+              transformation:{width:FTR_PX_W,height:FTR_PX_H},
+              type:"png"
+            })],
+            alignment:AlignmentType.CENTER,
+            spacing:{before:0,after:0},
+            indent:{left:-MG,right:-MG}
+          })]
+        })
+      };
+    }catch(e){console.warn("Footer err:",e.message);}
+  }
+  // Margins: MG top/sides, footer distance from bottom edge
+  return new Document({sections:[{
+    properties:{page:{
+      size:{width:PW,height:PH},
+      margin:{top:MG,right:MG,bottom:720,left:MG,footer:0},
+      pageNumbers:{start:1,forceStart:true}
+    }},
+    footers: footerSection,
+    children:body
+  }]});
+}
+
+async function dlDocx(formIdx){
+  if(!D)return;
+  const btn=document.getElementById("btn-dx"+formIdx),ico=document.getElementById("dx-ico"+formIdx);
+  if(btn)btn.disabled=true;if(ico)ico.textContent="...";
+  try{
+    const lib=await loadDocxLib();
+    const imgs=await Promise.all([fetchImg(LOGO_URL),fetchImg(FOOTER_URL)]);
+    const doc=await buildDocxDoc(formIdx,imgs[0],imgs[1]);
+    const blob=await lib.Packer.toBlob(doc);
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");a.href=url;a.download="ThaoDan_"+FF[formIdx]+".docx";a.click();
+    URL.revokeObjectURL(url);
+  }catch(e){alert("Loi tao docx: "+e.message);}
+  finally{if(btn)btn.disabled=false;if(ico)ico.textContent=".docx";}
+}
+async function dlDocxAll(){
+  if(!D)return;
+  let lib;try{lib=await loadDocxLib();}catch(e){alert("Lỗi: "+e.message);return;}
+  const imgs=await Promise.all([fetchImg(LOGO_URL),fetchImg(FOOTER_URL)]);
+  for(let i=0;i<11;i++){
+    try{
+      const doc=await buildDocxDoc(i,imgs[0],imgs[1]);
+      const blob=await lib.Packer.toBlob(doc);
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");a.href=url;a.download="ThaoDan_"+FF[i]+".docx";a.click();
+      URL.revokeObjectURL(url);
+      await new Promise(function(r){setTimeout(r,400);});
+    }catch(e){console.error("Form "+i+": "+e.message);}
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+
+</html>
