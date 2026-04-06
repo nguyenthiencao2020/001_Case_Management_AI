@@ -932,14 +932,14 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
         <div class="chat-msgs" id="chat-msgs">
           <div class="chat-empty">
             <div style="font-size:28px;margin-bottom:8px;">💬</div>
-            <div style="font-weight:600;margin-bottom:4px;">Sẵn sàng hỗ trợ</div>
-            <div>Sau khi phân tích, bạn có thể hỏi thêm bất kỳ điều gì về ca này.</div>
+            <div style="font-weight:600;margin-bottom:4px;">Chuyên gia CTXH sẵn sàng</div>
+            <div>Hỏi bất kỳ điều gì về công tác xã hội, kỹ thuật quản lý ca, hoặc phân tích ca cụ thể sau khi nhập ghi chép.</div>
           </div>
         </div>
         <div id="chat-suggestions" class="chat-suggestions" style="display:none;"></div>
         <div class="chat-input-row">
-          <textarea id="chat-input" class="chat-input" placeholder="Hỏi thêm về ca này... (Enter để gửi)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}" disabled></textarea>
-          <button class="btn-send" id="btn-send" onclick="sendChat()" disabled>Gửi</button>
+          <textarea id="chat-input" class="chat-input" placeholder="Hỏi bất kỳ điều gì về CTXH... (Enter để gửi)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+          <button class="btn-send" id="btn-send" onclick="sendChat()">Gửi</button>
         </div>
       </div>
     </div>
@@ -2770,19 +2770,33 @@ const STAGE_SUGGESTIONS = {
   ]
 };
 
+const GENERAL_SUGGESTIONS = [
+  {icon:'📖', text:'Quy trình quản lý ca CTXH gồm những bước nào?'},
+  {icon:'👶', text:'Luật trẻ em 2016 quy định gì về bảo vệ trẻ?'},
+  {icon:'🤝', text:'Kỹ thuật tạo rapport với thân chủ?'},
+  {icon:'📋', text:'Cách viết ghi chép ca CTXH chuyên nghiệp?'},
+  {icon:'🔍', text:'Công cụ đánh giá rủi ro cho trẻ em?'},
+];
+
 function renderSuggestions() {
   const el = document.getElementById('chat-suggestions');
   if (!el) return;
-  const sug = STAGE_SUGGESTIONS[currentStage] || STAGE_SUGGESTIONS[1];
-  const stageLabel = ['','Tiếp cận','Vãng gia','Kế hoạch','Tiến trình','Kết thúc'][currentStage] || '';
-  el.innerHTML = `<div class="chat-sug-label">💡 Gợi ý GĐ${currentStage} — ${stageLabel}:</div>` +
+  let sug, label;
+  if (D) {
+    sug = STAGE_SUGGESTIONS[currentStage] || STAGE_SUGGESTIONS[1];
+    const stageLabel = ['','Tiếp cận','Vãng gia','Kế hoạch','Tiến trình','Kết thúc'][currentStage] || '';
+    label = `💡 Gợi ý GĐ${currentStage} — ${stageLabel}:`;
+  } else {
+    sug = GENERAL_SUGGESTIONS;
+    label = '💡 Hỏi chuyên gia CTXH:';
+  }
+  el.innerHTML = `<div class="chat-sug-label">${label}</div>` +
     sug.map(s => `<button class="chat-sug-btn" onclick="useSuggestion('${s.text.replace(/'/g,"\\\'")}')">${s.icon} ${s.text}</button>`).join('');
   el.style.display = 'flex';
 }
 
 function useSuggestion(text) {
   const input = document.getElementById('chat-input');
-  if (input.disabled) { showNotif('⚠️ Cần phân tích ca trước khi chat','warn'); return; }
   input.value = text;
   sendChat();
 }
@@ -2802,8 +2816,9 @@ async function sendChat() {
   chatHistory.push({role:'user',content:msg});
   const stageLabel = ['','Tiếp cận ban đầu','Vãng gia & Đánh giá','Kế hoạch can thiệp','Tiến trình','Kết thúc ca'][currentStage] || '';
   
-  // ── ENHANCED CONTEXT: gửi nhiều data hơn cho AI hiểu rõ case ──
+  // ── ENHANCED CONTEXT: gửi data nếu có, hoặc chế độ tư vấn chung ──
   let ctx = `\n\nGiai đoạn hiện tại: GĐ ${currentStage} — ${stageLabel}`;
+  let sysPrompt = SYS_CHAT;
   if (D) {
     const parts = [];
     if (D.co_ban) parts.push('Thông tin trẻ: ' + JSON.stringify(D.co_ban).substring(0,500));
@@ -2820,6 +2835,8 @@ async function sendChat() {
       if (r.recommendations) parts.push('Đề xuất: ' + JSON.stringify(r.recommendations).substring(0,300));
     }
     ctx += '\n\nDữ liệu case:\n' + parts.join('\n');
+  } else {
+    ctx = '\n\n[Chưa có dữ liệu case cụ thể — đang ở chế độ tư vấn chung về CTXH. Hãy trả lời dựa trên kiến thức chuyên môn CTXH, kỹ thuật quản lý ca, luật trẻ em Việt Nam, và kinh nghiệm thực tiễn.]';
   }
 
   try {
@@ -3119,9 +3136,7 @@ function newCase() {
   updateHeader();
   renderCaseList();
   renderEntriesPanel();
-  document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">💬</div><div>Sẵn sàng phân tích</div></div>';
-  document.getElementById('chat-input').disabled = true;
-  document.getElementById('btn-send').disabled = true;
+  document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">💬</div><div style="font-weight:600;">Chuyên gia CTXH sẵn sàng</div><div>Hỏi bất kỳ điều gì về CTXH hoặc nhập ghi chép để phân tích ca.</div></div>';
   document.getElementById('btn-fill').disabled = true;
   updateStageUI();
   switchMain('dash');
