@@ -258,6 +258,10 @@ body {
 .chat-hd-right { margin-left:auto; font-size:10px; color:var(--t3); background:#f1f5f9; padding:2px 8px; border-radius:8px; }
 .chat-msgs { flex:1; overflow-y:auto; padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
 .chat-empty { text-align:center; color:var(--t3); font-size:12px; padding:40px 20px; }
+.chat-suggestions{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px;border-top:1px solid var(--bd);background:var(--bg2);overflow-x:auto;}
+.chat-sug-btn{background:#fff;border:1px solid var(--bd);border-radius:20px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;color:var(--t1);transition:all .2s;flex-shrink:0;}
+.chat-sug-btn:hover{background:var(--org-light);border-color:var(--org);color:var(--org);}
+.chat-sug-label{font-size:11px;color:var(--t3);padding:0 16px;font-weight:500;margin-bottom:2px;}
 .cb { max-width:88%; padding:10px 14px; border-radius:12px; font-size:12.5px; line-height:1.65; word-break:break-word; }
 .cb-user { background:var(--navy); color:#fff; align-self:flex-end; border-bottom-right-radius:3px; }
 .cb-ai { background:#fff; color:var(--text); border:1px solid var(--bd); align-self:flex-start; border-bottom-left-radius:3px; box-shadow:var(--shadow); }
@@ -932,6 +936,7 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
             <div>Sau khi phân tích, bạn có thể hỏi thêm bất kỳ điều gì về ca này.</div>
           </div>
         </div>
+        <div id="chat-suggestions" class="chat-suggestions" style="display:none;"></div>
         <div class="chat-input-row">
           <textarea id="chat-input" class="chat-input" placeholder="Hỏi thêm về ca này... (Enter để gửi)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}" disabled></textarea>
           <button class="btn-send" id="btn-send" onclick="sendChat()" disabled>Gửi</button>
@@ -1935,6 +1940,8 @@ function updateStageUI() {
   } else if (hdrProg) {
     hdrProg.style.display = 'none';
   }
+  // Update chat suggestions
+  renderSuggestions();
 }
 
 function completeStage() {
@@ -2723,6 +2730,63 @@ function toggleFormSidebar() {
 // ════════════════════════════════════════════════════════════
 // CHAT
 // ════════════════════════════════════════════════════════════
+// ── QUICK SUGGESTIONS theo giai đoạn ──
+const STAGE_SUGGESTIONS = {
+  1: [
+    {icon:'🤝', text:'Cách tạo rapport với trẻ/gia đình?'},
+    {icon:'👀', text:'Những dấu hiệu cần quan sát khi tiếp cận?'},
+    {icon:'📋', text:'Thông tin nào cần thu thập đầu tiên?'},
+    {icon:'⚠️', text:'Dấu hiệu nguy hiểm cần can thiệp khẩn?'},
+    {icon:'🗣️', text:'Kỹ thuật phỏng vấn trẻ em?'},
+  ],
+  2: [
+    {icon:'🏠', text:'Cần quan sát gì khi vãng gia?'},
+    {icon:'📊', text:'Hướng dẫn vẽ eco-map / genogram?'},
+    {icon:'🔍', text:'Cách đánh giá mức độ rủi ro?'},
+    {icon:'💡', text:'Phân biệt nhu cầu vs yêu cầu?'},
+    {icon:'👨‍👩‍👧', text:'Đánh giá năng lực chăm sóc của gia đình?'},
+    {icon:'📝', text:'Gợi ý câu hỏi phỏng vấn gia đình?'},
+  ],
+  3: [
+    {icon:'🎯', text:'Hướng dẫn đặt mục tiêu SMART?'},
+    {icon:'🔗', text:'Nguồn lực nào có thể kết nối cho ca này?'},
+    {icon:'📅', text:'Gợi ý timeline can thiệp hợp lý?'},
+    {icon:'⚖️', text:'Ưu tiên nhu cầu nào trước?'},
+    {icon:'🤝', text:'Cách phối hợp đa ngành cho ca này?'},
+  ],
+  4: [
+    {icon:'📈', text:'Ca này đang tiến triển thế nào?'},
+    {icon:'🔄', text:'Khi nào cần điều chỉnh kế hoạch?'},
+    {icon:'⚠️', text:'Dấu hiệu ca đang đi sai hướng?'},
+    {icon:'📝', text:'Cách ghi nhận thay đổi của trẻ?'},
+    {icon:'💪', text:'Đánh giá kết quả trung gian?'},
+  ],
+  5: [
+    {icon:'✅', text:'Tiêu chí đóng ca là gì?'},
+    {icon:'📋', text:'Cần chuẩn bị gì để kết thúc ca?'},
+    {icon:'🔄', text:'Kế hoạch theo dõi sau kết thúc?'},
+    {icon:'📤', text:'Khi nào cần chuyển gửi?'},
+    {icon:'📊', text:'Tổng kết kết quả ca này?'},
+  ]
+};
+
+function renderSuggestions() {
+  const el = document.getElementById('chat-suggestions');
+  if (!el) return;
+  const sug = STAGE_SUGGESTIONS[currentStage] || STAGE_SUGGESTIONS[1];
+  const stageLabel = ['','Tiếp cận','Vãng gia','Kế hoạch','Tiến trình','Kết thúc'][currentStage] || '';
+  el.innerHTML = `<div class="chat-sug-label">💡 Gợi ý GĐ${currentStage} — ${stageLabel}:</div>` +
+    sug.map(s => `<button class="chat-sug-btn" onclick="useSuggestion('${s.text.replace(/'/g,"\\\'")}')">${s.icon} ${s.text}</button>`).join('');
+  el.style.display = 'flex';
+}
+
+function useSuggestion(text) {
+  const input = document.getElementById('chat-input');
+  if (input.disabled) { showNotif('⚠️ Cần phân tích ca trước khi chat','warn'); return; }
+  input.value = text;
+  sendChat();
+}
+
 async function sendChat() {
   const input = document.getElementById('chat-input');
   const msg = input.value.trim();
@@ -2737,7 +2801,26 @@ async function sendChat() {
 
   chatHistory.push({role:'user',content:msg});
   const stageLabel = ['','Tiếp cận ban đầu','Vãng gia & Đánh giá','Kế hoạch can thiệp','Tiến trình','Kết thúc ca'][currentStage] || '';
-  const ctx = D ? `\n\nGiai đoạn hiện tại: GĐ ${currentStage} — ${stageLabel}\n\nBáo cáo phân tích:\n${JSON.stringify({report:D._report,co_ban:D.co_ban,danh_gia:D.danh_gia}).substring(0,1500)}` : `\n\nGiai đoạn hiện tại: GĐ ${currentStage} — ${stageLabel}`;
+  
+  // ── ENHANCED CONTEXT: gửi nhiều data hơn cho AI hiểu rõ case ──
+  let ctx = `\n\nGiai đoạn hiện tại: GĐ ${currentStage} — ${stageLabel}`;
+  if (D) {
+    const parts = [];
+    if (D.co_ban) parts.push('Thông tin trẻ: ' + JSON.stringify(D.co_ban).substring(0,500));
+    if (D.gia_dinh) parts.push('Gia đình: ' + JSON.stringify(D.gia_dinh).substring(0,400));
+    if (D.tinh_trang) parts.push('Tình trạng: ' + JSON.stringify(D.tinh_trang).substring(0,300));
+    if (D.danh_gia) parts.push('Đánh giá: ' + JSON.stringify(D.danh_gia).substring(0,500));
+    if (D.ke_hoach) parts.push('Kế hoạch: ' + JSON.stringify(D.ke_hoach).substring(0,500));
+    if (D.vang_gia) parts.push('Vãng gia: ' + JSON.stringify(D.vang_gia).substring(0,400));
+    if (D.cap_nhat?.length) parts.push('Cập nhật gần nhất: ' + JSON.stringify(D.cap_nhat.slice(-2)).substring(0,500));
+    if (D._report) {
+      const r = D._report;
+      if (r.risk) parts.push('Rủi ro: ' + JSON.stringify(r.risk).substring(0,300));
+      if (r.strengths) parts.push('Điểm mạnh: ' + JSON.stringify(r.strengths).substring(0,300));
+      if (r.recommendations) parts.push('Đề xuất: ' + JSON.stringify(r.recommendations).substring(0,300));
+    }
+    ctx += '\n\nDữ liệu case:\n' + parts.join('\n');
+  }
 
   try {
     const reply = await callGroqChat([
