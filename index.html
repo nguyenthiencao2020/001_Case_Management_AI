@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Thảo Đàn AI Case Assistant v21</title>
+<title>Thảo Đàn AI Case Assistant v22</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -600,7 +600,7 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
   .psheet{box-shadow:none!important;padding:20px!important;max-width:100%!important;}
 }
 
-/* ══ FULL-WIDTH FIX v19.2 ══ */
+/* ══ FULL-WIDTH FIX v22.2 ══ */
 .dash-right {
   flex:1 !important; min-width:0 !important; overflow:hidden !important;
 }
@@ -788,9 +788,54 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 .user-bar .user-email{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .btn-logout{background:none;border:1px solid var(--bd);border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;color:var(--t3);font-family:inherit;}
 .btn-logout:hover{background:#fee;color:#b91c1c;border-color:#fca5a5;}
+/* ── NOTIFICATIONS PANEL ── */
+.notif-panel{position:fixed;top:56px;right:16px;width:340px;max-height:400px;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:999;overflow:hidden;display:none;}
+.notif-hd{padding:12px 16px;border-bottom:1px solid var(--bd);font-weight:600;font-size:13px;display:flex;justify-content:space-between;align-items:center;}
+.notif-list{overflow-y:auto;max-height:340px;padding:8px;}
+.notif-item{padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.5;cursor:pointer;transition:background .2s;margin-bottom:4px;}
+.notif-item:hover{background:var(--bg2);}
+.notif-item.warning{border-left:3px solid #dc2626;}
+.notif-item.reminder{border-left:3px solid #f59e0b;}
+.notif-item .notif-time{font-size:10px;color:var(--t3);margin-top:4px;}
+.notif-empty{padding:24px;text-align:center;color:var(--t3);font-size:12px;}
+/* ── STATS MODAL ── */
+.stats-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:998;display:none;align-items:center;justify-content:center;}
+.stats-box{background:#fff;border-radius:16px;padding:24px;width:90%;max-width:500px;max-height:80vh;overflow-y:auto;}
+.stats-title{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;}
+.stat-card{background:var(--bg2);border-radius:10px;padding:14px;text-align:center;}
+.stat-num{font-size:24px;font-weight:800;color:var(--navy);}
+.stat-label{font-size:11px;color:var(--t3);margin-top:4px;}
+.stat-card.risk-high{background:#fef2f2;} .stat-card.risk-high .stat-num{color:#dc2626;}
+.stat-card.risk-med{background:#fffbeb;} .stat-card.risk-med .stat-num{color:#d97706;}
+.stat-card.risk-low{background:#f0fdf4;} .stat-card.risk-low .stat-num{color:#16a34a;}
+/* ── FILE UPLOAD ── */
+.file-upload-area{border:2px dashed var(--bd);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:all .2s;margin:8px 0;}
+.file-upload-area:hover{border-color:var(--org);background:var(--org-light);}
+.file-list{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
+.file-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:8px;font-size:12px;}
+.file-item img{width:40px;height:40px;object-fit:cover;border-radius:6px;}
+.file-item .file-info{flex:1;overflow:hidden;}
+.file-item .file-name{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.file-item .file-meta{font-size:10px;color:var(--t3);}
+.file-item .file-del{color:#dc2626;cursor:pointer;font-size:14px;}
 </style>
 </head>
 <body>
+
+<!-- NOTIFICATIONS PANEL -->
+<div id="notif-panel" class="notif-panel">
+  <div class="notif-hd">🔔 Thông báo <button onclick="document.getElementById('notif-panel').style.display='none'" style="background:none;border:none;cursor:pointer;font-size:16px;">✕</button></div>
+  <div id="notif-list" class="notif-list"><div class="notif-empty">Không có thông báo mới</div></div>
+</div>
+
+<!-- STATS MODAL -->
+<div id="stats-overlay" class="stats-overlay" onclick="if(event.target===this)this.style.display='none'">
+  <div class="stats-box">
+    <div class="stats-title">📊 Thống kê ca <button onclick="document.getElementById('stats-overlay').style.display='none'" style="background:none;border:none;cursor:pointer;font-size:18px;">✕</button></div>
+    <div id="stats-content">Đang tải...</div>
+  </div>
+</div>
 
 <!-- LOGIN OVERLAY -->
 <div id="login-overlay" class="login-overlay">
@@ -822,7 +867,7 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 <div class="hdr">
   <div class="logo-area">
     <img class="logo-img" src="https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/main/ThaoDanSSC_Digital-01.png" alt="TD" onerror="this.style.display='none'">
-    <div class="logo-txt"><div class="t1">THẢO <span>ĐÀN</span></div><div class="t2">AI Case Assistant v19</div></div>
+    <div class="logo-txt"><div class="t1">THẢO <span>ĐÀN</span></div><div class="t2">AI Case Assistant v22</div></div>
   </div>
   <div class="sep"></div>
   <div class="hdr-info">
@@ -843,6 +888,8 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
   </div>
   <div class="hdr-btns">
     <div id="user-bar" class="user-bar" style="display:none;">
+      <button class="btn-hdr" onclick="showStats()" title="Thống kê">📊</button>
+      <button class="btn-hdr" onclick="showNotifications()" title="Thông báo" style="position:relative;">🔔<span id="notif-badge" style="display:none;position:absolute;top:-2px;right:-2px;background:#dc2626;color:#fff;font-size:9px;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;"></span></button>
       <span class="user-email" id="user-email"></span>
       <button class="btn-logout" onclick="logoutUser()">Đăng xuất</button>
     </div>
@@ -1184,7 +1231,7 @@ Trả về JSON hợp lệ DUY NHẤT, bắt đầu bằng {. KHÔNG dùng markd
   "urgent_reason": ""
 }`;
 // ════════════════════════════════════════════════════════════
-// ★★★ 5 REPORT PROMPTS RIÊNG TỪNG GIAI ĐOẠN v19 ★★★
+// ★★★ 5 REPORT PROMPTS RIÊNG TỪNG GIAI ĐOẠN v22 ★★★
 // ════════════════════════════════════════════════════════════
 
 const SYS_REPORT_1 = `Bạn là GIÁM SÁT VIÊN CTXH cấp cao tại Thảo Đàn TP.HCM — 15+ năm kinh nghiệm bảo vệ trẻ em.
@@ -1645,6 +1692,8 @@ function _onLogin(user) {
     updateHeader();
     updateStageUI();
     renderEntriesPanel();
+    // Check notifications and stale cases
+    setTimeout(() => { checkStaleCases(); showNotifications(); }, 2000);
   });
 }
 
@@ -1663,74 +1712,143 @@ async function _checkSession() {
 }
 
 // ════════════════════════════════════════════════════════════
-// STORAGE — Supabase + localStorage fallback
+// STORAGE v22 — Supabase per-case rows + files + notifications
+// STORAGE v22 — Supabase per-case rows + files + notifications
 // ════════════════════════════════════════════════════════════
-const CASES_KEY = 'thaodan_cases_v21';
-const CASES_KEY_LOCAL = 'thaodan_cases_v21_local';
+const CASES_KEY_LOCAL = 'thaodan_cases_v22_local';
 let _cases = {};
 
 function loadCases() { return _cases; }
 
 function saveCases(c) {
   _cases = JSON.parse(JSON.stringify(c));
-  const payload = JSON.stringify(_cases);
-  const sizeMB = (payload.length / 1024 / 1024).toFixed(1);
-  if (parseFloat(sizeMB) > 3.5) {
-    showNotif('⚠️ Dữ liệu đã ' + sizeMB + 'MB — nên Export backup JSON để tránh mất!', 'warn');
-  }
-  _saveToLocal(payload);
+  try { localStorage.setItem(CASES_KEY_LOCAL, JSON.stringify(_cases)); } catch(e) {}
   if (_currentUser) {
-    _supabase.from('cases').upsert({
-      user_id: _currentUser.id,
-      data: _cases,
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id' }).then(({ error }) => {
-      if (error) { console.warn('Supabase save error:', error); showNotif('⚠️ Lưu cloud thất bại — đã lưu local', 'warn'); }
-    }).catch(e => console.warn('Supabase save error:', e));
-  }
-}
-function _saveToLocal(payload) {
-  try { localStorage.setItem(CASES_KEY_LOCAL, payload); }
-  catch(e) {
-    showNotif('❌ localStorage đầy! Đang thử nén...', 'err');
-    _saveToLocalCompact(payload);
-  }
-}
-function _saveToLocalCompact(payload) {
-  try {
-    const cases = JSON.parse(payload);
-    Object.values(cases).forEach(c => {
-      if (c.lastAnalysis?._report) c.lastAnalysis._report = {_stripped:true,risk:c.lastAnalysis._report.risk||''};
+    Object.values(_cases).forEach(cs => {
+      const risk = cs.lastAnalysis?._report?.risk?.level || cs.lastAnalysis?._report?.risk_level || null;
+      _supabase.from('cases_v2').upsert({
+        id: cs.id, user_id: _currentUser.id, name: cs.name || 'Ca mới',
+        status: cs.status || 'open', stage: cs.currentStage || 1,
+        risk_level: ['Cao','Trung bình','Thấp'].includes(risk) ? risk : null,
+        child_name: cs.lastAnalysis?.co_ban?.ho_ten || '',
+        child_dob: cs.lastAnalysis?.co_ban?.ngay_sinh || '',
+        data: cs, updated_at: cs.updatedAt || new Date().toISOString()
+      }, { onConflict: 'id' }).then(({ error }) => {
+        if (error) console.warn('Supabase save error:', error);
+      });
     });
-    localStorage.setItem(CASES_KEY_LOCAL, JSON.stringify(cases));
-    showNotif('⚠️ Đã lưu rút gọn (báo cáo sẽ tạo lại khi phân tích). Nên Export backup!', 'warn');
-  } catch(e2) {
-    showNotif('❌ Không thể lưu — hãy Export backup JSON ngay!', 'err');
+  }
+}
+
+function saveOneCase(caseId) {
+  const cs = _cases[caseId];
+  if (!cs) return;
+  try { localStorage.setItem(CASES_KEY_LOCAL, JSON.stringify(_cases)); } catch(e) {}
+  if (_currentUser) {
+    const risk = cs.lastAnalysis?._report?.risk?.level || cs.lastAnalysis?._report?.risk_level || null;
+    _supabase.from('cases_v2').upsert({
+      id: cs.id, user_id: _currentUser.id, name: cs.name || 'Ca mới',
+      status: cs.status || 'open', stage: cs.currentStage || 1,
+      risk_level: ['Cao','Trung bình','Thấp'].includes(risk) ? risk : null,
+      child_name: cs.lastAnalysis?.co_ban?.ho_ten || '',
+      child_dob: cs.lastAnalysis?.co_ban?.ngay_sinh || '',
+      data: cs, updated_at: cs.updatedAt || new Date().toISOString()
+    }, { onConflict: 'id' }).then(({ error }) => {
+      if (error) console.warn('Supabase save error:', error);
+    });
   }
 }
 
 async function initStorage() {
-  // Try Supabase first
   if (_currentUser) {
     try {
-      const { data, error } = await _supabase.from('cases').select('data').eq('user_id', _currentUser.id).single();
-      if (data?.data) {
-        _cases = data.data;
-        // Sync to localStorage as backup
-        _saveToLocal(JSON.stringify(_cases));
+      const { data } = await _supabase.from('cases_v2')
+        .select('id, data').eq('user_id', _currentUser.id)
+        .order('updated_at', { ascending: false });
+      if (data?.length) {
+        _cases = {};
+        data.forEach(row => { if (row.data) _cases[row.id] = row.data; });
+        try { localStorage.setItem(CASES_KEY_LOCAL, JSON.stringify(_cases)); } catch(e) {}
         return;
       }
     } catch(e) { console.warn('Supabase load error:', e); }
   }
-  // Fallback to localStorage
   try {
-    const raw = localStorage.getItem(CASES_KEY_LOCAL);
-    if (raw) { _cases = JSON.parse(raw); }
+    const raw = localStorage.getItem(CASES_KEY_LOCAL) || localStorage.getItem('thaodan_cases_v21_local');
+    if (raw) _cases = JSON.parse(raw);
   } catch(e) { _cases = {}; }
 }
 
-function genCaseId() { return 'c_'+Date.now()+'_'+Math.random().toString(36).substr(2,4); }
+async function deleteCaseFromDB(caseId) {
+  if (_currentUser) {
+    await _supabase.from('cases_v2').delete().eq('id', caseId).eq('user_id', _currentUser.id);
+  }
+}
 
+async function uploadCaseFile(caseId, file, stage, note) {
+  if (!_currentUser) { showNotif('⚠️ Cần đăng nhập','warn'); return null; }
+  const ext = file.name.split('.').pop();
+  const path = `${_currentUser.id}/${caseId}/${Date.now()}.${ext}`;
+  const { error } = await _supabase.storage.from('case-files').upload(path, file);
+  if (error) { showNotif('❌ Upload lỗi: ' + error.message, 'err'); return null; }
+  await _supabase.from('case_files').insert({
+    case_id: caseId, user_id: _currentUser.id, file_name: file.name,
+    file_path: path, file_size: file.size, file_type: file.type,
+    stage: stage || currentStage, note: note || ''
+  });
+  showNotif('✅ Đã upload: ' + file.name);
+  return path;
+}
+
+async function getCaseFiles(caseId) {
+  if (!_currentUser) return [];
+  const { data } = await _supabase.from('case_files')
+    .select('*').eq('case_id', caseId).order('created_at', { ascending: false });
+  return data || [];
+}
+
+async function getFileUrl(filePath) {
+  const { data } = await _supabase.storage.from('case-files').createSignedUrl(filePath, 3600);
+  return data?.signedUrl || '';
+}
+
+async function deleteCaseFile(fileId, filePath) {
+  await _supabase.storage.from('case-files').remove([filePath]);
+  await _supabase.from('case_files').delete().eq('id', fileId);
+}
+
+async function loadNotifications() {
+  if (!_currentUser) return [];
+  const { data } = await _supabase.from('notifications')
+    .select('*').eq('user_id', _currentUser.id).eq('is_read', false)
+    .order('created_at', { ascending: false }).limit(20);
+  return data || [];
+}
+
+async function markNotifRead(id) {
+  await _supabase.from('notifications').update({ is_read: true }).eq('id', id);
+}
+
+async function loadCaseStats() {
+  if (!_currentUser) return null;
+  const { data } = await _supabase.from('case_stats')
+    .select('*').eq('user_id', _currentUser.id).single();
+  return data;
+}
+
+async function checkStaleCases() {
+  if (!_currentUser) return;
+  const now = new Date();
+  Object.values(_cases).forEach(c => {
+    if (c.status !== 'open') return;
+    const days = Math.floor((now - new Date(c.updatedAt)) / 86400000);
+    const risk = c.lastAnalysis?._report?.risk?.level || c.lastAnalysis?._report?.risk_level || '';
+    if (risk === 'Cao' && days > 7) showNotif(`⚠️ Ca "${c.name}" rủi ro CAO — ${days} ngày chưa cập nhật!`, 'warn');
+    else if (days > 14) showNotif(`📌 Ca "${c.name}" đã ${days} ngày chưa cập nhật`, 'warn');
+  });
+}
+
+function genCaseId() { return 'c_'+Date.now()+'_'+Math.random().toString(36).substr(2,4); }
 // ════════════════════════════════════════════════════════════
 // API CALLS — qua Cloudflare Worker proxy (không cần key phía client)
 // ════════════════════════════════════════════════════════════
@@ -1768,6 +1886,128 @@ async function callGroqChat(messages, temp=0.4) {
 
 function changeAPIKey() {
   showNotif('ℹ️ API key được quản lý an toàn phía server — không cần nhập thủ công');
+}
+
+// ── STATS DASHBOARD ──
+async function showStats() {
+  const overlay = document.getElementById('stats-overlay');
+  overlay.style.display = 'flex';
+  const el = document.getElementById('stats-content');
+  el.innerHTML = 'Đang tải...';
+  
+  // Calculate from local data
+  const cases = Object.values(_cases);
+  const open = cases.filter(c => c.status === 'open');
+  const closed = cases.filter(c => c.status === 'closed');
+  const riskHigh = cases.filter(c => {
+    const r = c.lastAnalysis?._report?.risk?.level || c.lastAnalysis?._report?.risk_level;
+    return r === 'Cao';
+  });
+  const riskMed = cases.filter(c => {
+    const r = c.lastAnalysis?._report?.risk?.level || c.lastAnalysis?._report?.risk_level;
+    return r === 'Trung bình';
+  });
+  const stages = [0,0,0,0,0,0];
+  open.forEach(c => { stages[c.currentStage || 1]++; });
+  
+  // Stale cases (>14 days no update)
+  const now = new Date();
+  const stale = open.filter(c => {
+    const days = Math.floor((now - new Date(c.updatedAt)) / 86400000);
+    return days > 14;
+  });
+
+  el.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num">${cases.length}</div><div class="stat-label">Tổng ca</div></div>
+      <div class="stat-card" style="background:#dbeafe;"><div class="stat-num" style="color:#1d4ed8;">${open.length}</div><div class="stat-label">Đang mở</div></div>
+      <div class="stat-card"><div class="stat-num">${closed.length}</div><div class="stat-label">Đã đóng</div></div>
+      <div class="stat-card risk-high"><div class="stat-num">${riskHigh.length}</div><div class="stat-label">Rủi ro cao</div></div>
+      <div class="stat-card risk-med"><div class="stat-num">${riskMed.length}</div><div class="stat-label">Rủi ro TB</div></div>
+      <div class="stat-card" style="background:#fef3c7;"><div class="stat-num" style="color:#92400e;">${stale.length}</div><div class="stat-label">Lâu chưa CN</div></div>
+    </div>
+    <div style="font-weight:600;font-size:13px;margin-bottom:8px;">Ca đang mở theo giai đoạn:</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      ${[1,2,3,4,5].map(s => `<div style="flex:1;text-align:center;padding:8px;background:var(--bg2);border-radius:8px;">
+        <div style="font-size:18px;font-weight:700;">${stages[s]}</div>
+        <div style="font-size:10px;color:var(--t3);">GĐ${s}</div>
+      </div>`).join('')}
+    </div>
+    ${stale.length ? `<div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#dc2626;">⚠️ Ca lâu chưa cập nhật:</div>
+    <div style="font-size:12px;">${stale.map(c => {
+      const days = Math.floor((now - new Date(c.updatedAt)) / 86400000);
+      return `<div style="padding:6px 0;border-bottom:1px solid var(--bd);">📁 ${esc(c.name)} — <b>${days} ngày</b> · GĐ${c.currentStage||1}</div>`;
+    }).join('')}</div>` : '<div style="color:#16a34a;font-size:12px;">✅ Tất cả ca đều được cập nhật đều đặn</div>'}
+  `;
+}
+
+// ── NOTIFICATIONS ──
+async function showNotifications() {
+  const panel = document.getElementById('notif-panel');
+  panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+  if (panel.style.display === 'none') return;
+  
+  const list = document.getElementById('notif-list');
+  const notifs = await loadNotifications();
+  
+  if (!notifs.length) {
+    // Fallback: check stale cases locally
+    const localNotifs = [];
+    const now = new Date();
+    Object.values(_cases).forEach(c => {
+      if (c.status !== 'open') return;
+      const days = Math.floor((now - new Date(c.updatedAt)) / 86400000);
+      const risk = c.lastAnalysis?._report?.risk?.level || c.lastAnalysis?._report?.risk_level || '';
+      if (risk === 'Cao' && days > 7) localNotifs.push({ type:'warning', message:`Ca "${c.name}" rủi ro CAO — ${days} ngày chưa cập nhật!`, created_at: c.updatedAt });
+      else if (days > 14) localNotifs.push({ type:'reminder', message:`Ca "${c.name}" đã ${days} ngày chưa cập nhật`, created_at: c.updatedAt });
+    });
+    if (!localNotifs.length) { list.innerHTML = '<div class="notif-empty">🎉 Không có thông báo mới</div>'; return; }
+    list.innerHTML = localNotifs.map(n => `<div class="notif-item ${n.type}">${n.message}<div class="notif-time">${fmtVN(n.created_at)}</div></div>`).join('');
+    return;
+  }
+  
+  list.innerHTML = notifs.map(n => `<div class="notif-item ${n.type}" onclick="markNotifRead('${n.id}');this.remove();">
+    ${esc(n.message)}<div class="notif-time">${fmtVN(n.created_at)}</div>
+  </div>`).join('');
+  document.getElementById('notif-badge').style.display = 'flex';
+  document.getElementById('notif-badge').textContent = notifs.length;
+}
+
+// ── FILE UPLOAD UI ──
+function renderFileUpload(caseId) {
+  return `<div class="file-upload-area" onclick="document.getElementById('file-input-${caseId}').click()">
+    📎 Nhấn để upload ảnh/file (ảnh vãng gia, giấy tờ...)
+    <input type="file" id="file-input-${caseId}" style="display:none" accept="image/*,.pdf,.doc,.docx" multiple onchange="handleFileUpload('${caseId}', this.files)">
+  </div>
+  <div id="file-list-${caseId}" class="file-list"></div>`;
+}
+
+async function handleFileUpload(caseId, files) {
+  for (const file of files) {
+    if (file.size > 5 * 1024 * 1024) { showNotif('⚠️ File ' + file.name + ' > 5MB — bỏ qua', 'warn'); continue; }
+    showNotif('⏳ Đang upload: ' + file.name);
+    await uploadCaseFile(caseId, file, currentStage, '');
+  }
+  refreshFileList(caseId);
+}
+
+async function refreshFileList(caseId) {
+  const el = document.getElementById('file-list-' + caseId);
+  if (!el) return;
+  const files = await getCaseFiles(caseId);
+  if (!files.length) { el.innerHTML = ''; return; }
+  const items = await Promise.all(files.map(async f => {
+    const isImg = f.file_type?.startsWith('image/');
+    const url = await getFileUrl(f.file_path);
+    const size = (f.file_size / 1024).toFixed(0) + 'KB';
+    return `<div class="file-item">
+      ${isImg ? `<img src="${url}" alt="">` : '<div style="width:40px;height:40px;background:var(--bg2);border-radius:6px;display:flex;align-items:center;justify-content:center;">📄</div>'}
+      <div class="file-info"><div class="file-name">${esc(f.file_name)}</div><div class="file-meta">GĐ${f.stage} · ${size} · ${fmtVN(f.created_at)}</div></div>
+      ${isImg ? `<a href="${url}" target="_blank" style="font-size:14px;">🔍</a>` : `<a href="${url}" target="_blank" style="font-size:14px;">⬇</a>`}
+      <span class="file-del" onclick="if(confirm('Xóa file này?')){deleteCaseFile('${f.id}','${f.file_path}').then(()=>refreshFileList('${caseId}'))}">🗑</span>
+    </div>`;
+  }));
+  el.innerHTML = items.join('');
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2153,7 +2393,7 @@ function renderProgressSummary() {
   if (D?._report) renderReport(D._report);
 }
 // ════════════════════════════════════════════════════════════
-// ★★★ REPORT RENDERER v19 — Stage-aware ★★★
+// ★★★ REPORT RENDERER v22 — Stage-aware ★★★
 // ════════════════════════════════════════════════════════════
 function renderReport(report) {
   if (!report) return;
@@ -2198,7 +2438,7 @@ function _header(stageName,stageNum,color) {
       <div><div style="font-size:14px;font-weight:900">Báo cáo GĐ ${stageNum} — ${stageName}</div>
       <div style="font-size:10px;opacity:.6;margin-top:2px">${esc(cb.ho_ten||'—')} · ${now}</div></div>
     </div>
-    <div style="font-size:10px;opacity:.6">v19</div></div>`;
+    <div style="font-size:10px;opacity:.6">v22</div></div>`;
 }
 function _urgentBanner(report) {
   if (!report.urgent||!report.urgent_reason) return '';
@@ -3232,10 +3472,16 @@ function showCaseDetail(id) {
     </div>
     <div class="case-detail-body">
       ${entries.length ? entries.map(e=>`<div class="ct-item"><div class="ct-date">📅 ${fmtVN(e.date)}</div><div class="ct-notes">${esc((e.notes||'').substring(0,300))}</div></div>`).join('') : '<div style="text-align:center;padding:40px;color:var(--t3);">Chưa có ghi chép</div>'}
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);">
+        <div style="font-weight:600;font-size:13px;margin-bottom:6px;">📎 Tài liệu đính kèm</div>
+        ${renderFileUpload(id)}
+      </div>
     </div>
     <div class="case-actions">
       <button class="btn-analyze" style="font-size:11px;flex:none;padding:7px 14px;" onclick="loadCaseIntoApp('${id}');switchMain('dash')">🔬 Phân tích</button>
     </div>`;
+  // Load files async
+  refreshFileList(id);
 }
 
 function loadCaseIntoApp(id) {
@@ -3273,9 +3519,11 @@ function deleteCase(id) {
   const cases = loadCases();
   delete cases[id];
   saveCases(cases);
-  if (curCaseId===id) { curCaseId=null; updateHeader(); }
+  deleteCaseFromDB(id);
+  if (curCaseId===id) { curCaseId=null; D=null; updateHeader(); }
   renderCaseList(); updateCasesCount();
   document.getElementById('cases-main').innerHTML = '<div class="case-detail-empty"><div>Đã xóa</div></div>';
+  showNotif('✅ Đã xóa ca');
 }
 
 function updateCasesCount() {
