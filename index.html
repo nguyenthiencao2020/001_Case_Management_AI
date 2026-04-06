@@ -3092,24 +3092,36 @@ async function sendFEC() {
   try {
     const raw = await callAI(
       `Bạn là trợ lý chỉnh sửa form CTXH Thảo Đàn. ĐANG SỬA: ${formName} (form index ${curForm}).
-Data roots: ${fctx.rootKeys}. Phân tích yêu cầu sửa đổi và trả về JSON DUY NHẤT:
-{"understood":true,"edits":[{"path":"<root>.<field>","old_val":"cũ","new_val":"mới","label":"Tên field"}],"message":""}
+Data roots: ${fctx.rootKeys}.
+
+QUAN TRỌNG: User có thể yêu cầu sửa NHIỀU field cùng lúc. Hãy phân tích kỹ và tạo NHIỀU edit entries trong mảng "edits".
+VD: "sửa tên thành Nguyễn Văn A, sinh ngày 1/1/2010, giới tính Nam" → 3 edits.
+VD: "địa chỉ là 123 Nguyễn Huệ Q1, SĐT 0901234567" → 2 edits.
+
+Trả về JSON DUY NHẤT:
+{"understood":true,"edits":[{"path":"<root>.<field>","old_val":"giá trị cũ","new_val":"giá trị mới","label":"Tên field hiển thị"}],"message":""}
 Nếu không hiểu: {"understood":false,"edits":[],"message":"giải thích"}
-VD path cho từng form: co_ban.ho_ten, vang_gia.quan_sat_mt, danh_gia.van_de_tam_ly, ke_hoach.thoi_gian_kh, chuyen_gui.don_vi_nhan, ket_thuc.ket_qua_dat
-Với cap_nhat (mảng): dùng path "cap_nhat[0].ket_qua" cho entry đầu, "cap_nhat[-1].ket_qua" cho entry cuối.
+
+VD path: co_ban.ho_ten, co_ban.ngay_sinh, co_ban.gioi_tinh, co_ban.dia_chi_hien_tai, co_ban.sdt, 
+vang_gia.quan_sat_mt, vang_gia.bau_khong_khi, danh_gia.van_de_the_chat, danh_gia.van_de_tam_ly, 
+ke_hoach.thoi_gian_kh, ke_hoach.bat_dau_case, chuyen_gui.don_vi_nhan, ket_thuc.ket_qua_dat
+Với cap_nhat (mảng): "cap_nhat[0].ket_qua", "cap_nhat[-1].ket_qua"
+Với gia_dinh: gia_dinh.cha.ho_ten, gia_dinh.me.ho_ten, gia_dinh.hoan_canh
+
 Dữ liệu hiện tại: ${fctx.snippet}`,
-      msg, 0, 500);
+      msg, 0, 1500);
     const result = robustJSON(raw);
     if (!result.understood || !result.edits?.length) {
-      msgs.innerHTML += `<div class="fec-msg-ai">🤔 ${esc(result.message||'Không hiểu. VD: "sửa tên thành Nguyễn Văn A"')}</div>`;
+      msgs.innerHTML += `<div class="fec-msg-ai">🤔 ${esc(result.message||'Không hiểu. VD: "sửa tên thành Nguyễn Văn A, SN 1/1/2010, giới tính Nam"')}</div>`;
     } else {
       result.edits.forEach(edit => {
         setNested(D, edit.path, edit.new_val);
         msgs.innerHTML += `<div class="fec-msg-ai" style="color:#16a34a;">✅ ${esc(edit.label||edit.path)}: "${esc(edit.old_val||'')}" → "${esc(edit.new_val)}"</div>`;
       });
+      msgs.innerHTML += `<div class="fec-msg-ai" style="color:#1d4ed8;font-size:11px;">📝 Đã sửa ${result.edits.length} trường — nhớ Lưu ca</div>`;
       showForm(curForm);
       if(window._markUnsaved) window._markUnsaved();
-      showNotif('✅ Đã cập nhật — nhớ Lưu ca');
+      showNotif(`✅ Đã cập nhật ${result.edits.length} trường — nhớ Lưu ca`);
     }
   } catch(e) {
     msgs.innerHTML += `<div class="fec-msg-ai">❌ ${esc(e.message)}</div>`;
