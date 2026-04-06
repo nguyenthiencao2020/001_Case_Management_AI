@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Thảo Đàn AI Case Assistant v19</title>
+<title>Thảo Đàn AI Case Assistant v21</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -276,8 +277,6 @@ body {
 }
 .btn-send:hover { background:var(--navy2); }
 .btn-send:disabled { background:#cbd5e1; cursor:not-allowed; }
-
-
 /* ══ FORMS TAB — CSS GRID: TRUE FULL-WIDTH ══ */
 .forms-tab {
   display:grid;
@@ -375,8 +374,6 @@ body {
   font-size:9.5px; font-weight:800; color:var(--t3); text-transform:uppercase;
   letter-spacing:1px; padding:6px 2px 4px; border-bottom:1px solid var(--bd); margin-bottom:6px;
 }
-
-
 .fv { display:none; width:100%; box-sizing:border-box; }
 .fv-header {
   display:flex; align-items:flex-start; justify-content:space-between;
@@ -629,8 +626,6 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
   box-sizing:border-box !important;
 }
 .fl-vl { word-break:break-word !important; }
-
-
 /* ══════════════════════════════════════════════════════
    MOBILE RESPONSIVE — NVXH thực địa
    Breakpoint: 768px (tablet), 480px (phone)
@@ -768,9 +763,44 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
   select { min-height:36px; }
 }
 
+/* ── LOGIN SCREEN ── */
+.login-overlay{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0f2d6b 0%,#1a3f8f 50%,#0a1f4d 100%);display:flex;align-items:center;justify-content:center;font-family:'Be Vietnam Pro',sans-serif;}
+.login-box{background:#fff;border-radius:16px;padding:40px 36px;width:90%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center;}
+.login-logo{width:120px;margin:0 auto 16px;display:block;}
+.login-title{font-size:20px;font-weight:700;color:#0f2d6b;margin-bottom:4px;}
+.login-sub{font-size:13px;color:#666;margin-bottom:24px;}
+.login-input{width:100%;padding:12px 14px;border:1.5px solid #ddd;border-radius:10px;font-size:14px;font-family:inherit;margin-bottom:12px;box-sizing:border-box;transition:border-color .2s;}
+.login-input:focus{outline:none;border-color:#f07020;box-shadow:0 0 0 3px rgba(240,112,32,.15);}
+.login-btn{width:100%;padding:12px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;}
+.login-btn-primary{background:#f07020;color:#fff;margin-bottom:10px;}
+.login-btn-primary:hover{background:#d05a10;}
+.login-btn-google{background:#fff;color:#333;border:1.5px solid #ddd;display:flex;align-items:center;justify-content:center;gap:8px;}
+.login-btn-google:hover{background:#f8f8f8;border-color:#bbb;}
+.login-btn-google svg{width:18px;height:18px;}
+.login-err{color:#dc2626;font-size:12px;margin-top:8px;min-height:18px;}
+.login-footer{font-size:11px;color:#999;margin-top:20px;}
+.login-spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-right:6px;}
+.user-bar{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);}
+.user-bar .user-email{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.btn-logout{background:none;border:1px solid var(--bd);border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;color:var(--t3);font-family:inherit;}
+.btn-logout:hover{background:#fee;color:#b91c1c;border-color:#fca5a5;}
 </style>
 </head>
 <body>
+
+<!-- LOGIN OVERLAY -->
+<div id="login-overlay" class="login-overlay">
+  <div class="login-box">
+    <img class="login-logo" src="https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/main/ThaoDanSSC_Digital-01.png" alt="Thảo Đàn" onerror="this.style.display='none'">
+    <div class="login-title">Thảo Đàn AI Case Assistant</div>
+    <div class="login-sub">Đăng nhập để tiếp tục</div>
+    <input id="login-email" class="login-input" type="email" placeholder="Email">
+    <input id="login-pass" class="login-input" type="password" placeholder="Mật khẩu" onkeydown="if(event.key==='Enter')loginEmail()">
+    <button class="login-btn login-btn-primary" onclick="loginEmail()">Đăng nhập</button>
+    <div id="login-err" class="login-err"></div>
+    <div class="login-footer">Liên hệ quản trị viên nếu chưa có tài khoản</div>
+  </div>
+</div>
 
 <!-- PRINT OVERLAY -->
 <div id="pov" class="pov">
@@ -808,7 +838,10 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
     <span id="hdr-case-date"></span>
   </div>
   <div class="hdr-btns">
-    <button class="btn-hdr" onclick="changeAPIKey()" title="Đổi Groq API key">🔑</button>
+    <div id="user-bar" class="user-bar" style="display:none;">
+      <span class="user-email" id="user-email"></span>
+      <button class="btn-logout" onclick="logoutUser()">Đăng xuất</button>
+    </div>
     <button class="btn-hdr" onclick="exportCaseJSON()" title="Backup ca ra file JSON">⬇ JSON</button>
     <button class="btn-hdr" onclick="importCaseJSON()" title="Khôi phục ca từ file JSON">⬆ JSON</button>
     <button class="btn-hdr" onclick="newCase()">＋ Ca mới</button>
@@ -1145,8 +1178,6 @@ Trả về JSON hợp lệ DUY NHẤT, bắt đầu bằng {. KHÔNG dùng markd
   "urgent": false,
   "urgent_reason": ""
 }`;
-
-
 // ════════════════════════════════════════════════════════════
 // ★★★ 5 REPORT PROMPTS RIÊNG TỪNG GIAI ĐOẠN v19 ★★★
 // ════════════════════════════════════════════════════════════
@@ -1546,13 +1577,95 @@ function showNotif(msg, type='ok') {
 }
 
 // ════════════════════════════════════════════════════════════
-// STORAGE (in-memory + attempt persist)
+// SUPABASE CONFIG
 // ════════════════════════════════════════════════════════════
-const CASES_KEY = 'thaodan_cases_v19';
-const CASES_KEY_LOCAL = 'thaodan_cases_v19_local';
+// ⚠️ ĐỔI 2 giá trị này thành project của bạn:
+const SUPABASE_URL = 'https://mlhtvxoricudzstpzquh.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_SemT5e_eSp8FqkONPGTr0g_HWWtgRT2';
+const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let _currentUser = null;
+
+// ── AUTH ──
+async function loginEmail() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-err');
+  errEl.textContent = '';
+  if (!email || !pass) { errEl.textContent = 'Vui lòng nhập email và mật khẩu'; return; }
+  try {
+    const { data, error } = await _supabase.auth.signInWithPassword({ email, password: pass });
+    if (error) throw error;
+    _onLogin(data.user);
+  } catch(e) {
+    errEl.textContent = e.message === 'Invalid login credentials' 
+      ? 'Email hoặc mật khẩu không đúng' 
+      : e.message || 'Lỗi đăng nhập';
+  }
+}
+
+async function logoutUser() {
+  await _supabase.auth.signOut();
+  _currentUser = null;
+  _cases = {};
+  document.getElementById('login-overlay').style.display = 'flex';
+  document.getElementById('user-bar').style.display = 'none';
+}
+
+function _onLogin(user) {
+  _currentUser = user;
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('user-bar').style.display = 'flex';
+  document.getElementById('user-email').textContent = user.email;
+  // Load cases from Supabase
+  initStorage().then(() => {
+    updateCasesCount();
+    renderCaseList();
+    const list = Object.values(loadCases()).sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
+    if (list.length) {
+      curCaseId = list[0].id;
+      currentStage = list[0].currentStage || 1;
+      const entries = list[0].entries || [];
+      if (entries.length) {
+        const latest = entries[entries.length - 1];
+        document.getElementById('dash-notes').value = latest.notes || '';
+        document.getElementById('dash-cc').textContent = (latest.notes || '').length + ' ký tự';
+      }
+      if (list[0].lastAnalysis?.co_ban) {
+        D = list[0].lastAnalysis;
+        document.getElementById('btn-fill').disabled = false;
+        document.getElementById('chat-input').disabled = false;
+        document.getElementById('btn-send').disabled = false;
+      }
+    }
+    updateHeader();
+    updateStageUI();
+    renderEntriesPanel();
+  });
+}
+
+// Check session on load
+async function _checkSession() {
+  const { data: { session } } = await _supabase.auth.getSession();
+  if (session?.user) {
+    _onLogin(session.user);
+  }
+  // Listen for auth changes (Google redirect callback)
+  _supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session?.user && !_currentUser) {
+      _onLogin(session.user);
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+// STORAGE — Supabase + localStorage fallback
+// ════════════════════════════════════════════════════════════
+const CASES_KEY = 'thaodan_cases_v21';
+const CASES_KEY_LOCAL = 'thaodan_cases_v21_local';
 let _cases = {};
 
 function loadCases() { return _cases; }
+
 function saveCases(c) {
   _cases = JSON.parse(JSON.stringify(c));
   const payload = JSON.stringify(_cases);
@@ -1560,9 +1673,16 @@ function saveCases(c) {
   if (parseFloat(sizeMB) > 3.5) {
     showNotif('⚠️ Dữ liệu đã ' + sizeMB + 'MB — nên Export backup JSON để tránh mất!', 'warn');
   }
-  if (window.storage) {
-    window.storage.set(CASES_KEY, payload).catch(() => { _saveToLocal(payload); });
-  } else { _saveToLocal(payload); }
+  _saveToLocal(payload);
+  if (_currentUser) {
+    _supabase.from('cases').upsert({
+      user_id: _currentUser.id,
+      data: _cases,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' }).then(({ error }) => {
+      if (error) { console.warn('Supabase save error:', error); showNotif('⚠️ Lưu cloud thất bại — đã lưu local', 'warn'); }
+    }).catch(e => console.warn('Supabase save error:', e));
+  }
 }
 function _saveToLocal(payload) {
   try { localStorage.setItem(CASES_KEY_LOCAL, payload); }
@@ -1583,13 +1703,24 @@ function _saveToLocalCompact(payload) {
     showNotif('❌ Không thể lưu — hãy Export backup JSON ngay!', 'err');
   }
 }
+
 async function initStorage() {
-  if (window.storage) {
-    try { const r = await window.storage.get(CASES_KEY); if (r&&r.value) { _cases=JSON.parse(r.value); return; } } catch(e) {}
+  // Try Supabase first
+  if (_currentUser) {
+    try {
+      const { data, error } = await _supabase.from('cases').select('data').eq('user_id', _currentUser.id).single();
+      if (data?.data) {
+        _cases = data.data;
+        // Sync to localStorage as backup
+        _saveToLocal(JSON.stringify(_cases));
+        return;
+      }
+    } catch(e) { console.warn('Supabase load error:', e); }
   }
+  // Fallback to localStorage
   try {
     const raw = localStorage.getItem(CASES_KEY_LOCAL);
-    if (raw) { _cases = JSON.parse(raw); if (window.storage) window.storage.set(CASES_KEY, raw).catch(()=>{}); }
+    if (raw) { _cases = JSON.parse(raw); }
   } catch(e) { _cases = {}; }
 }
 
@@ -2014,8 +2145,6 @@ function renderProgressSummary() {
   renderEntriesPanel();
   if (D?._report) renderReport(D._report);
 }
-
-
 // ════════════════════════════════════════════════════════════
 // ★★★ REPORT RENDERER v19 — Stage-aware ★★★
 // ════════════════════════════════════════════════════════════
@@ -2486,8 +2615,6 @@ function renderReport5(r) {
   _setReport(h);
 }
 
-
-
 function renderEntriesPanel() {
   const panel = document.getElementById('entries-panel');
   if (!panel) return;
@@ -2592,8 +2719,6 @@ function toggleFormSidebar() {
   }
   if (btn) btn.textContent = sidebarVisible ? '☰' : '▶';
 }
-
-
 
 // ════════════════════════════════════════════════════════════
 // CHAT
@@ -3875,8 +4000,6 @@ async function buildDocx(fi,logoData,footerData){
 
   return new Document({sections:[{properties:{page:{size:{width:PW,height:PH2},margin:{top:MG,right:MG,bottom:720,left:MG,footer:0}}},footers:footerSection,children:body}]});
 }
-
-
 // ════════════════════════════════════════════════════════════
 // FEATURE 4.1 — Export ca ra file JSON (backup)
 // ════════════════════════════════════════════════════════════
@@ -3944,8 +4067,6 @@ function openPrint() {
   document.getElementById('pov').style.display = 'block';
 }
 function closePov() { document.getElementById('pov').style.display = 'none'; }
-
-
 // ════════════════════════════════════════════════════════════
 // PRINT FULL CASE — In toàn bộ form có dữ liệu
 // ════════════════════════════════════════════════════════════
@@ -4112,31 +4233,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  initStorage().then(() => {
-    updateCasesCount();
-    renderCaseList();
-    const list = Object.values(loadCases()).sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
-    if (list.length) {
-      curCaseId = list[0].id;
-      currentStage = list[0].currentStage || 1;
-      // Auto-load latest entry notes on startup
-      const entries = list[0].entries || [];
-      if (entries.length) {
-        const latest = entries[entries.length - 1];
-        document.getElementById('dash-notes').value = latest.notes || '';
-        document.getElementById('dash-cc').textContent = (latest.notes || '').length + ' ký tự';
-      }
-      if (list[0].lastAnalysis?.co_ban) {
-        D = list[0].lastAnalysis;
-        document.getElementById('btn-fill').disabled = false;
-        document.getElementById('chat-input').disabled = false;
-        document.getElementById('btn-send').disabled = false;
-      }
-    }
-    updateHeader();
-    updateStageUI();
-    renderEntriesPanel();
-  });
+  // Check auth session — nếu đã login thì tự load data
+  _checkSession();
 });
 </script>
 </body>
