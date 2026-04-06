@@ -533,14 +533,27 @@ body {
 }
 .btn-new-case:hover { background:var(--org2); }
 .cases-list { flex:1; overflow-y:auto; }
-.case-item { padding:10px 14px; border-bottom:1px solid var(--bd); cursor:pointer; transition:all .1s; }
+.case-item { padding:12px 14px; border-bottom:1px solid var(--bd); cursor:pointer; transition:all .15s; position:relative; }
 .case-item:hover { background:#f8fafc; }
 .case-item.active { background:rgba(15,45,107,.05); border-left:3px solid var(--org); }
-.ci-name { font-size:12.5px; font-weight:700; color:var(--text); }
-.ci-meta { font-size:10.5px; color:var(--t3); margin-top:2px; }
-.ci-badge { display:inline-block; font-size:9px; padding:1px 6px; border-radius:8px; margin-left:4px; font-weight:600; }
+.case-item.stale { background:#fffbeb; }
+.ci-top { display:flex; align-items:center; justify-content:space-between; gap:6px; }
+.ci-name { font-size:12.5px; font-weight:700; color:var(--text); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ci-child { font-size:11px; color:var(--t2); margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ci-child b { color:var(--navy); font-weight:600; }
+.ci-meta { font-size:10px; color:var(--t3); margin-top:4px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.ci-badge { display:inline-block; font-size:9px; padding:1px 6px; border-radius:8px; font-weight:600; flex-shrink:0; }
 .ci-open { background:#dbeafe; color:#1e40af; }
 .ci-closed { background:#f1f5f9; color:#64748b; }
+.ci-risk { display:inline-block; font-size:9px; padding:1px 6px; border-radius:8px; font-weight:700; flex-shrink:0; }
+.ci-risk-high { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+.ci-risk-med { background:#fffbeb; color:#b45309; border:1px solid #fde68a; }
+.ci-risk-low { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+.ci-stage-bar { display:flex; gap:2px; margin-top:5px; }
+.ci-stage-dot { height:3px; flex:1; border-radius:2px; background:#e2e8f0; transition:background .2s; }
+.ci-stage-dot.done { background:#16a34a; }
+.ci-stage-dot.current { background:var(--org); }
+.ci-ago { font-size:9px; color:var(--t3); font-style:italic; }
 .cases-main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .case-detail-empty { display:flex; align-items:center; justify-content:center; height:100%; text-align:center; color:var(--t3); }
 .case-detail-hd {
@@ -1065,7 +1078,7 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 <div class="tab-panel" id="panel-cases">
   <div class="cases-tab">
     <div class="cases-sidebar">
-      <div class="cases-search-row"><input type="text" id="cases-search" class="cases-search" placeholder="Tìm theo tên, mã ca..." oninput="renderCaseList()"><button class="btn-new-case" onclick="newCase()">＋ Mới</button></div>
+      <div class="cases-search-row"><input type="text" id="cases-search" class="cases-search" placeholder="Tìm theo tên ca, tên trẻ..." oninput="renderCaseList()"><button class="btn-new-case" onclick="newCase()">＋ Mới</button></div>
 
       <div style="display:flex;gap:6px;padding:6px 12px;">
         <select id="filter-status" onchange="renderCaseList()" style="flex:1;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;padding:5px 8px;border-radius:5px;font-size:10px;font-family:inherit;cursor:pointer;">
@@ -3431,6 +3444,19 @@ function updateHeader() {
   if (dl) dl.textContent = c ? '📁 '+c.name : '';
 }
 
+function _timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Math.floor((new Date() - new Date(dateStr)) / 1000);
+  if (diff < 60) return 'vừa xong';
+  if (diff < 3600) return Math.floor(diff/60) + ' phút trước';
+  if (diff < 86400) return Math.floor(diff/3600) + ' giờ trước';
+  const days = Math.floor(diff/86400);
+  if (days === 1) return 'hôm qua';
+  if (days < 30) return days + ' ngày trước';
+  if (days < 365) return Math.floor(days/30) + ' tháng trước';
+  return Math.floor(days/365) + ' năm trước';
+}
+
 function renderCaseList() {
   const cases = loadCases();
   const q = (document.getElementById('cases-search')?.value||'').toLowerCase();
@@ -3439,15 +3465,42 @@ function renderCaseList() {
   const el = document.getElementById('cases-list');
   const list = Object.values(cases).sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
   let filtered = list;
-  if (q) filtered = filtered.filter(c => c.name.toLowerCase().includes(q) || (c.id||'').toLowerCase().includes(q));
+  if (q) filtered = filtered.filter(c => {
+    const childName = (c.lastAnalysis?.co_ban?.ho_ten||'').toLowerCase();
+    return c.name.toLowerCase().includes(q) || childName.includes(q) || (c.id||'').toLowerCase().includes(q);
+  });
   if (fStatus) filtered = filtered.filter(c => (c.status||'open') === fStatus);
   if (fStage) filtered = filtered.filter(c => String(c.currentStage||1) === fStage);
   if (!filtered.length) { el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3);font-size:12px;">Chưa có ca nào</div>'; return; }
-  el.innerHTML = filtered.map(c=>`
-    <div class="case-item${c.id===curCaseId?' active':''}" onclick="selectCase('${c.id}')">
-      <div class="ci-name">${esc(c.name||'?')}<span class="ci-badge ${c.status==='open'?'ci-open':'ci-closed'}">${c.status==='open'?'Mở':'Đóng'}</span></div>
-      <div class="ci-meta">GĐ ${c.currentStage||1} · ${fmtVN(c.updatedAt)} · ${(c.entries||[]).length} ghi chép</div>
-    </div>`).join('');
+  
+  const now = new Date();
+  el.innerHTML = filtered.map(c => {
+    const stage = c.currentStage || 1;
+    const risk = c.lastAnalysis?._report?.risk?.level || c.lastAnalysis?._report?.risk_level || '';
+    const childName = c.lastAnalysis?.co_ban?.ho_ten || '';
+    const childDob = c.lastAnalysis?.co_ban?.ngay_sinh || '';
+    const days = Math.floor((now - new Date(c.updatedAt)) / 86400000);
+    const isStale = c.status === 'open' && days > 14;
+    const riskClass = risk === 'Cao' ? 'ci-risk-high' : risk === 'Trung bình' ? 'ci-risk-med' : risk === 'Thấp' ? 'ci-risk-low' : '';
+    const stageDots = [1,2,3,4,5].map(s => 
+      `<div class="ci-stage-dot ${s < stage ? 'done' : s === stage ? 'current' : ''}"></div>`
+    ).join('');
+    
+    return `<div class="case-item${c.id===curCaseId?' active':''}${isStale?' stale':''}" onclick="selectCase('${c.id}')">
+      <div class="ci-top">
+        <div class="ci-name">${esc(c.name||'?')}</div>
+        <span class="ci-badge ${c.status==='open'?'ci-open':'ci-closed'}">${c.status==='open'?'Mở':'Đóng'}</span>
+      </div>
+      ${childName ? `<div class="ci-child">👤 <b>${esc(childName)}</b>${childDob ? ' · '+childDob : ''}</div>` : ''}
+      <div class="ci-meta">
+        <span>GĐ ${stage}/5</span>
+        ${riskClass ? `<span class="ci-risk ${riskClass}">${risk === 'Cao' ? '🔴' : risk === 'Trung bình' ? '🟡' : '🟢'} ${risk}</span>` : ''}
+        <span>${(c.entries||[]).length} ghi chép</span>
+        <span class="ci-ago">${_timeAgo(c.updatedAt)}${isStale ? ' ⚠️' : ''}</span>
+      </div>
+      <div class="ci-stage-bar">${stageDots}</div>
+    </div>`;
+  }).join('');
 }
 
 function selectCase(id) {
@@ -3461,10 +3514,31 @@ function showCaseDetail(id) {
   const main = document.getElementById('cases-main');
   if (!c) { main.innerHTML = '<div class="case-detail-empty"><div>Chọn ca để xem</div></div>'; return; }
   const entries = (c.entries||[]).slice().reverse();
+  const stage = c.currentStage || 1;
+  const risk = c.lastAnalysis?._report?.risk?.level || c.lastAnalysis?._report?.risk_level || '';
+  const childName = c.lastAnalysis?.co_ban?.ho_ten || '';
+  const childDob = c.lastAnalysis?.co_ban?.ngay_sinh || '';
+  const riskHtml = risk === 'Cao' ? '<span class="ci-risk ci-risk-high">🔴 Rủi ro cao</span>'
+    : risk === 'Trung bình' ? '<span class="ci-risk ci-risk-med">🟡 Rủi ro TB</span>'
+    : risk === 'Thấp' ? '<span class="ci-risk ci-risk-low">🟢 Rủi ro thấp</span>' : '';
+  const stageLabels = ['','Tiếp cận','Vãng gia','Kế hoạch','Tiến trình','Kết thúc'];
+  const stageDots = [1,2,3,4,5].map(s => 
+    `<div style="display:flex;align-items:center;gap:3px;">
+      <div style="width:8px;height:8px;border-radius:50%;background:${s < stage ? '#16a34a' : s === stage ? 'var(--org)' : '#e2e8f0'};"></div>
+      <span style="font-size:9px;color:${s === stage ? 'var(--org)' : 'var(--t3)'};font-weight:${s === stage ? '700' : '400'};">${s}</span>
+    </div>`
+  ).join('<div style="flex:1;height:2px;background:#e2e8f0;min-width:8px;"></div>');
+
   main.innerHTML = `
     <div class="case-detail-hd">
-      <div><div class="case-detail-title">${esc(c.name||'?')}</div><div class="case-detail-meta">Tạo: ${fmtVN(c.createdAt)} · ${(c.entries||[]).length} ghi chép</div></div>
-      <div style="display:flex;gap:6px;">
+      <div style="flex:1;">
+        <div class="case-detail-title">${esc(c.name||'?')} ${riskHtml}</div>
+        ${childName ? `<div style="font-size:13px;color:var(--t1);margin-top:2px;">👤 <b>${esc(childName)}</b>${childDob ? ' · SN: '+childDob : ''}</div>` : ''}
+        <div class="case-detail-meta">Tạo: ${fmtVN(c.createdAt)} · ${(c.entries||[]).length} ghi chép · Cập nhật: ${_timeAgo(c.updatedAt)}</div>
+        <div style="display:flex;align-items:center;gap:0;margin-top:8px;max-width:280px;">${stageDots}</div>
+        <div style="font-size:10px;color:var(--org);font-weight:600;margin-top:3px;">GĐ ${stage} — ${stageLabels[stage]||''}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
         <button class="btn-secondary" onclick="loadCaseIntoApp('${id}');switchMain('dash')">🔬 Mở</button>
         <button class="btn-secondary" onclick="loadCaseIntoApp('${id}');setTimeout(printFullCase,300)">🖨 In</button>
         <button class="btn-secondary" onclick="deleteCase('${id}')" style="color:#b91c1c;border-color:#fecaca;">🗑 Xóa</button>
