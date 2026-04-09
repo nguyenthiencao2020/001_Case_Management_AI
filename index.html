@@ -4103,7 +4103,7 @@ async function buildDocx(fi,logoData,footerData){
   function ML(val,n){
     n=n||2;const rows=[];
     if(val&&clean(val)){
-      rows.push(new Paragraph({children:[R(capFirst(clean(val)),{color:"1E293B",size:T_BODY})],spacing:{before:40,after:60,line:LS.value}}));
+      rows.push(new Paragraph({children:[R(capFirst(fmtDate(clean(val))),{color:"1E293B",size:T_BODY})],spacing:{before:40,after:60,line:LS.value}}));
     } else {
       for(let i=0;i<n;i++){
         rows.push(new Paragraph({
@@ -4150,7 +4150,7 @@ async function buildDocx(fi,logoData,footerData){
   function mkCell(txt,isH,w,opts){
     opts=opts||{};
     const isEmpty=!isH&&(!txt||!clean(txt));
-    const display=isEmpty?"":capFirst(clean(txt)||"");
+    const display=isEmpty?"":capFirst(fmtDate(clean(txt)||""));
     const textColor=isH?"FFFFFF":(isEmpty?"CCCCCC":"333333");
     return new TableCell({
       children:[new Paragraph({
