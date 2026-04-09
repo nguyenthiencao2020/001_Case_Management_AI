@@ -3976,7 +3976,7 @@ async function buildDocx(fi,logoData,footerData){
   function V(val){
     const cv=clean(val||'');
     if(!cv) return R(' ',{color:"FFFFFF",size:T_BODY});
-    return R(capFirst(fmtDate(cv)),{color:"1A3F8F",size:T_BODY});
+    return R(capFirst(fmtDate(cv)),{color:"1E293B",size:T_BODY});
   }
 
   function P(ch,o){return new Paragraph(Object.assign({children:Array.isArray(ch)?ch:[ch],spacing:{before:40,after:30,line:LS.value}},o||{}));}
@@ -4103,7 +4103,7 @@ async function buildDocx(fi,logoData,footerData){
   function ML(val,n){
     n=n||2;const rows=[];
     if(val&&clean(val)){
-      rows.push(new Paragraph({children:[R(capFirst(clean(val)),{color:"1A3F8F",size:T_BODY})],spacing:{before:40,after:60,line:LS.value}}));
+      rows.push(new Paragraph({children:[R(capFirst(clean(val)),{color:"1E293B",size:T_BODY})],spacing:{before:40,after:60,line:LS.value}}));
     } else {
       for(let i=0;i<n;i++){
         rows.push(new Paragraph({
@@ -4122,7 +4122,7 @@ async function buildDocx(fi,logoData,footerData){
     opts.forEach((opt,i)=>{
       if(i>0) ch.push(R("     ",{size:T_BODY}));
       const chk=sel&&sel.toLowerCase().includes(opt.toLowerCase().substring(0,4));
-      ch.push(R(chk?"☑ ":"☐ ",{font:"Segoe UI Symbol",size:T_BODY,color:chk?"1A3F8F":"555555"}));
+      ch.push(R(chk?"☑ ":"☐ ",{font:"Segoe UI Symbol",size:T_BODY,color:chk?"1E293B":"555555"}));
       ch.push(R(opt,{size:T_BODY,color:"333333"}));
     });
     return P(ch,{spacing:{before:50,after:50}});
