@@ -3414,12 +3414,13 @@ function renderFormTab(idx) {
   const ncs=gd.nguoi_cham_soc||{},hv=tt.hoc_van||{},sk=tt.suc_khoe||{},tl=tt.tam_ly||{};
   const gks=tt.giay_khai_sinh||{},tr=tt.thuong_tru||{},cc=tt.cccd||{};
   const nlxh=D.nguon_luc_xa_hoi||{},cg=D.chuyen_gui||{};
-  const mo=new Date().getMonth()+1, yr=new Date().getFullYear();
+  const _d=new Date(),mo=_d.getMonth()+1,yr=_d.getFullYear();
+  const todayFmtH=String(_d.getDate()).padStart(2,'0')+'/'+String(mo).padStart(2,'0')+'/'+yr;
 
   let h = `<div class="fv-header">
     <div class="fv-title-block">
       <div class="fv-ttl">${FORM_NAMES[idx]}</div>
-      <div class="fv-meta">Mã: DADH2025/00001 &nbsp;|&nbsp; TĐ-00020 &nbsp;|&nbsp; ${mo}/${yr}</div>
+      <div class="fv-meta">Mã: DADH2025/00001 &nbsp;|&nbsp; TĐ-00020 &nbsp;|&nbsp; ${todayFmtH}</div>
       <div class="fv-badges">
         <span class="fv-badge">✓ v16</span>
         <span class="fv-badge-stage">GĐ ${currentStage}</span>
