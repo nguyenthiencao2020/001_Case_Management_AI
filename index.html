@@ -2180,8 +2180,10 @@ function updateStageUI() {
 
   // Complete button
   const btnComplete = document.getElementById('btn-complete-stage');
+  const _curCase = curCaseId ? loadCases()[curCaseId] : null;
+  const _isClosed = _curCase?.status === 'closed';
   if (btnComplete) {
-    if (cfg.completable && D) {
+    if (cfg.completable && D && !_isClosed) {
       btnComplete.classList.add('show');
       btnComplete.style.display = 'inline-flex';
       btnComplete.textContent = currentStage < 5 ? `✓ Hoàn thành GĐ ${currentStage}` : '✓ Đóng ca';
@@ -2254,7 +2256,29 @@ function updateStageUI() {
 
 function completeStage() {
   if (!D) { showNotif('⚠️ Hãy phân tích ghi chép trước khi hoàn thành giai đoạn', 'warn'); return; }
-  if (currentStage >= 5) { showNotif('ℹ️ Đây là giai đoạn cuối', 'warn'); return; }
+
+  // ── GĐ 5: Đóng ca ──
+  if (currentStage >= 5) {
+    if (!curCaseId) { showNotif('⚠️ Không tìm thấy ca hiện tại', 'warn'); return; }
+    if (!confirm('Xác nhận ĐÓNG CA?\n\nSau khi đóng, ca sẽ chuyển sang trạng thái "Đã đóng".\nBạn vẫn có thể xem lại nhưng không thể chỉnh sửa tiếp.')) return;
+    const cases = loadCases();
+    if (cases[curCaseId]) {
+      cases[curCaseId].status = 'closed';
+      cases[curCaseId].closedAt = new Date().toISOString();
+      cases[curCaseId].updatedAt = new Date().toISOString();
+      D._status = 'closed';
+      saveCases(cases);
+    }
+    updateHeader();
+    renderCaseList();
+    updateCasesCount();
+    // Ẩn nút đóng ca
+    const btnComplete = document.getElementById('btn-complete-stage');
+    if (btnComplete) { btnComplete.style.display = 'none'; btnComplete.classList.remove('show'); }
+    showNotif('✅ Đã đóng ca thành công!');
+    return;
+  }
+
   if (!confirm(`Sau khi hoàn thành GĐ ${currentStage}, các form giai đoạn này sẽ bị khóa.\nBạn có chắc muốn tiếp tục?`)) return;
 
   const nextStage = currentStage + 1;
