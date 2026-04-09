@@ -1559,7 +1559,7 @@ Chỉ điền key "ke_hoach". Không điền bất kỳ key nào khác.
   "ke_hoach": {
     "bat_dau_case":"",
     "thoi_gian_kh":"",
-    "nhu_cau_ho_tro":[{"loai":"","uu_tien":"","muc_tieu":""}],
+    "nhu_cau_ho_tro":[{"loai":"(PHẢI là 1 trong: Học bổng | Học nghề, việc làm | Chăm sóc sức khỏe, y tế | Nâng cao năng lực kỹ năng sống | Mối quan hệ gia đình và xã hội | Tâm lý | Hòa nhập cộng đồng | Nhu cầu khác)","uu_tien":"(1|2|3)","muc_tieu":""}],
     "hoat_dong":[{"muc_tieu_so":"","noi_dung":"","thoi_gian":"","nguon_luc":"","nguon_luc_gd":"","nguon_luc_cs":""}],
     "nguon_luc_ket_noi":"",
     "xem_xet":[""],
@@ -4518,15 +4518,26 @@ async function buildDocx(fi,logoData,footerData){
     body.push(SH("I. Các nhu cầu cần hỗ trợ"));
     // 8 loại chuẩn theo mẫu gốc
     const NC_CHUAN=["Học bổng","Học nghề, việc làm","Chăm sóc sức khỏe, y tế","Nâng cao năng lực kỹ năng sống","Mối quan hệ gia đình và xã hội","Tâm lý","Hòa nhập cộng đồng","Nhu cầu khác"];
-    const ncMap={};(kh.nhu_cau_ho_tro||[]).forEach(nc=>{ncMap[(nc.loai||"").toLowerCase()]={uu_tien:nc.uu_tien,muc_tieu:nc.muc_tieu};});
+    const ncMap={};(kh.nhu_cau_ho_tro||[]).forEach(nc=>{ncMap[(nc.loai||'').toLowerCase().trim()]={uu_tien:nc.uu_tien,muc_tieu:nc.muc_tieu};});
     const nc5=NC_CHUAN.map((loai,i)=>{
-      const found=Object.entries(ncMap).find(([k])=>loai.toLowerCase().includes(k.substring(0,4)))||[];
-      const m=found[1]||{};
-      return[String(i+1),loai,m.uu_tien||"",m.muc_tieu||""];
+      const lo=loai.toLowerCase();
+      // 1. Exact match
+      let m=ncMap[lo];
+      // 2. Word-based match: split to words ≥3 chars, check any overlap
+      if(!m){
+        const loWords=lo.split(/[\s,]+/).filter(w=>w.length>=3);
+        const entry=Object.entries(ncMap).find(([k])=>{
+          const kWords=k.split(/[\s,]+/).filter(w=>w.length>=3);
+          return loWords.some(lw=>kWords.some(kw=>kw.includes(lw)||lw.includes(kw)));
+        });
+        m=entry?.[1];
+      }
+      m=m||{};
+      return[String(i+1),loai,m.uu_tien||'',m.muc_tieu||''];
     });
     body.push(TBLF(["TT","Nhu cầu cần hỗ trợ","Mức độ ưu tiên (1, 2, 3)","Mục tiêu cụ thể cần đạt được"],nc5,[400,2800,1600,4838]));
     body.push(SH("II. Các hoạt động trợ giúp"));
-    const hd5=(kh.hoat_dong||[]).map((h,i)=>[h.muc_tieu_so||String(i+1),h.noi_dung,h.thoi_gian,h.nguon_luc,h.nguon_luc_gd,h.nguon_luc_cs]);
+    const hd5=(kh.hoat_dong||[]).map((h,i)=>[h.muc_tieu_so||String(i+1),h.noi_dung,fmtDate(h.thoi_gian),h.nguon_luc,h.nguon_luc_gd,h.nguon_luc_cs]);
     while(hd5.length<4)hd5.push(["","","","","",""]);
     body.push(TBLF(["Mục tiêu số","Hoạt động","Thời gian thực hiện","Nguồn lực/kinh phí","Nguồn lực gia đình","Nguồn lực Cơ sở"],hd5,[600,2600,1200,1600,1300,2338]));
     body.push(SH("III. Nguồn lực kết nối hỗ trợ"));
