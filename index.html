@@ -1740,6 +1740,15 @@ function fmtDate(v) {
   // yyyy-mm → 01/mm/yyyy
   m = v.match(/^(\d{4})-(\d{1,2})$/);
   if (m) return '01/'+m[2].padStart(2,'0')+'/'+m[1];
+  // "09 2026" hoặc "9 2026" (mm yyyy, space) → 01/09/2026
+  m = v.match(/^(\d{1,2})\s+(\d{4})$/);
+  if (m) return '01/'+m[1].padStart(2,'0')+'/'+m[2];
+  // "09-2026" (mm-yyyy, dash) → 01/09/2026
+  m = v.match(/^(\d{1,2})-(\d{4})$/);
+  if (m) return '01/'+m[1].padStart(2,'0')+'/'+m[2];
+  // "Tháng 09 2026" (space, no slash)
+  m = v.match(/[Tt]háng\s+(\d{1,2})\s+(\d{4})/);
+  if (m) return '01/'+m[1].padStart(2,'0')+'/'+m[2];
   // Tìm pattern dd/mm/yyyy trong chuỗi dài hơn
   m = v.match(/(\d{1,2})[\s\/\-](\d{1,2})[\s\/\-](\d{4})/);
   if (m) return m[1].padStart(2,'0')+'/'+m[2].padStart(2,'0')+'/'+m[3];
