@@ -456,7 +456,7 @@ body {
   font-size:12.5px; padding:4px 10px; border-radius:6px;
   line-height:1.5; word-break:break-word;
 }
-.fl-vl.ok { background:#f0fdf4; color:#166534; border-left:2px solid #4ade80; }
+.fl-vl.ok { background:#f0f4fb; color:var(--navy); border-left:2px solid rgba(15,45,107,.28); font-weight:500; }
 .fl-vl.no { background:#f8fafc; color:var(--t3); border-left:2px solid #e2e8f0; font-style:italic; }
 
 /* ══ TABLES ══ */
@@ -465,7 +465,7 @@ body {
   background:var(--navy); color:#fff; padding:8px 10px;
   font-size:10px; text-transform:uppercase; letter-spacing:.5px; font-weight:700; text-align:left;
 }
-.tbl td { padding:7px 10px; border-bottom:1px solid var(--bd); color:var(--t2); vertical-align:top; }
+.tbl td { padding:7px 10px; border-bottom:1px solid var(--bd); color:var(--navy); vertical-align:top; font-weight:500; }
 .tbl tr:last-child td { border-bottom:none; }
 .tbl tr:nth-child(even) td { background:#fafbfc; }
 
@@ -881,6 +881,20 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 
 /* ══ CLOSED TEXTAREA STATE ══ */
 .input-ta:disabled{background:#f9fafb;color:#9ca3af;cursor:not-allowed;border-color:#e5e7eb;}
+
+/* ══ PRIVACY NOTE ══ */
+.privacy-note{font-size:10px;color:#6b7280;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:5px 9px;margin-bottom:6px;line-height:1.4;display:flex;align-items:flex-start;gap:5px;}
+.privacy-note span{flex-shrink:0;}
+
+/* ══ SESSION TIMEOUT WARNING ══ */
+.session-warn{position:fixed;bottom:20px;right:20px;background:#1e3a5f;color:#fff;border-radius:12px;padding:14px 18px;z-index:9999;display:none;box-shadow:0 8px 24px rgba(0,0,0,.3);font-size:12.5px;max-width:280px;}
+.session-warn.show{display:block;}
+.session-warn .sw-title{font-weight:800;font-size:13px;margin-bottom:6px;}
+.session-warn .sw-timer{font-size:22px;font-weight:900;color:#fbbf24;text-align:center;margin:8px 0;}
+.session-warn .sw-btns{display:flex;gap:8px;margin-top:10px;}
+.sw-btn-stay{flex:1;background:#f07020;color:#fff;border:none;border-radius:7px;padding:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+.sw-btn-out{flex:1;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+
 </style>
 </head>
 <body>
@@ -1009,6 +1023,7 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
       <div class="input-section">
         <div class="input-label" id="input-label-text">📝 Ghi chép Tiếp cận ban đầu</div>
         <div class="stage-hint-box" id="stage-hint">Nhập ghi chép lần gặp đầu tiên. AI sẽ trích xuất Form 0 (Hồ sơ) và Form 1 (Phiếu tiếp cận).</div>
+        <div class="privacy-note"><span>🔒</span>Không ghi họ tên thật, địa chỉ cụ thể hoặc số điện thoại trong ô này. AI sẽ ẩn danh hóa để bảo vệ thông tin trẻ em.</div>
         <textarea id="dash-notes" class="input-ta" placeholder="Paste ghi chép tiếp cận ban đầu...&#10;&#10;AI sẽ trích xuất Form 0 và Form 1."></textarea>
         <div class="input-footer">
           <span class="char-count" id="dash-cc">0 ký tự</span>
@@ -1196,6 +1211,8 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 // ── CONFIG ──
 // Proxy URL — API key được giấu an toàn phía Cloudflare Worker
 const GURL = "https://thaodan-proxy.asif-foundation.workers.dev";
+// ── PRIVACY DIRECTIVE — prepended to every AI call ──
+const PRIVACY_PREFIX = `\n\n⚠️ BẢO MẬT DỮ LIỆU TRẺ EM (Luật ATTTM 2015 & NĐ 13/2023): Dữ liệu đã được ẩn danh hóa trước khi gửi. KHÔNG suy đoán danh tính thật. KHÔNG lưu trữ, tái tạo hoặc phổ biến thông tin định danh cá nhân. Chỉ phân tích nội dung chuyên môn bảo vệ trẻ em.`;
 const LOGO_URL = "https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/main/ThaoDanSSC_Digital-01.png";
 const FOOTER_URL = "https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/3e05cff6b6a5f80355e7a378f7f82ffd790f81cc/Footer.png";
 const FORM_NAMES = ["HỒ SƠ THÔNG TIN TRẺ","PHIẾU TIẾP CẬN","PHÚC TRÌNH VÃNG GIA","PHIẾU ĐÁNH GIÁ KHẨN CẤP","ĐÁNH GIÁ NHU CẦU","KẾ HOẠCH CAN THIỆP","TIẾN ĐỘ THỰC HIỆN","CẬP NHẬT TIẾN TRÌNH","PHIẾU CHUYỂN GỬI","PHIẾU KẾT THÚC CA","BÁO CÁO QLTH"];
@@ -1763,8 +1780,10 @@ async function loginEmail() {
 }
 
 async function logoutUser() {
+  document.getElementById('session-warn')?.classList.remove('show');
   await _supabase.auth.signOut();
   _currentUser = null; _cases = {};
+  window._sessionReset?.(); // stop session timers after clearing _currentUser
   // Reset toàn bộ state
   D = null; curCaseId = null; currentStage = 1; chatHistory = [];
   document.getElementById('dash-notes').value = '';
@@ -1782,6 +1801,7 @@ async function logoutUser() {
 
 function _onLogin(user) {
   _currentUser = user;
+  window._sessionReset?.(); // bắt đầu đếm session timeout từ đầu
   document.getElementById('login-overlay').style.display = 'none';
   document.getElementById('user-bar').style.display = 'flex';
   document.getElementById('user-email').textContent = user.email;
@@ -1928,7 +1948,7 @@ async function uploadCaseFile(caseId, file, stage, note) {
 async function getCaseFiles(caseId) {
   if (!_currentUser) return [];
   const { data } = await _supabase.from('case_files')
-    .select('*').eq('case_id', caseId).order('created_at', { ascending: false });
+    .select('*').eq('case_id', caseId).eq('user_id', _currentUser.id).order('created_at', { ascending: false });
   return data || [];
 }
 
@@ -1975,6 +1995,70 @@ async function checkStaleCases() {
 
 function genCaseId() { return 'c_'+Date.now()+'_'+Math.random().toString(36).substr(2,4); }
 // ════════════════════════════════════════════════════════════
+// PRIVACY — ẩn danh hóa PII trước khi gửi AI
+// ════════════════════════════════════════════════════════════
+function maskPhonesInText(text) {
+  if (typeof text !== 'string') return text;
+  return text.replace(/(\b0\d{9}\b|\+84\d{9}\b|\b0\d{2}[\s.-]\d{3}[\s.-]\d{4}\b)/g, '***');
+}
+
+function maskStringsInObj(obj) {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'string') return maskPhonesInText(obj);
+  if (Array.isArray(obj)) return obj.map(maskStringsInObj);
+  if (typeof obj === 'object') {
+    const out = {};
+    for (const k of Object.keys(obj)) out[k] = maskStringsInObj(obj[k]);
+    return out;
+  }
+  return obj;
+}
+
+function pseudonymizeForAI(data) {
+  if (!data) return data;
+  const d = maskStringsInObj(JSON.parse(JSON.stringify(data)));
+  // Tên trẻ
+  if (d.co_ban) {
+    if (d.co_ban.ho_ten) d.co_ban.ho_ten = 'Trẻ';
+    if (d.co_ban.ngay_sinh) {
+      const yr = String(d.co_ban.ngay_sinh).match(/\d{4}/);
+      d.co_ban.ngay_sinh = yr ? yr[0] : 'N/A';
+    }
+    if (d.co_ban.dia_chi) {
+      const parts = String(d.co_ban.dia_chi).split(',').map(s=>s.trim()).filter(Boolean);
+      d.co_ban.dia_chi = parts[parts.length - 1] || d.co_ban.dia_chi;
+    }
+    if (d.co_ban.so_dien_thoai) d.co_ban.so_dien_thoai = '***';
+    if (d.co_ban.cccd) d.co_ban.cccd = '***';
+    if (d.co_ban.ma_so_bhxh) d.co_ban.ma_so_bhxh = '***';
+  }
+  // Người chăm sóc — giữ nguyên tên (cần cho phân tích), chỉ ẩn SĐT/CCCD
+  if (d.gia_dinh?.nguoi_cham_soc) {
+    const nc = d.gia_dinh.nguoi_cham_soc;
+    if (nc.so_dien_thoai) nc.so_dien_thoai = '***';
+    if (nc.cccd) nc.cccd = '***';
+    if (nc.dia_chi) {
+      const parts = String(nc.dia_chi).split(',').map(s=>s.trim()).filter(Boolean);
+      nc.dia_chi = parts[parts.length - 1] || nc.dia_chi;
+    }
+  }
+  // Thành viên gia đình — giữ nguyên tên (cần cho phân tích), chỉ ẩn SĐT/CCCD
+  if (Array.isArray(d.gia_dinh?.thanh_vien)) {
+    d.gia_dinh.thanh_vien = d.gia_dinh.thanh_vien.map(m => {
+      if (!m) return m;
+      if (m.so_dien_thoai) m.so_dien_thoai = '***';
+      if (m.cccd) m.cccd = '***';
+      if (m.dia_chi) {
+        const parts = String(m.dia_chi).split(',').map(s=>s.trim()).filter(Boolean);
+        m.dia_chi = parts[parts.length - 1] || m.dia_chi;
+      }
+      return m;
+    });
+  }
+  return d;
+}
+
+// ════════════════════════════════════════════════════════════
 // API CALLS — qua Cloudflare Worker proxy (không cần key phía client)
 // ════════════════════════════════════════════════════════════
 async function callAI(sysPrompt, userMsg, temp=0.2, maxTok=3000) {
@@ -1983,7 +2067,7 @@ async function callAI(sysPrompt, userMsg, temp=0.2, maxTok=3000) {
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
       model:'llama-3.3-70b-versatile', temperature:temp, max_tokens:maxTok,
-      messages:[{role:'system',content:sysPrompt},{role:'user',content:userMsg}]
+      messages:[{role:'system',content:sysPrompt+PRIVACY_PREFIX},{role:'user',content:userMsg}]
     })
   });
   if (!res.ok) {
@@ -2402,6 +2486,7 @@ async function runAnalysis() {
   const notes = document.getElementById('dash-notes').value.trim();
   if (!notes) { showNotif('⚠️ Nhập ghi chép trước', 'warn'); return; }
   if (notes.length < 30) { showNotif('⚠️ Ghi chép quá ngắn — cần ít nhất 30 ký tự', 'warn'); return; }
+  const notesAI = maskPhonesInText(notes); // mask phones before sending to AI
 
   const btn = document.getElementById('btn-analyze');
   btn.disabled = true;
@@ -2431,7 +2516,7 @@ async function runAnalysis() {
     // Giai đoạn 4: chỉ cần extract (không cần parallel report)
     if (currentStage === 4) {
       prog.style.transition = 'width 2.5s'; prog.style.width = '70%';
-      const formRaw = await callAI(extractPrompt, 'Ghi chép NVXH (Cập nhật tiến trình):\n\n' + notes, 0, 2000);
+      const formRaw = await callAI(extractPrompt, 'Ghi chép NVXH (Cập nhật tiến trình):\n\n' + notesAI, 0, 2000);
       let appendData = {};
       try { appendData = robustJSON(formRaw); } catch(e) { console.warn('Stage 4 JSON error:', e); }
 
@@ -2463,7 +2548,7 @@ async function runAnalysis() {
 
       // ★ Thêm báo cáo AI cho GĐ 4
       try {
-        const report4Raw = await callAI(SYS_REPORT_4, 'Ghi chép NVXH (Tiến trình):\n\n' + notes + '\n\nDữ liệu cập nhật hiện tại:\n' + JSON.stringify({cap_nhat: D.cap_nhat, ke_hoach: D.ke_hoach}).substring(0, 800), 0.3, 1500);
+        const report4Raw = await callAI(SYS_REPORT_4, 'Ghi chép NVXH (Tiến trình):\n\n' + notesAI + '\n\nDữ liệu cập nhật hiện tại:\n' + JSON.stringify({cap_nhat: D.cap_nhat, ke_hoach: D.ke_hoach}).substring(0, 800), 0.3, 1500);
         const report4 = robustJSON(report4Raw);
         D._report = report4;
         D._report._stage = 4;
@@ -2482,8 +2567,8 @@ async function runAnalysis() {
       // Giai đoạn 1, 2, 3, 5: parallel report + extract
       const reportPrompt = STAGE_REPORT_MAP[currentStage] || SYS_REPORT_1;
       const [reportRaw, formRaw] = await Promise.all([
-        callAI(reportPrompt, 'Ghi chép NVXH:\n\n' + notes, 0.3, 2500),
-        callAI(extractPrompt, 'Ghi chép NVXH:\n\n' + notes, 0, 4096)
+        callAI(reportPrompt, 'Ghi chép NVXH:\n\n' + notesAI, 0.3, 2500),
+        callAI(extractPrompt, 'Ghi chép NVXH:\n\n' + notesAI, 0, 4096)
       ]);
 
       let report = {};
@@ -3891,7 +3976,7 @@ async function buildDocx(fi,logoData,footerData){
   function V(val){
     const cv=clean(val||'');
     if(!cv) return R(' ',{color:"FFFFFF",size:T_BODY});
-    return R(capFirst(fmtDate(cv)),{color:"1A3F8F",size:T_BODY});
+    return R(capFirst(fmtDate(cv)),{color:"1E293B",size:T_BODY});
   }
 
   function P(ch,o){return new Paragraph(Object.assign({children:Array.isArray(ch)?ch:[ch],spacing:{before:40,after:30,line:LS.value}},o||{}));}
@@ -4018,7 +4103,7 @@ async function buildDocx(fi,logoData,footerData){
   function ML(val,n){
     n=n||2;const rows=[];
     if(val&&clean(val)){
-      rows.push(new Paragraph({children:[R(capFirst(clean(val)),{color:"1A3F8F",size:T_BODY})],spacing:{before:40,after:60,line:LS.value}}));
+      rows.push(new Paragraph({children:[R(capFirst(clean(val)),{color:"1E293B",size:T_BODY})],spacing:{before:40,after:60,line:LS.value}}));
     } else {
       for(let i=0;i<n;i++){
         rows.push(new Paragraph({
@@ -4037,7 +4122,7 @@ async function buildDocx(fi,logoData,footerData){
     opts.forEach((opt,i)=>{
       if(i>0) ch.push(R("     ",{size:T_BODY}));
       const chk=sel&&sel.toLowerCase().includes(opt.toLowerCase().substring(0,4));
-      ch.push(R(chk?"☑ ":"☐ ",{font:"Segoe UI Symbol",size:T_BODY,color:chk?"1A3F8F":"555555"}));
+      ch.push(R(chk?"☑ ":"☐ ",{font:"Segoe UI Symbol",size:T_BODY,color:chk?"1E293B":"555555"}));
       ch.push(R(opt,{size:T_BODY,color:"333333"}));
     });
     return P(ch,{spacing:{before:50,after:50}});
@@ -5061,6 +5146,7 @@ async function generateComprehensiveEval() {
   </div>`;
 
   try {
+    const pData = pseudonymizeForAI(data); // ẩn danh hóa trước khi gửi AI
     const caseContext = JSON.stringify({
       ten_ca: c?.name,
       giai_doan_hien_tai: currentStage,
@@ -5068,16 +5154,16 @@ async function generateComprehensiveEval() {
       so_lan_ghi_chep: (c?.entries || []).length,
       ngay_tao: c?.createdAt,
       ngay_cap_nhat: c?.updatedAt,
-      co_ban: data.co_ban || {},
-      gia_dinh: data.gia_dinh || {},
-      tinh_trang: data.tinh_trang || {},
-      danh_gia: data.danh_gia || {},
-      vang_gia: data.vang_gia || {},
-      ke_hoach: data.ke_hoach || {},
-      cap_nhat_tien_trinh: data.cap_nhat || [],
-      chuyen_gui: data.chuyen_gui || {},
-      ket_thuc: data.ket_thuc || {},
-      bao_cao_phan_tich_cuoi: data._report || {}
+      co_ban: pData.co_ban || {},
+      gia_dinh: pData.gia_dinh || {},
+      tinh_trang: pData.tinh_trang || {},
+      danh_gia: pData.danh_gia || {},
+      vang_gia: pData.vang_gia || {},
+      ke_hoach: pData.ke_hoach || {},
+      cap_nhat_tien_trinh: pData.cap_nhat || [],
+      chuyen_gui: pData.chuyen_gui || {},
+      ket_thuc: pData.ket_thuc || {},
+      bao_cao_phan_tich_cuoi: pData._report || {}
     }, null, 2);
 
     const result = await callAI(SYS_COMPREHENSIVE_EVAL,
@@ -5154,6 +5240,63 @@ document.addEventListener('DOMContentLoaded', () => {
   // Check auth session — nếu đã login thì tự load data
   _checkSession();
 });
+  // ── SESSION TIMEOUT (30 phút không hoạt động → cảnh báo 5 phút → tự đăng xuất) ──
+  (function() {
+    const WARN_AT_MS = 25 * 60 * 1000; // cảnh báo sau 25 phút
+    const LOGOUT_MS  = 30 * 60 * 1000; // đăng xuất sau 30 phút
+    let _tWarn = null, _tOut = null, _tTick = null;
+
+    function _clearAll() {
+      clearTimeout(_tWarn); clearTimeout(_tOut); clearInterval(_tTick);
+      document.getElementById('session-warn')?.classList.remove('show');
+    }
+
+    function _showWarn() {
+      if (!_currentUser) return;
+      const warn = document.getElementById('session-warn');
+      if (!warn) return;
+      warn.classList.add('show');
+      let secs = 5 * 60;
+      const timerEl = document.getElementById('sw-timer');
+      _tTick = setInterval(() => {
+        secs--;
+        if (timerEl) {
+          const m = Math.floor(secs / 60), s = secs % 60;
+          timerEl.textContent = `${m}:${String(s).padStart(2, '0')}`;
+        }
+        if (secs <= 0) { clearInterval(_tTick); logoutUser(); }
+      }, 1000);
+    }
+
+    function _reset() {
+      _clearAll();
+      if (!_currentUser) return;
+      _tWarn = setTimeout(_showWarn, WARN_AT_MS);
+      _tOut  = setTimeout(() => { if (_currentUser) logoutUser(); }, LOGOUT_MS);
+    }
+
+    window._sessionKeepAlive = function() { _reset(); };
+    window._sessionReset     = _reset;
+
+    ['click','keydown','touchstart','scroll'].forEach(ev =>
+      document.addEventListener(ev, () => { if (_currentUser) _reset(); }, { passive: true })
+    );
+
+    // Bắt đầu bộ đếm khi load trang
+    _reset();
+  })();
 </script>
+
+<!-- SESSION TIMEOUT WARNING -->
+<div class="session-warn" id="session-warn">
+  <div class="sw-title">⏰ Sắp hết phiên làm việc</div>
+  <div style="font-size:11px;color:rgba(255,255,255,.7);margin-bottom:4px">Không có hoạt động trong 25 phút. Hệ thống sẽ tự đăng xuất.</div>
+  <div class="sw-timer" id="sw-timer">5:00</div>
+  <div class="sw-btns">
+    <button class="sw-btn-stay" onclick="_sessionKeepAlive()">Tiếp tục làm việc</button>
+    <button class="sw-btn-out" onclick="logoutUser()">Đăng xuất ngay</button>
+  </div>
+</div>
+
 </body>
 </html>
