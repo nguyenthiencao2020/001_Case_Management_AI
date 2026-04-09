@@ -4196,7 +4196,8 @@ async function buildDocx(fi,logoData,footerData){
   const ncs=gd.nguoi_cham_soc||{},hv=tt.hoc_van||{},sk=tt.suc_khoe||{},tl=tt.tam_ly||{};
   const gks=tt.giay_khai_sinh||{},tr=tt.thuong_tru||{},cc=tt.cccd||{};
   const nlxh=D.nguon_luc_xa_hoi||{},cg=D.chuyen_gui||{};
-  const mo=new Date().getMonth()+1,yr=new Date().getFullYear();
+  const _now=new Date(),mo=_now.getMonth()+1,yr=_now.getFullYear();
+  const todayFmt=String(_now.getDate()).padStart(2,'0')+'/'+String(mo).padStart(2,'0')+'/'+yr;
   // Tìm cha/mẹ từ thành viên GĐ
   const tvs=gd.thanh_vien||[];
   const cha=tvs.find(t=>/cha|ba|bố|bó/i.test(t.quan_he))||{};
@@ -4208,7 +4209,7 @@ async function buildDocx(fi,logoData,footerData){
     try{
       const lC=new TableCell({children:[new Paragraph({children:[new ImageRun({data:logoData,transformation:{width:58,height:58},type:"png"})],alignment:AlignmentType.LEFT})],width:{size:800,type:WidthType.DXA},borders:bna,verticalAlign:VerticalAlign.CENTER});
       const tC=new TableCell({children:[new Paragraph({children:[R("CƠ SỞ THẢO ĐÀN",{bold:true,size:T_LOGO,color:NAVY})],spacing:{before:0,after:10}}),new Paragraph({children:[R("Trung tâm Dịch vụ Xã hội · TP. Hồ Chí Minh",{size:T_META,color:"888888"})],spacing:{before:0,after:0}})],width:{size:CW-800-2400,type:WidthType.DXA},borders:bna,verticalAlign:VerticalAlign.CENTER});
-      const iC=new TableCell({children:[new Paragraph({children:[R("Mã hồ sơ: DADH2025/00001",{size:T_META,bold:true})],alignment:AlignmentType.RIGHT,spacing:{before:0,after:10}}),new Paragraph({children:[R("Số TT: TĐ-00020",{size:T_META,bold:true})],alignment:AlignmentType.RIGHT,spacing:{before:0,after:10}}),new Paragraph({children:[R("Tháng "+mo+"/"+yr,{size:T_META})],alignment:AlignmentType.RIGHT})],width:{size:2400,type:WidthType.DXA},borders:bna,verticalAlign:VerticalAlign.CENTER});
+      const iC=new TableCell({children:[new Paragraph({children:[R("Mã hồ sơ: DADH2025/00001",{size:T_META,bold:true})],alignment:AlignmentType.RIGHT,spacing:{before:0,after:10}}),new Paragraph({children:[R("Số TT: TĐ-00020",{size:T_META,bold:true})],alignment:AlignmentType.RIGHT,spacing:{before:0,after:10}}),new Paragraph({children:[R(todayFmt,{size:T_META})],alignment:AlignmentType.RIGHT})],width:{size:2400,type:WidthType.DXA},borders:bna,verticalAlign:VerticalAlign.CENTER});
       body.push(new Table({width:{size:CW,type:WidthType.DXA},columnWidths:[800,CW-800-2400,2400],rows:[new TableRow({children:[lC,tC,iC]})]}));
     }catch(e){body.push(P([R("CƠ SỞ THẢO ĐÀN — Mã hồ sơ: DADH2025/00001",{bold:true})]));}
   }else{body.push(P([R("Mã hồ sơ: DADH2025/00001     Số TT: TĐ-00020",{bold:true,size:T_TABLE})],{alignment:AlignmentType.RIGHT}));}
@@ -4414,7 +4415,7 @@ async function buildDocx(fi,logoData,footerData){
   // ══════════════════════════════════════════
   }else if(fi===3){
     // ── TRANG 1: PHIẾU ĐÁNH GIÁ ──
-    body.push(...TITLE("PHIẾU ĐÁNH GIÁ TÌNH TRẠNG CỦA TRẺ","Tháng "+mo+"/"+yr+" — Đối với trẻ cần hỗ trợ khẩn cấp"));
+    body.push(...TITLE("PHIẾU ĐÁNH GIÁ TÌNH TRẠNG CỦA TRẺ",todayFmt+" — Đối với trẻ cần hỗ trợ khẩn cấp"));
     body.push(PHOTO_BOX());
     body.push(SH("1. Thông tin về trẻ"));
     body.push(FLM(["Họ tên (nếu được biết)",cb.ho_ten],["Tuổi (hoặc ước lượng)",cb.tuoi]));
@@ -4472,7 +4473,7 @@ async function buildDocx(fi,logoData,footerData){
   // FORM 3b — 9: GIỮ NGUYÊN + SỬA NHỎ
   // ═══════════════════════════════
   }else if(fi===4){
-    body.push(...TITLE("ĐÁNH GIÁ VẤN ĐỀ VÀ NHU CẦU CỦA TRẺ","Tháng "+mo+"/"+yr));
+    body.push(...TITLE("ĐÁNH GIÁ VẤN ĐỀ VÀ NHU CẦU CỦA TRẺ",todayFmt));
     body.push(SH("Thông tin về trẻ"));
     body.push(FL("Họ tên trẻ",cb.ho_ten));body.push(FLM(["Tuổi (hoặc ước lượng tuổi)",cb.tuoi],["Giới tính",cb.gioi_tinh]));
     body.push(FL("Địa điểm (trẻ đang ở đâu vào thời điểm nhận được thông báo?)",cb.dia_chi_hien_tai));
@@ -4559,7 +4560,7 @@ async function buildDocx(fi,logoData,footerData){
     body.push(FLM(["Số điện thoại liên hệ",cg.sdt_nhan],["Email",cg.email_nhan||""]));
     body.push(DATE_R());body.push(SGN(["Xác nhận từ nơi nhận chuyển gửi","Nhân viên xã hội"]));
   }else if(fi===9){
-    body.push(...TITLE("PHIẾU KẾT THÚC CA","Tháng "+mo+"/"+yr));
+    body.push(...TITLE("PHIẾU KẾT THÚC CA",todayFmt));
     body.push(FLM(["Họ và tên trẻ",cb.ho_ten],["Giới tính",cb.gioi_tinh]));
     body.push(FLM(["Hồ sơ xã hội","DADH2025/00001"],["Năm sinh",cb.ngay_sinh]));
     body.push(FLM(["Thời gian bắt đầu case",ktu.bat_dau_case||cb.ngay_tiep_can],["Thời gian thực hiện KH",""]));
