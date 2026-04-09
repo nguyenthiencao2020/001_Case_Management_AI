@@ -895,6 +895,37 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 .sw-btn-stay{flex:1;background:#f07020;color:#fff;border:none;border-radius:7px;padding:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
 .sw-btn-out{flex:1;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
 
+/* ══ CUSTOM CONFIRM MODAL ══ */
+.confirm-overlay{position:fixed;inset:0;z-index:10001;background:rgba(15,45,107,.45);display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px);}
+.confirm-overlay.show{display:flex;}
+.confirm-box{background:#fff;border-radius:18px;padding:30px 26px 22px;width:90%;max-width:360px;box-shadow:0 24px 60px rgba(0,0,0,.25);text-align:center;animation:cmb-in .18s ease;}
+@keyframes cmb-in{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}
+.cmb-icon{font-size:38px;margin-bottom:10px;line-height:1;}
+.cmb-title{font-size:17px;font-weight:800;color:#1e293b;margin-bottom:8px;}
+.cmb-body{font-size:13px;color:#64748b;line-height:1.65;margin-bottom:22px;white-space:pre-wrap;}
+.cmb-btns{display:flex;gap:10px;}
+.cmb-btn{flex:1;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;}
+.cmb-cancel{background:#f1f5f9;color:#64748b;}.cmb-cancel:hover{background:#e2e8f0;}
+.cmb-ok-red{background:#ef4444;color:#fff;}.cmb-ok-red:hover{background:#dc2626;}
+.cmb-ok-orange{background:#f07020;color:#fff;}.cmb-ok-orange:hover{background:#d05a10;}
+.cmb-ok-blue{background:#1a3f8f;color:#fff;}.cmb-ok-blue:hover{background:#0f2d6b;}
+
+/* ══ USER BAR ══ */
+.user-bar{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);}
+.user-bar .user-email{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:rgba(255,255,255,.75);}
+.btn-logout{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:7px;padding:4px 11px;font-size:11px;font-weight:600;cursor:pointer;color:rgba(255,255,255,.9);font-family:inherit;transition:all .15s;}
+.btn-logout:hover{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.4);}
+
+/* ══ LOGIN POLISH ══ */
+.login-box{background:#fff;border-radius:20px;padding:44px 38px 36px;width:90%;max-width:400px;box-shadow:0 24px 72px rgba(0,0,0,.35);text-align:center;}
+.login-title{font-size:22px;font-weight:800;color:#0f2d6b;margin-bottom:4px;letter-spacing:-.3px;}
+.login-sub{font-size:13px;color:#94a3b8;margin-bottom:28px;}
+.login-input{width:100%;padding:13px 15px;border:1.5px solid #e2e8f0;border-radius:11px;font-size:14px;font-family:inherit;margin-bottom:12px;box-sizing:border-box;transition:all .2s;background:#f8fafc;}
+.login-input:focus{outline:none;border-color:#f07020;background:#fff;box-shadow:0 0 0 3px rgba(240,112,32,.12);}
+.login-btn-primary{background:linear-gradient(135deg,#f07020,#e05a10);color:#fff;margin-bottom:10px;letter-spacing:.2px;}
+.login-btn-primary:hover{background:linear-gradient(135deg,#e05a10,#c84a00);transform:translateY(-1px);box-shadow:0 4px 14px rgba(240,112,32,.4);}
+.login-footer{font-size:11px;color:#94a3b8;margin-top:20px;}
+
 </style>
 </head>
 <body>
@@ -916,14 +947,14 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 <!-- LOGIN OVERLAY -->
 <div id="login-overlay" class="login-overlay">
   <div class="login-box">
-    <img class="login-logo" src="https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/main/ThaoDanSSC_Digital-01.png" alt="Thảo Đàn" onerror="this.style.display='none'">
-    <div class="login-title">Thảo Đàn AI Case Assistant</div>
-    <div class="login-sub">Đăng nhập để tiếp tục</div>
-    <input id="login-email" class="login-input" type="email" placeholder="Email">
-    <input id="login-pass" class="login-input" type="password" placeholder="Mật khẩu" onkeydown="if(event.key==='Enter')loginEmail()">
-    <button class="login-btn login-btn-primary" onclick="loginEmail()">Đăng nhập</button>
+    <img class="login-logo" src="https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/main/ThaoDanSSC_Digital-01.png" alt="Thảo Đàn" onerror="this.style.display='none'" style="width:110px;margin:0 auto 20px;display:block;">
+    <div class="login-title">Thảo Đàn AI</div>
+    <div class="login-sub">Case Management Assistant · Đăng nhập để tiếp tục</div>
+    <input id="login-email" class="login-input" type="email" placeholder="Email công tác" autocomplete="email">
+    <input id="login-pass" class="login-input" type="password" placeholder="Mật khẩu" onkeydown="if(event.key==='Enter')loginEmail()" autocomplete="current-password">
+    <button class="login-btn login-btn-primary" id="login-btn" onclick="loginEmail()">Đăng nhập</button>
     <div id="login-err" class="login-err"></div>
-    <div class="login-footer">Liên hệ quản trị viên nếu chưa có tài khoản</div>
+    <div class="login-footer">🔒 Dữ liệu được mã hóa và bảo mật · Liên hệ quản trị viên nếu chưa có tài khoản</div>
   </div>
 </div>
 
@@ -1784,16 +1815,21 @@ async function loginEmail() {
   const email = document.getElementById('login-email').value.trim();
   const pass = document.getElementById('login-pass').value;
   const errEl = document.getElementById('login-err');
+  const btn = document.getElementById('login-btn');
   errEl.textContent = '';
   if (!email || !pass) { errEl.textContent = 'Vui lòng nhập email và mật khẩu'; return; }
+  btn.disabled = true;
+  btn.innerHTML = '<span class="login-spinner"></span>Đang đăng nhập...';
   try {
     const { data, error } = await _supabase.auth.signInWithPassword({ email, password: pass });
     if (error) throw error;
     _onLogin(data.user);
   } catch(e) {
-    errEl.textContent = e.message === 'Invalid login credentials' 
-      ? 'Email hoặc mật khẩu không đúng' 
+    errEl.textContent = e.message === 'Invalid login credentials'
+      ? 'Email hoặc mật khẩu không đúng'
       : e.message || 'Lỗi đăng nhập';
+    btn.disabled = false;
+    btn.textContent = 'Đăng nhập';
   }
 }
 
@@ -2425,20 +2461,29 @@ function completeStage() {
   // ── GĐ 5: Đóng ca ──
   if (currentStage >= 5) {
     if (!curCaseId) { showNotif('⚠️ Không tìm thấy ca hiện tại', 'warn'); return; }
-    if (!confirm('Xác nhận ĐÓNG CA?\n\nSau khi đóng, ca sẽ chuyển sang trạng thái "Đã đóng".\nBạn vẫn có thể xem lại nhưng không thể chỉnh sửa tiếp.')) return;
-    const cases = loadCases();
-    if (cases[curCaseId]) {
-      cases[curCaseId].status = 'closed';
-      cases[curCaseId].closedAt = new Date().toISOString();
-      cases[curCaseId].updatedAt = new Date().toISOString();
-      D._status = 'closed';
-      saveCases(cases);
-    }
-    updateHeader();
-    renderCaseList();
-    updateCasesCount();
-    applyClosedCaseUI();
-    showNotif('✅ Đã đóng ca thành công!');
+    const cName = (loadCases()[curCaseId]?.name) || 'ca này';
+    showConfirm({
+      icon: '✅',
+      title: 'Xác nhận đóng ca?',
+      body: `"${cName}" sẽ chuyển sang trạng thái Đã đóng.\nBạn vẫn có thể xem lại nhưng không thể chỉnh sửa tiếp.`,
+      okText: 'Đóng ca',
+      okClass: 'cmb-ok-orange',
+      onConfirm() {
+        const cases = loadCases();
+        if (cases[curCaseId]) {
+          cases[curCaseId].status = 'closed';
+          cases[curCaseId].closedAt = new Date().toISOString();
+          cases[curCaseId].updatedAt = new Date().toISOString();
+          D._status = 'closed';
+          saveCases(cases);
+        }
+        updateHeader();
+        renderCaseList();
+        updateCasesCount();
+        applyClosedCaseUI();
+        showNotif('✅ Đã đóng ca thành công!');
+      }
+    });
     return;
   }
 
@@ -3781,18 +3826,31 @@ function showCaseDetail(id) {
     </div>`
   ).join('<div style="flex:1;height:2px;background:#e2e8f0;min-width:8px;"></div>');
 
+  const isClosed = c.status === 'closed';
+  const closedAtTxt = c.closedAt ? ' · Đóng: '+fmtVN(c.closedAt) : '';
+  const statusBadge = isClosed
+    ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">✅ Đã đóng</span>`
+    : `<span style="display:inline-flex;align-items:center;gap:4px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">🔵 Đang mở</span>`;
+  const closeBtn = isClosed
+    ? `<button class="btn-secondary" style="color:#16a34a;border-color:#bbf7d0;" onclick="_reopenCaseFromList('${id}')">🔓 Mở lại ca</button>`
+    : `<button class="btn-secondary" style="color:#f07020;border-color:#fed7aa;" onclick="_closeCaseFromList('${id}')">✅ Đóng ca</button>`;
+
   main.innerHTML = `
     <div class="case-detail-hd">
       <div style="flex:1;">
-        <div class="case-detail-title">${esc(c.name||'?')} ${riskHtml}</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+          <div class="case-detail-title">${esc(c.name||'?')}</div>
+          ${statusBadge} ${riskHtml}
+        </div>
         ${childName ? `<div style="font-size:13px;color:var(--t1);margin-top:2px;">👤 <b>${esc(childName)}</b>${childDob ? ' · SN: '+childDob : ''}</div>` : ''}
-        <div class="case-detail-meta">Tạo: ${fmtVN(c.createdAt)} · ${(c.entries||[]).length} ghi chép · Cập nhật: ${_timeAgo(c.updatedAt)}</div>
+        <div class="case-detail-meta">Tạo: ${fmtVN(c.createdAt)} · ${(c.entries||[]).length} ghi chép · Cập nhật: ${_timeAgo(c.updatedAt)}${closedAtTxt}</div>
         <div style="display:flex;align-items:center;gap:0;margin-top:8px;max-width:280px;">${stageDots}</div>
         <div style="font-size:10px;color:var(--org);font-weight:600;margin-top:3px;">GĐ ${stage} — ${stageLabels[stage]||''}</div>
       </div>
-      <div style="display:flex;gap:6px;flex-shrink:0;">
+      <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         <button class="btn-secondary" onclick="loadCaseIntoApp('${id}');switchMain('dash')">🔬 Mở</button>
         <button class="btn-secondary" onclick="loadCaseIntoApp('${id}');setTimeout(printFullCase,300)">🖨 In</button>
+        ${closeBtn}
         <button class="btn-secondary" onclick="deleteCase('${id}')" style="color:#b91c1c;border-color:#fecaca;">🗑 Xóa</button>
       </div>
     </div>
@@ -3808,6 +3866,47 @@ function showCaseDetail(id) {
     </div>`;
   // Load files async
   refreshFileList(id);
+}
+
+function _closeCaseFromList(id) {
+  const c = loadCases()[id];
+  showConfirm({
+    icon: '✅',
+    title: 'Đóng ca?',
+    body: `"${c?.name||'Ca này'}" sẽ chuyển sang trạng thái Đã đóng.`,
+    okText: 'Đóng ca',
+    okClass: 'cmb-ok-orange',
+    onConfirm() {
+      const cases = loadCases();
+      if (cases[id]) {
+        cases[id].status = 'closed';
+        cases[id].closedAt = new Date().toISOString();
+        cases[id].updatedAt = new Date().toISOString();
+      }
+      saveCases(cases);
+      if (curCaseId === id && D) { D._status = 'closed'; applyClosedCaseUI(); }
+      renderCaseList(); showCaseDetail(id);
+      showNotif('✅ Đã đóng ca');
+    }
+  });
+}
+function _reopenCaseFromList(id) {
+  const c = loadCases()[id];
+  showConfirm({
+    icon: '🔓',
+    title: 'Mở lại ca?',
+    body: `"${c?.name||'Ca này'}" sẽ được mở lại để tiếp tục chỉnh sửa.`,
+    okText: 'Mở lại',
+    okClass: 'cmb-ok-blue',
+    onConfirm() {
+      const cases = loadCases();
+      if (cases[id]) { cases[id].status = 'open'; delete cases[id].closedAt; }
+      saveCases(cases);
+      if (curCaseId === id && D) { D._status = 'open'; applyClosedCaseUI(); }
+      renderCaseList(); showCaseDetail(id);
+      showNotif('🔓 Đã mở lại ca');
+    }
+  });
 }
 
 function loadCaseIntoApp(id) {
@@ -3841,16 +3940,48 @@ function loadCaseIntoApp(id) {
   showNotif('📂 Đã mở: ' + c.name + ' — GĐ ' + currentStage + ' · ' + entries.length + ' ghi chép');
 }
 
+// ── CUSTOM CONFIRM MODAL ──
+let _confirmCb = null;
+function showConfirm({icon='⚠️', title='', body='', okText='Xác nhận', okClass='cmb-ok-red', onConfirm=null}={}) {
+  _confirmCb = onConfirm;
+  document.getElementById('cmb-icon').textContent = icon;
+  document.getElementById('cmb-title').textContent = title;
+  document.getElementById('cmb-body').textContent = body;
+  const ok = document.getElementById('cmb-ok');
+  ok.textContent = okText;
+  ok.className = 'cmb-btn ' + okClass;
+  ok.onclick = _doConfirm;
+  document.getElementById('confirm-overlay').classList.add('show');
+}
+function _doConfirm() {
+  document.getElementById('confirm-overlay').classList.remove('show');
+  const cb = _confirmCb; _confirmCb = null;
+  if (cb) cb();
+}
+function _cancelConfirm() {
+  document.getElementById('confirm-overlay').classList.remove('show');
+  _confirmCb = null;
+}
+
 function deleteCase(id) {
-  if (!confirm('Xóa ca này?')) return;
-  const cases = loadCases();
-  delete cases[id];
-  saveCases(cases);
-  deleteCaseFromDB(id);
-  if (curCaseId===id) { curCaseId=null; D=null; updateHeader(); }
-  renderCaseList(); updateCasesCount();
-  document.getElementById('cases-main').innerHTML = '<div class="case-detail-empty"><div>Đã xóa</div></div>';
-  showNotif('✅ Đã xóa ca');
+  const c = loadCases()[id];
+  showConfirm({
+    icon: '🗑',
+    title: 'Xóa ca này?',
+    body: `"${c?.name||'Ca này'}" sẽ bị xóa vĩnh viễn. Không thể hoàn tác.`,
+    okText: 'Xóa ca',
+    okClass: 'cmb-ok-red',
+    onConfirm() {
+      const cases = loadCases();
+      delete cases[id];
+      saveCases(cases);
+      deleteCaseFromDB(id);
+      if (curCaseId===id) { curCaseId=null; D=null; updateHeader(); }
+      renderCaseList(); updateCasesCount();
+      document.getElementById('cases-main').innerHTML = '<div class="case-detail-empty"><div>Đã xóa</div></div>';
+      showNotif('✅ Đã xóa ca');
+    }
+  });
 }
 
 function updateCasesCount() {
@@ -5320,6 +5451,19 @@ document.addEventListener('DOMContentLoaded', () => {
     _reset();
   })();
 </script>
+
+<!-- CUSTOM CONFIRM MODAL -->
+<div class="confirm-overlay" id="confirm-overlay" onclick="if(event.target===this)_cancelConfirm()">
+  <div class="confirm-box">
+    <div class="cmb-icon" id="cmb-icon">⚠️</div>
+    <div class="cmb-title" id="cmb-title"></div>
+    <div class="cmb-body" id="cmb-body"></div>
+    <div class="cmb-btns">
+      <button class="cmb-btn cmb-cancel" onclick="_cancelConfirm()">Hủy</button>
+      <button class="cmb-btn" id="cmb-ok">Xác nhận</button>
+    </div>
+  </div>
+</div>
 
 <!-- SESSION TIMEOUT WARNING -->
 <div class="session-warn" id="session-warn">
