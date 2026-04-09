@@ -3614,8 +3614,8 @@ function renderCaseList() {
     const days = Math.floor((now - new Date(c.updatedAt)) / 86400000);
     const isStale = c.status === 'open' && days > 14;
     const riskClass = risk === 'Cao' ? 'ci-risk-high' : risk === 'Trung bình' ? 'ci-risk-med' : risk === 'Thấp' ? 'ci-risk-low' : '';
-    const stageDots = [1,2,3,4,5].map(s => 
-      `<div class="ci-stage-dot ${s < stage ? 'done' : s === stage ? 'current' : ''}"></div>`
+    const stageDots = [1,2,3,4,5].map(s =>
+      `<div class="ci-stage-dot ${(c.status==='closed' || s < stage) ? 'done' : s === stage ? 'current' : ''}"></div>`
     ).join('');
     
     return `<div class="case-item${c.id===curCaseId?' active':''}${isStale?' stale':''}" onclick="selectCase('${c.id}')">
@@ -4925,10 +4925,12 @@ function renderAnalysisPanel() {
     <div class="analysis-card-title">📁 THÔNG TIN CA</div>
     <div style="font-size:14px;font-weight:800;color:var(--navy);margin-bottom:5px">${esc(c?.name || 'Ca chưa đặt tên')}</div>`;
   if (cobaN.ho_ten) html += `<div style="font-size:12px;color:var(--t2);margin-bottom:6px">👤 <strong>${esc(cobaN.ho_ten)}</strong>${cobaN.tuoi?' · '+esc(cobaN.tuoi)+' tuổi':''}${cobaN.gioi_tinh?' · '+esc(cobaN.gioi_tinh):''}</div>`;
+  const _closed = c?.status === 'closed';
   html += `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">
-    <span style="padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700;background:${c?.status==='closed'?'#f3f4f6':'#dbeafe'};color:${c?.status==='closed'?'#374151':'#1d4ed8'}">${c?.status==='closed'?'✅ Đã đóng':'🟢 Đang mở'}</span>
-    <span style="padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700;background:${si.bg};color:${si.color}">GĐ ${stage}/5</span>
+    <span style="padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700;background:${_closed?'#ecfdf5':'#dbeafe'};color:${_closed?'#065f46':'#1d4ed8'}">${_closed?'✅ Đã đóng':'🟢 Đang mở'}</span>
+    <span style="padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700;background:${si.bg};color:${si.color}">${_closed?'GĐ 5 ✓':'GĐ '+stage+'/5'}</span>
     ${createdAt?`<span style="padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700;background:#f3f4f6;color:#374151">⏱ ${daysOpen} ngày</span>`:''}
+    ${_closed&&c.closedAt?`<span style="padding:3px 9px;border-radius:10px;font-size:10px;font-weight:600;background:#ecfdf5;color:#059669">📅 Đóng: ${fmtVN(c.closedAt)}</span>`:''}
   </div></div>`;
 
   // ── Risk level card ──
@@ -4968,11 +4970,12 @@ function renderAnalysisPanel() {
   html += `<div class="analysis-card">
     <div class="analysis-card-title">🕐 TIẾN TRÌNH GIAI ĐOẠN</div>
     <div class="stage-timeline">`;
+  const _isCaseClosed = c?.status === 'closed';
   for (let s = 1; s <= 5; s++) {
     const info = stageInfo[s];
-    const isDone = s < stage;
-    const isActive = s === stage;
-    const isLocked = s > stage;
+    const isDone = _isCaseClosed ? true : s < stage;
+    const isActive = _isCaseClosed ? false : s === stage;
+    const isLocked = _isCaseClosed ? false : s > stage;
     const dotBg = isLocked ? '#e5e7eb' : info.color;
     const dotTxt = isLocked ? '#9ca3af' : '#fff';
     const stageEntries = entries.filter(e => (e.stage||1) === s);
