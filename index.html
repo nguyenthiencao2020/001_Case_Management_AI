@@ -2184,7 +2184,10 @@ function updateStageUI() {
   const _curCase = curCaseId ? loadCases()[curCaseId] : null;
   const _isClosed = _curCase?.status === 'closed';
   if (btnComplete) {
-    if (cfg.completable && D && !_isClosed) {
+    // GĐ5: chỉ cần có ca (không cần D) — GĐ1-4: phải có D (đã phân tích)
+    const _canComplete = cfg.completable && !_isClosed &&
+      (currentStage === 5 ? !!_curCase : !!D);
+    if (_canComplete) {
       btnComplete.classList.add('show');
       btnComplete.style.display = 'inline-flex';
       btnComplete.textContent = currentStage < 5 ? `✓ Hoàn thành GĐ ${currentStage}` : '✓ Đóng ca';
