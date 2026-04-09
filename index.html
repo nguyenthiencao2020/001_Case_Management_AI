@@ -832,6 +832,33 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 .file-item .file-name{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .file-item .file-meta{font-size:10px;color:var(--t3);}
 .file-item .file-del{color:#dc2626;cursor:pointer;font-size:14px;}
+
+/* ══ PHÂN TÍCH & ĐÁNH GIÁ TAB ══ */
+.analysis-layout{display:flex;height:100%;overflow:hidden;width:100%;}
+.analysis-left{width:300px;flex-shrink:0;overflow-y:auto;background:#fff;border-right:1px solid var(--bd);padding:14px;display:flex;flex-direction:column;gap:10px;}
+.analysis-right{flex:1;overflow-y:auto;background:var(--cream);padding:14px;display:flex;flex-direction:column;gap:10px;}
+.analysis-card{background:#fff;border-radius:10px;padding:12px 14px;border:1px solid var(--bd);box-shadow:var(--shadow);}
+.analysis-card-title{font-size:9.5px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.risk-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;}
+.risk-matrix-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bd);font-size:11.5px;}
+.risk-matrix-row:last-child{border-bottom:none;}
+.stage-timeline{display:flex;flex-direction:column;gap:0;}
+.stage-tl-item{display:flex;gap:10px;align-items:flex-start;}
+.stage-tl-dot{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0;margin-top:2px;}
+.stage-tl-connector{width:2px;background:var(--bd);min-height:20px;margin:2px 0 2px 9px;}
+.stage-tl-content{flex:1;padding-bottom:12px;}
+.stage-tl-label{font-size:11.5px;font-weight:700;}
+.stage-tl-date{font-size:10px;color:var(--t3);margin-top:1px;}
+.btn-gen-eval{width:100%;padding:12px;border-radius:10px;background:linear-gradient(135deg,var(--navy3) 0%,var(--navy) 100%);color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;box-shadow:0 2px 8px rgba(15,45,107,.25);}
+.btn-gen-eval:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(15,45,107,.3);}
+.btn-gen-eval:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none;}
+.eval-output{background:#fff;border-radius:10px;padding:16px;border:1px solid var(--bd);box-shadow:var(--shadow);flex:1;min-height:200px;}
+.eval-placeholder{text-align:center;padding:40px 20px;color:var(--t3);}
+.eval-placeholder .ep-icon{font-size:36px;margin-bottom:12px;opacity:.4;}
+.eval-placeholder .ep-title{font-size:14px;font-weight:700;color:var(--t2);margin-bottom:6px;}
+.eval-placeholder .ep-sub{font-size:12px;line-height:1.5;}
+.eval-section-head{font-size:12.5px;font-weight:800;color:var(--navy);margin:16px 0 7px;padding:6px 12px;background:#f0f4f8;border-left:4px solid var(--navy);border-radius:0 6px 6px 0;}
+.eval-section-head:first-child{margin-top:0;}
 </style>
 </head>
 <body>
@@ -918,6 +945,7 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
   <div class="mnav active" id="mnav-dash" onclick="switchMain('dash')"><span class="mn-ico">🔬</span>Dashboard & AI</div>
   <div class="mnav" id="mnav-forms" onclick="switchMain('forms')"><span class="mn-ico">📋</span>Biểu mẫu QLTH</div>
   <div class="mnav" id="mnav-cases" onclick="switchMain('cases')"><span class="mn-ico">🗂</span>Danh sách ca <span id="cases-count-badge" style="background:rgba(240,112,32,.3);color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:4px;"></span></div>
+  <div class="mnav" id="mnav-analysis" onclick="switchMain('analysis')"><span class="mn-ico">📊</span>Phân tích & Đánh giá</div>
 </div>
 
 <div class="notif" id="notif"></div>
@@ -1091,6 +1119,33 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
       <div class="cases-list" id="cases-list"><div style="padding:24px;text-align:center;color:var(--t3);font-size:12px;">Chưa có ca nào</div></div>
     </div>
     <div class="cases-main" id="cases-main"><div class="case-detail-empty"><div><div style="font-size:36px;margin-bottom:12px;">🗂</div><div style="font-size:14px;font-weight:600;margin-bottom:6px;">Chọn một ca để xem</div></div></div></div>
+  </div>
+</div>
+
+<!-- ═══════════ TAB 4: PHÂN TÍCH & ĐÁNH GIÁ ═══════════ -->
+<div class="tab-panel" id="panel-analysis">
+  <div class="analysis-layout">
+    <!-- LEFT: Case Summary + Timeline + Risk Matrix -->
+    <div class="analysis-left" id="analysis-left">
+      <div class="eval-placeholder" style="padding:32px 10px;">
+        <div class="ep-icon">📊</div>
+        <div class="ep-title">Chưa có ca nào</div>
+        <div class="ep-sub">Mở một ca ở tab Dashboard để xem phân tích</div>
+      </div>
+    </div>
+    <!-- RIGHT: AI Comprehensive Report -->
+    <div class="analysis-right">
+      <button class="btn-gen-eval" id="btn-gen-eval" onclick="generateComprehensiveEval()">
+        ✨ Tạo Báo cáo Phân tích & Đánh giá Tổng hợp
+      </button>
+      <div class="eval-output" id="eval-output">
+        <div class="eval-placeholder">
+          <div class="ep-icon">📝</div>
+          <div class="ep-title">Báo cáo Phân tích & Đánh giá Tổng hợp</div>
+          <div class="ep-sub">Nhấn nút bên trên để AI tạo báo cáo đánh giá toàn diện cho ca đang mở — phân tích tiến triển qua từng giai đoạn, rủi ro, điểm mạnh và khuyến nghị.</div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -3112,11 +3167,12 @@ async function sendChat() {
 // ════════════════════════════════════════════════════════════
 function switchMain(tab) {
   curMain = tab;
-  ['dash','forms','cases'].forEach(t => {
+  ['dash','forms','cases','analysis'].forEach(t => {
     document.getElementById('panel-'+t)?.classList.toggle('active', t===tab);
     document.getElementById('mnav-'+t)?.classList.toggle('active', t===tab);
   });
   if (tab==='cases') renderCaseList();
+  if (tab==='analysis') renderAnalysisPanel();
 }
 
 function fillForms() {
@@ -4624,6 +4680,258 @@ function checkReminders() {
   } else if (panel) {
     panel.style.display = 'none';
   }
+}
+
+// ════════════════════════════════════════════════════════════
+// PHÂN TÍCH & ĐÁNH GIÁ TỔNG HỢP
+// ════════════════════════════════════════════════════════════
+
+const SYS_COMPREHENSIVE_EVAL = `Bạn là GIÁM SÁT VIÊN CTXH cấp cao tại Thảo Đàn Social Service Center TP.HCM — chuyên gia bảo vệ trẻ em với 15+ năm kinh nghiệm.
+
+Nhiệm vụ: Tạo BÁO CÁO PHÂN TÍCH & ĐÁNH GIÁ TỔNG HỢP toàn bộ tiến trình can thiệp ca.
+
+Dựa trên dữ liệu ca được cung cấp, viết báo cáo theo cấu trúc:
+
+## I. TỔNG QUAN CA
+Thông tin cơ bản, tình trạng hiện tại, tổng thời gian can thiệp, giai đoạn đang thực hiện.
+
+## II. DIỄN BIẾN THEO GIAI ĐOẠN
+Phân tích những gì phát hiện và thay đổi quan trọng ở mỗi giai đoạn đã thực hiện.
+
+## III. ĐÁNH GIÁ TIẾN TRIỂN RỦI RO
+Rủi ro tăng/giảm/ổn định qua các giai đoạn? Nguyên nhân? Lĩnh vực nào cải thiện, lĩnh vực nào còn đáng lo?
+
+## IV. ĐIỂM MẠNH VÀ NGUỒN LỰC
+Điểm mạnh của trẻ và gia đình. Những nguồn lực cộng đồng/xã hội đã hoặc có thể phát huy.
+
+## V. VẤN ĐỀ CÒN TỒN TẠI
+Những vấn đề chưa được giải quyết, nguy cơ tiềm ẩn cần tiếp tục theo dõi. Áp dụng triết lý Thảo Đàn: cảnh giác "kết luận tươi vui", nhận diện phụ mẫu hóa.
+
+## VI. ĐÁNH GIÁ HIỆU QUẢ CAN THIỆP
+Can thiệp đã đạt được gì so với mục tiêu ban đầu? Khoảng cách còn lại?
+
+## VII. KHUYẾN NGHỊ ƯU TIÊN
+Bước tiếp theo cụ thể, ưu tiên cao nhất, ai thực hiện, thời hạn gợi ý.
+
+Yêu cầu:
+- Viết bằng tiếng Việt chuyên nghiệp, rõ ràng
+- Bám sát DỮ LIỆU THỰC TẾ của ca — không viết chung chung
+- Áp dụng triết lý Thảo Đàn: phân biệt nhu cầu vs yêu cầu, nhận diện phụ mẫu hóa, không kết luận tươi vui khi thiếu dữ liệu
+- Độ dài: 500–800 từ`;
+
+function renderAnalysisPanel() {
+  if (curMain !== 'analysis') return;
+  const cases = loadCases();
+  const c = curCaseId ? cases[curCaseId] : null;
+  const leftEl = document.getElementById('analysis-left');
+  if (!leftEl) return;
+
+  if (!c && !D) {
+    leftEl.innerHTML = `<div class="eval-placeholder" style="padding:32px 10px;">
+      <div class="ep-icon">📊</div>
+      <div class="ep-title">Chưa có ca nào</div>
+      <div class="ep-sub">Mở một ca ở tab Dashboard để xem phân tích</div>
+    </div>`;
+    return;
+  }
+
+  const data = D || c?.lastAnalysis || {};
+  const report = data._report || {};
+  const cobaN = data.co_ban || {};
+  const stage = currentStage;
+  const risk = report.risk || '';
+  const now = new Date();
+  const createdAt = c?.createdAt ? new Date(c.createdAt) : null;
+  const updatedAt = c?.updatedAt ? new Date(c.updatedAt) : null;
+  const daysOpen = createdAt ? Math.floor((now - createdAt) / 86400000) : 0;
+
+  const stageInfo = [null,
+    {label:'Tiếp cận ban đầu', color:'#2563eb', bg:'#eff6ff'},
+    {label:'Vãng gia & Đánh giá', color:'#0891b2', bg:'#ecfeff'},
+    {label:'Kế hoạch can thiệp', color:'#7c3aed', bg:'#f5f3ff'},
+    {label:'Tiến trình', color:'#d97706', bg:'#fffbeb'},
+    {label:'Kết thúc ca', color:'#059669', bg:'#ecfdf5'}
+  ];
+
+  const rmLabels = {
+    an_toan_the_chat:'🛡️ An toàn thể chất',
+    an_toan_tam_ly:'🧠 An toàn tâm lý',
+    moi_truong:'🏠 Môi trường sống',
+    giao_duc:'📚 Giáo dục & PT',
+    he_thong_bao_ve:'👨‍👩‍👧 Hệ thống BV'
+  };
+  const levelMap = {
+    C:{label:'Cao', color:'#dc2626', bg:'#fef2f2'},
+    TB:{label:'TB', color:'#d97706', bg:'#fffbeb'},
+    T:{label:'Thấp', color:'#16a34a', bg:'#f0fdf4'},
+    KR:{label:'Chưa rõ', color:'#6b7280', bg:'#f3f4f6'}
+  };
+
+  const si = stageInfo[stage] || stageInfo[1];
+  let html = '';
+
+  // ── Case summary card ──
+  html += `<div class="analysis-card">
+    <div class="analysis-card-title">📁 THÔNG TIN CA</div>
+    <div style="font-size:14px;font-weight:800;color:var(--navy);margin-bottom:5px">${esc(c?.name || 'Ca chưa đặt tên')}</div>`;
+  if (cobaN.ho_ten) html += `<div style="font-size:12px;color:var(--t2);margin-bottom:6px">👤 <strong>${esc(cobaN.ho_ten)}</strong>${cobaN.tuoi?' · '+esc(cobaN.tuoi)+' tuổi':''}${cobaN.gioi_tinh?' · '+esc(cobaN.gioi_tinh):''}</div>`;
+  html += `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">
+    <span style="padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700;background:${c?.status==='closed'?'#f3f4f6':'#dbeafe'};color:${c?.status==='closed'?'#374151':'#1d4ed8'}">${c?.status==='closed'?'✅ Đã đóng':'🟢 Đang mở'}</span>
+    <span style="padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700;background:${si.bg};color:${si.color}">GĐ ${stage}/5</span>
+    ${createdAt?`<span style="padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700;background:#f3f4f6;color:#374151">⏱ ${daysOpen} ngày</span>`:''}
+  </div></div>`;
+
+  // ── Risk level card ──
+  if (risk) {
+    const rC=_riskColor(risk), rBg=_riskBg(risk), rI=_riskIcon(risk);
+    html += `<div class="analysis-card">
+      <div class="analysis-card-title">⚠️ MỨC ĐỘ RỦI RO</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span class="risk-pill" style="background:${rBg};color:${rC};border:1.5px solid ${rC}33">${rI} ${risk}</span>
+        ${report.urgent?`<span style="font-size:10px;font-weight:700;color:#dc2626;background:#fef2f2;padding:3px 8px;border-radius:8px">⚡ KHẨN CẤP</span>`:''}
+      </div>
+      ${report.risk_reason?`<div style="font-size:11.5px;color:var(--t2);line-height:1.5;padding:7px 9px;background:${rBg};border-radius:7px">${esc(report.risk_reason)}</div>`:''}
+    </div>`;
+  }
+
+  // ── Risk matrix card ──
+  const rm = report.risk_matrix || {};
+  const rmKeys = Object.keys(rm);
+  if (rmKeys.length) {
+    html += `<div class="analysis-card">
+      <div class="analysis-card-title">📊 MA TRẬN RỦI RO</div>`;
+    Object.entries(rmLabels).forEach(([k, label]) => {
+      const f = rm[k];
+      if (!f) return;
+      const lv = typeof f === 'string' ? f : f?.level;
+      const lvi = levelMap[lv] || {label:lv||'—', color:'#9ca3af', bg:'#f3f4f6'};
+      html += `<div class="risk-matrix-row">
+        <span style="color:var(--t2)">${label}</span>
+        <span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:${lvi.bg};color:${lvi.color}">${lvi.label}</span>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // ── Stage timeline card ──
+  const entries = c?.entries || [];
+  html += `<div class="analysis-card">
+    <div class="analysis-card-title">🕐 TIẾN TRÌNH GIAI ĐOẠN</div>
+    <div class="stage-timeline">`;
+  for (let s = 1; s <= 5; s++) {
+    const info = stageInfo[s];
+    const isDone = s < stage;
+    const isActive = s === stage;
+    const isLocked = s > stage;
+    const dotBg = isLocked ? '#e5e7eb' : info.color;
+    const dotTxt = isLocked ? '#9ca3af' : '#fff';
+    const stageEntries = entries.filter(e => (e.stage||1) === s);
+    const lastEntry = stageEntries[stageEntries.length-1];
+    html += `<div class="stage-tl-item">
+      <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">
+        <div class="stage-tl-dot" style="background:${dotBg};color:${dotTxt}">${isDone?'✓':s}</div>
+        ${s<5?`<div class="stage-tl-connector" style="background:${isDone?info.color+'55':'#e5e7eb'}"></div>`:''}
+      </div>
+      <div class="stage-tl-content">
+        <div class="stage-tl-label" style="color:${isLocked?'#9ca3af':info.color}">${info.label}</div>
+        ${lastEntry?`<div class="stage-tl-date">📅 ${fmtVN(lastEntry.date)}</div>`:''}
+        ${isActive?`<span style="font-size:10px;background:${info.bg};color:${info.color};padding:2px 7px;border-radius:8px;display:inline-block;margin-top:2px;font-weight:600">Đang thực hiện</span>`:''}
+        ${isDone?`<span style="font-size:10px;background:#f0fdf4;color:#16a34a;padding:2px 7px;border-radius:8px;display:inline-block;margin-top:2px;font-weight:600">✅ Hoàn thành</span>`:''}
+      </div>
+    </div>`;
+  }
+  html += `</div></div>`;
+
+  // ── Stats card ──
+  const stage4Updates = entries.filter(e => (e.stage||1) === 4).length;
+  html += `<div class="analysis-card">
+    <div class="analysis-card-title">📈 THỐNG KÊ</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+      <div style="text-align:center;padding:10px;background:var(--cream);border-radius:8px">
+        <div style="font-size:22px;font-weight:800;color:var(--navy)">${entries.length}</div>
+        <div style="font-size:10px;color:var(--t3)">Lần ghi chép</div>
+      </div>
+      <div style="text-align:center;padding:10px;background:var(--cream);border-radius:8px">
+        <div style="font-size:22px;font-weight:800;color:#d97706">${stage4Updates}</div>
+        <div style="font-size:10px;color:var(--t3)">Cập nhật GĐ4</div>
+      </div>
+      ${updatedAt?`<div style="grid-column:span 2;padding:7px 10px;background:var(--cream);border-radius:8px;font-size:11px;color:var(--t2)">🕒 Cập nhật lần cuối: <strong>${fmtVN(updatedAt.toISOString())}</strong></div>`:''}
+    </div>
+  </div>`;
+
+  leftEl.innerHTML = html;
+}
+
+async function generateComprehensiveEval() {
+  const cases = loadCases();
+  const c = curCaseId ? cases[curCaseId] : null;
+  const data = D || c?.lastAnalysis || {};
+
+  if (!data.co_ban && !data._report) {
+    showNotif('⚠️ Chưa có dữ liệu phân tích — hãy chạy phân tích ở tab Dashboard trước', 'warn');
+    return;
+  }
+
+  const btn = document.getElementById('btn-gen-eval');
+  const out = document.getElementById('eval-output');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> AI đang tạo báo cáo...';
+  out.innerHTML = `<div style="text-align:center;padding:40px;color:var(--t3)">
+    <span class="spin" style="font-size:20px;display:inline-block"></span>
+    <div style="margin-top:12px;font-size:13px;font-weight:500">AI đang phân tích toàn bộ tiến trình ca...</div>
+    <div style="margin-top:6px;font-size:11px">Quá trình này mất 15–30 giây</div>
+  </div>`;
+
+  try {
+    const caseContext = JSON.stringify({
+      ten_ca: c?.name,
+      giai_doan_hien_tai: currentStage,
+      trang_thai: c?.status === 'closed' ? 'Đã đóng' : 'Đang mở',
+      so_lan_ghi_chep: (c?.entries || []).length,
+      ngay_tao: c?.createdAt,
+      ngay_cap_nhat: c?.updatedAt,
+      co_ban: data.co_ban || {},
+      gia_dinh: data.gia_dinh || {},
+      tinh_trang: data.tinh_trang || {},
+      danh_gia: data.danh_gia || {},
+      vang_gia: data.vang_gia || {},
+      ke_hoach: data.ke_hoach || {},
+      cap_nhat_tien_trinh: data.cap_nhat || [],
+      chuyen_gui: data.chuyen_gui || {},
+      ket_thuc: data.ket_thuc || {},
+      bao_cao_phan_tich_cuoi: data._report || {}
+    }, null, 2);
+
+    const result = await callAI(SYS_COMPREHENSIVE_EVAL,
+      `Dữ liệu ca cần phân tích và đánh giá:\n\n${caseContext}`,
+      0.4, 2500);
+
+    out.innerHTML = `<div style="font-family:'Be Vietnam Pro',sans-serif;font-size:13px;line-height:1.75;color:var(--text)">${_formatEvalReport(result)}</div>`;
+  } catch(e) {
+    out.innerHTML = `<div style="color:#dc2626;padding:20px;text-align:center;font-size:13px">❌ ${esc(e.message)}</div>`;
+    showNotif('❌ Lỗi tạo báo cáo: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🔄 Tạo lại Báo cáo';
+  }
+}
+
+function _formatEvalReport(text) {
+  // escape HTML first
+  let h = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // headings
+  h = h.replace(/^## (.+)$/gm, '<div class="eval-section-head">$1</div>');
+  h = h.replace(/^### (.+)$/gm, '<div style="font-size:12.5px;font-weight:700;color:var(--navy2);margin:12px 0 5px">$1</div>');
+  // bold
+  h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // list items → collect into <ul>
+  h = h.replace(/^- (.+)$/gm, '<li style="margin:3px 0;padding-left:2px">$1</li>');
+  h = h.replace(/(<li[^>]*>[\s\S]*?<\/li>)(\n<li[^>]*>[\s\S]*?<\/li>)*/g,
+    m => `<ul style="margin:6px 0 8px;padding-left:18px">${m}</ul>`);
+  // paragraphs
+  h = h.replace(/\n\n/g, '</p><p style="margin:6px 0">');
+  h = h.replace(/\n/g, '<br>');
+  return `<p style="margin:0 0 6px">${h}</p>`;
 }
 
 // INIT
