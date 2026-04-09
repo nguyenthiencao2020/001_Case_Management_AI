@@ -2032,10 +2032,9 @@ function pseudonymizeForAI(data) {
     if (d.co_ban.cccd) d.co_ban.cccd = '***';
     if (d.co_ban.ma_so_bhxh) d.co_ban.ma_so_bhxh = '***';
   }
-  // Người chăm sóc — giữ nhãn "Người chăm sóc", ẩn họ tên thật
+  // Người chăm sóc — giữ nguyên tên (cần cho phân tích), chỉ ẩn SĐT/CCCD
   if (d.gia_dinh?.nguoi_cham_soc) {
     const nc = d.gia_dinh.nguoi_cham_soc;
-    if (nc.ho_ten) nc.ho_ten = 'Người chăm sóc';
     if (nc.so_dien_thoai) nc.so_dien_thoai = '***';
     if (nc.cccd) nc.cccd = '***';
     if (nc.dia_chi) {
@@ -2043,11 +2042,10 @@ function pseudonymizeForAI(data) {
       nc.dia_chi = parts[parts.length - 1] || nc.dia_chi;
     }
   }
-  // Thành viên gia đình — "Thành viên 1", "Thành viên 2"...
+  // Thành viên gia đình — giữ nguyên tên (cần cho phân tích), chỉ ẩn SĐT/CCCD
   if (Array.isArray(d.gia_dinh?.thanh_vien)) {
-    d.gia_dinh.thanh_vien = d.gia_dinh.thanh_vien.map((m, i) => {
+    d.gia_dinh.thanh_vien = d.gia_dinh.thanh_vien.map(m => {
       if (!m) return m;
-      if (m.ho_ten) m.ho_ten = `Thành viên ${i + 1}`;
       if (m.so_dien_thoai) m.so_dien_thoai = '***';
       if (m.cccd) m.cccd = '***';
       if (m.dia_chi) {
