@@ -1731,7 +1731,16 @@ function fmtDate(v) {
   // yyyy/mm/dd
   m = v.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
   if (m) return m[3].padStart(2,'0')+'/'+m[2].padStart(2,'0')+'/'+m[1];
-  // Tìm pattern ngày trong chuỗi dài hơn
+  // mm/yyyy hoặc m/yyyy → 01/mm/yyyy
+  m = v.match(/^(\d{1,2})\/(\d{4})$/);
+  if (m) return '01/'+m[1].padStart(2,'0')+'/'+m[2];
+  // "Tháng 07/2026" hoặc "Tháng 7/2026"
+  m = v.match(/[Tt]háng\s+(\d{1,2})[\/\-](\d{4})/);
+  if (m) return '01/'+m[1].padStart(2,'0')+'/'+m[2];
+  // yyyy-mm → 01/mm/yyyy
+  m = v.match(/^(\d{4})-(\d{1,2})$/);
+  if (m) return '01/'+m[2].padStart(2,'0')+'/'+m[1];
+  // Tìm pattern dd/mm/yyyy trong chuỗi dài hơn
   m = v.match(/(\d{1,2})[\s\/\-](\d{1,2})[\s\/\-](\d{4})/);
   if (m) return m[1].padStart(2,'0')+'/'+m[2].padStart(2,'0')+'/'+m[3];
   return v;
@@ -4523,9 +4532,12 @@ async function buildDocx(fi,logoData,footerData){
     body.push(FLM(["Họ và tên trẻ",cb.ho_ten],["Giới tính",cb.gioi_tinh]));
     body.push(FLM(["Hồ sơ xã hội","DADH2025/00001"],["Năm sinh",cb.ngay_sinh]));
     body.push(FLM(["Thời gian bắt đầu case",kh.bat_dau_case||cb.ngay_tiep_can],["Thời gian thực hiện KH",kh.thoi_gian_kh||""]));
-    const td6=(kh.nhu_cau_ho_tro||[]).filter(nc=>nc.muc_tieu).map(nc=>[nc.loai,nc.muc_tieu,"",""]);
-    while(td6.length<9)td6.push(["","","",""]);
-    body.push(TBLF(["Nhu cầu can thiệp, trợ giúp","Các hoạt động can thiệp, trợ giúp","Thời gian","Nhận xét của NVXH"],td6,[2200,3000,1200,3238]));
+    // Ưu tiên D.tien_do (dữ liệu thực từ GĐ4), fallback ke_hoach (GĐ3)
+    const _td6 = Array.isArray(D.tien_do) && D.tien_do.length > 0
+      ? D.tien_do.map(t=>[t.nhu_cau||'', t.hoat_dong||'', t.thoi_gian||'', t.nhan_xet_nvxh||''])
+      : (kh.nhu_cau_ho_tro||[]).filter(nc=>nc.muc_tieu).map(nc=>[nc.loai,nc.muc_tieu,'','']);
+    while(_td6.length<9)_td6.push(['','','','']);
+    body.push(TBLF(["Nhu cầu can thiệp, trợ giúp","Các hoạt động can thiệp, trợ giúp","Thời gian","Nhận xét của NVXH"],_td6,[2200,3000,1200,3238]));
     body.push(DATE_R());body.push(SGN(["Giám sát","Nhân viên xã hội"]));
   }else if(fi===7){
     body.push(...TITLE("PHIẾU CẬP NHẬT THÔNG TIN"));
