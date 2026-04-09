@@ -1764,8 +1764,18 @@ async function loginEmail() {
 
 async function logoutUser() {
   await _supabase.auth.signOut();
-  _currentUser = null;
-  _cases = {};
+  _currentUser = null; _cases = {};
+  // Reset toàn bộ state
+  D = null; curCaseId = null; currentStage = 1; chatHistory = [];
+  document.getElementById('dash-notes').value = '';
+  document.getElementById('dash-cc').textContent = '0 ký tự';
+  document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">💬</div><div style="font-weight:600;">Chuyên gia CTXH sẵn sàng</div><div>Hỏi bất kỳ điều gì về CTXH hoặc nhập ghi chép để phân tích ca.</div></div>';
+  document.getElementById('hdr-case-name').textContent = '';
+  document.getElementById('hdr-case-date').textContent = '';
+  document.querySelectorAll('.fi-ck').forEach(el => el.remove());
+  document.querySelectorAll('.form-item').forEach(el => { el.classList.remove('form-locked'); el.style.opacity = ''; el.title = ''; });
+  document.getElementById('btn-fill').disabled = true;
+  document.getElementById('closed-banner')?.classList.remove('show');
   document.getElementById('login-overlay').style.display = 'flex';
   document.getElementById('user-bar').style.display = 'none';
 }
@@ -1794,11 +1804,17 @@ function _onLogin(user) {
         document.getElementById('btn-fill').disabled = false;
         document.getElementById('chat-input').disabled = false;
         document.getElementById('btn-send').disabled = false;
+      } else {
+        D = null;
+        document.getElementById('btn-fill').disabled = true;
+        document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">💬</div><div style="font-weight:600;">Chuyên gia CTXH sẵn sàng</div><div>Nhập ghi chép và nhấn Phân tích để bắt đầu.</div></div>';
       }
     }
     updateHeader();
     updateStageUI();
     restoreFormChecks();
+    // Render lại report nếu có
+    if (D?._report) renderReport(D._report);
     renderEntriesPanel();
     applyClosedCaseUI();
     // Check notifications and stale cases
@@ -4790,6 +4806,15 @@ function applyClosedCaseUI() {
     if (actionBar) actionBar.style.display = 'none';
     // Ẩn nút Lùi GĐ
     if (btnRollback) btnRollback.style.display = 'none';
+    // Refresh chat panel: hiện báo cáo cuối hoặc thông báo đóng ca
+    const chatMsgs = document.getElementById('chat-msgs');
+    if (chatMsgs && !chatMsgs.querySelector('.cb-report')) {
+      if (D?._report) {
+        renderReport(D._report);
+      } else {
+        chatMsgs.innerHTML = `<div class="chat-empty"><div style="font-size:32px;margin-bottom:10px;">✅</div><div style="font-weight:700;font-size:14px;color:#065f46;">Ca đã đóng</div><div style="margin-top:6px;font-size:12px;color:#047857;">Xem lại phân tích ở tab Phân tích & Đánh giá</div></div>`;
+      }
+    }
   } else {
     // Ca đang mở — khôi phục bình thường
     banner?.classList.remove('show');
