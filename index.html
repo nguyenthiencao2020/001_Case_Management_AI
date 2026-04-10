@@ -1837,19 +1837,40 @@ async function logoutUser() {
   document.getElementById('session-warn')?.classList.remove('show');
   await _supabase.auth.signOut();
   _currentUser = null; _cases = {};
-  window._sessionReset?.(); // stop session timers after clearing _currentUser
-  // Reset toàn bộ state
-  D = null; curCaseId = null; currentStage = 1; chatHistory = [];
+  window._sessionReset?.();
+  // ── Reset toàn bộ state ──
+  D = null; curCaseId = null; currentStage = 1; chatHistory = []; curForm = 0;
+  // Input & chat
   document.getElementById('dash-notes').value = '';
   document.getElementById('dash-cc').textContent = '0 ký tự';
   document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">💬</div><div style="font-weight:600;">Chuyên gia CTXH sẵn sàng</div><div>Hỏi bất kỳ điều gì về CTXH hoặc nhập ghi chép để phân tích ca.</div></div>';
+  const ci = document.getElementById('chat-input'); if (ci) ci.value = '';
+  // Header
   document.getElementById('hdr-case-name').textContent = '';
   document.getElementById('hdr-case-date').textContent = '';
+  const dl = document.getElementById('dash-case-label'); if (dl) dl.textContent = '';
+  // Form panel
+  document.getElementById('btn-fill').disabled = true;
   document.querySelectorAll('.fi-ck').forEach(el => el.remove());
   document.querySelectorAll('.form-item').forEach(el => { el.classList.remove('form-locked'); el.style.opacity = ''; el.title = ''; });
-  document.getElementById('btn-fill').disabled = true;
+  const fp = document.getElementById('form-preview');
+  if (fp) fp.innerHTML = '<div class="fv-placeholder"><div style="font-size:40px;margin-bottom:10px">📋</div><div style="font-weight:700;font-size:14px;margin-bottom:6px">Chưa có dữ liệu</div><div style="font-size:12px">Phân tích ghi chép để điền biểu mẫu tự động</div></div>';
+  // Entries panel
+  const ep = document.getElementById('entries-panel');
+  if (ep) ep.innerHTML = '';
+  // Cases tab
+  document.getElementById('cases-list').innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3);font-size:12px;">Chưa có ca nào</div>';
+  document.getElementById('cases-main').innerHTML = '<div class="case-detail-empty"><div><div style="font-size:36px;margin-bottom:12px;">🗂</div><div style="font-size:14px;font-weight:600;margin-bottom:6px;">Chọn một ca để xem</div></div></div>';
+  // Stage / banners
   document.getElementById('closed-banner')?.classList.remove('show');
-  document.getElementById('login-overlay').style.display = 'flex';
+  updateStageUI();
+  // Show login
+  const lo = document.getElementById('login-overlay');
+  lo.style.display = 'flex';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-err').textContent = '';
+  const lb = document.getElementById('login-btn'); if (lb) { lb.disabled = false; lb.textContent = 'Đăng nhập'; }
   document.getElementById('user-bar').style.display = 'none';
 }
 
