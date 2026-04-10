@@ -1239,6 +1239,7 @@ let D = null;
 let curMain = 'dash';
 let curForm = 0;
 let curCaseId = null;
+let _draftCaseId = null; // ca chưa lưu — chỉ tồn tại trong memory cho đến khi có hành động thực sự
 let chatHistory = [];
 let docxLib = null;
 // ★ STAGE STATE: 1=Tiếp cận, 2=Vãng gia, 3=Kế hoạch, 4=Tiến trình, 5=Kết thúc
@@ -1825,6 +1826,7 @@ async function logoutUser() {
   _currentUser = null; _cases = {};
   window._sessionReset?.();
   // ── Reset toàn bộ state ──
+  _discardDraft();
   D = null; curCaseId = null; currentStage = 1; chatHistory = []; curForm = 0;
   // Input & chat
   document.getElementById('dash-notes').value = '';
@@ -2556,6 +2558,7 @@ async function runAnalysis() {
   const notes = document.getElementById('dash-notes').value.trim();
   if (!notes) { showNotif('⚠️ Nhập ghi chép trước', 'warn'); return; }
   if (notes.length < 30) { showNotif('⚠️ Ghi chép quá ngắn — cần ít nhất 30 ký tự', 'warn'); return; }
+  _commitDraft(); // lưu ca draft thành thật nếu chưa lưu
   const notesAI = maskPhonesInText(notes); // mask phones before sending to AI
 
   const btn = document.getElementById('btn-analyze');
@@ -3689,12 +3692,30 @@ Dữ liệu hiện tại: ${fctx.snippet}`,
 // ════════════════════════════════════════════════════════════
 // CASES MANAGEMENT
 // ════════════════════════════════════════════════════════════
+// Hủy draft nếu có (không lưu gì cả)
+function _discardDraft() {
+  if (_draftCaseId) {
+    const cases = loadCases();
+    delete cases[_draftCaseId];
+    _cases = cases; // xóa khỏi memory, KHÔNG gọi saveCases
+    _draftCaseId = null;
+  }
+}
+
+// Commit draft: lưu thật sự vào localStorage + Supabase
+function _commitDraft() {
+  if (_draftCaseId && curCaseId === _draftCaseId) {
+    _draftCaseId = null;
+    saveCases(loadCases()); // persist lần đầu
+  }
+}
+
 function newCase() {
+  _discardDraft(); // xóa draft cũ nếu chưa dùng gì
   const id = genCaseId();
-  const cases = loadCases();
-  const now = new Date();
-  cases[id] = { id, name:'Ca mới '+now.toLocaleDateString('vi-VN'), createdAt:now.toISOString(), updatedAt:now.toISOString(), status:'open', entries:[], currentStage:1 };
-  saveCases(cases);
+  // Tạo trong memory THÔI, chưa lưu xuống DB/localStorage
+  _cases[id] = { id, name:'Ca mới '+new Date().toLocaleDateString('vi-VN'), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), status:'open', entries:[], currentStage:1 };
+  _draftCaseId = id;
   curCaseId = id; D = null; chatHistory = [];
   currentStage = 1;
   // Xóa checkmark cam + unlock forms từ ca cũ
@@ -3725,6 +3746,7 @@ function newCase() {
 
 function saveCaseNow() {
   if (!D && !document.getElementById('dash-notes').value.trim()) { showNotif('⚠️ Chưa có dữ liệu','warn'); return; }
+  _commitDraft(); // lưu ca draft thành thật nếu chưa lưu
   const cases = loadCases();
   if (!curCaseId) curCaseId = genCaseId();
   const c = cases[curCaseId] || { id:curCaseId, entries:[], createdAt:new Date().toISOString(), status:'open', name:'Ca '+fmtVN(new Date().toISOString()) };
@@ -3753,10 +3775,11 @@ function saveCaseNow() {
 
 function updateHeader() {
   const c = curCaseId ? loadCases()[curCaseId] : null;
+  const isDraft = curCaseId && curCaseId === _draftCaseId;
   document.getElementById('hdr-case-name').textContent = c?.name || '';
-  document.getElementById('hdr-case-date').textContent = c ? ' — '+fmtVN(c.updatedAt) : '';
+  document.getElementById('hdr-case-date').textContent = isDraft ? ' — ✏️ Chưa lưu' : (c ? ' — '+fmtVN(c.updatedAt) : '');
   const dl = document.getElementById('dash-case-label');
-  if (dl) dl.textContent = c ? '📁 '+c.name : '';
+  if (dl) dl.textContent = c ? (isDraft ? '📋 '+c.name+' (chưa lưu)' : '📁 '+c.name) : '';
 }
 
 function _timeAgo(dateStr) {
@@ -3928,6 +3951,7 @@ function _reopenCaseFromList(id) {
 }
 
 function loadCaseIntoApp(id) {
+  if (id !== _draftCaseId) _discardDraft(); // rời khỏi draft mà không làm gì → xóa
   const c = loadCases()[id];
   if (!c) return;
   curCaseId = id;
