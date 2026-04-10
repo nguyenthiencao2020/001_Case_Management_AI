@@ -3707,12 +3707,18 @@ function newCase() {
   renderEntriesPanel();
   document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">💬</div><div style="font-weight:600;">Chuyên gia CTXH sẵn sàng</div><div>Hỏi bất kỳ điều gì về CTXH hoặc nhập ghi chép để phân tích ca.</div></div>';
   document.getElementById('btn-fill').disabled = true;
-  const chatInput = document.getElementById('chat-input');
-  const btnSend = document.getElementById('btn-send');
-  if (chatInput) chatInput.disabled = false;
-  if (btnSend) btnSend.disabled = false;
+  // Bắt buộc re-enable textarea và action bar (không phụ thuộc applyClosedCaseUI)
+  const _ta = document.getElementById('dash-notes');
+  const _ab = document.getElementById('action-bar');
+  const _ci = document.getElementById('chat-input');
+  const _bs = document.getElementById('btn-send');
+  if (_ta) { _ta.disabled = false; }
+  if (_ab) { _ab.style.display = 'flex'; }
+  if (_ci) { _ci.disabled = false; }
+  if (_bs) { _bs.disabled = false; }
+  document.getElementById('closed-banner')?.classList.remove('show');
   updateStageUI();
-  applyClosedCaseUI(); // reset textarea disabled + action bar từ ca đóng trước đó
+  applyClosedCaseUI();
   switchMain('dash');
   showNotif('✅ Đã tạo ca mới');
 }
