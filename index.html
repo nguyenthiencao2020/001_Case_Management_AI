@@ -176,6 +176,23 @@ body {
   text-transform:uppercase; letter-spacing:1.2px; margin-bottom:6px;
   display:flex; align-items:center; gap:6px;
 }
+
+/* ── Template Panel ── */
+.tpl-toggle-row{display:flex;justify-content:flex-end;margin-bottom:5px;}
+.tpl-toggle-btn{background:none;border:1px dashed #94a3b8;color:var(--sc);font-size:10px;font-weight:700;padding:3px 9px;border-radius:5px;cursor:pointer;font-family:inherit;transition:all .2s;letter-spacing:.3px;}
+.tpl-toggle-btn:hover,.tpl-toggle-btn.open{background:var(--sc-bg);border-color:var(--sc);border-style:solid;}
+.tpl-panel{background:#f8faff;border:1px solid #dbeafe;border-radius:8px;padding:10px 12px;margin-bottom:8px;animation:tpl-in .15s ease;}
+@keyframes tpl-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.tpl-title{font-size:9.5px;font-weight:800;color:var(--sc);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px;}
+.tpl-item{display:flex;align-items:flex-start;gap:7px;padding:5px 4px;border-radius:5px;cursor:pointer;transition:background .12s;}
+.tpl-item:hover{background:#eff6ff;}
+.tpl-item-ico{font-size:12px;color:var(--sc);flex-shrink:0;line-height:1.4;font-weight:700;}
+.tpl-item-text{font-size:11.5px;color:var(--text);flex:1;line-height:1.5;}
+.tpl-item:hover .tpl-item-text{color:var(--sc);}
+.tpl-actions{display:flex;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid #dbeafe;}
+.tpl-use-all{background:var(--sc);color:#fff;border:none;font-size:10px;font-weight:700;padding:4px 11px;border-radius:5px;cursor:pointer;font-family:inherit;transition:opacity .15s;}
+.tpl-use-all:hover{opacity:.85;}
+.tpl-clear{background:#f1f5f9;color:var(--t2);border:none;font-size:10px;padding:4px 10px;border-radius:5px;cursor:pointer;font-family:inherit;}
 .stage-hint-box {
   font-size:11px; color:var(--sc); margin-bottom:7px;
   padding:6px 10px; background:var(--sc-bg); border-radius:6px;
@@ -1000,7 +1017,7 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 <div class="main-nav">
   <div class="mnav active" id="mnav-dash" onclick="switchMain('dash')"><span class="mn-ico">🔬</span>Dashboard & AI</div>
   <div class="mnav" id="mnav-forms" onclick="switchMain('forms')"><span class="mn-ico">📋</span>Biểu mẫu QLTH</div>
-  <div class="mnav" id="mnav-cases" onclick="switchMain('cases')"><span class="mn-ico">🗂</span>Danh sách ca <span id="cases-count-badge" style="background:rgba(240,112,32,.3);color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:4px;"></span></div>
+  <div class="mnav" id="mnav-cases" onclick="switchMain('cases')"><span class="mn-ico">🗂</span>Danh sách ca <span id="cases-count-badge" style="background:rgba(240,112,32,.3);color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:4px;"></span><span id="stale-count-badge" style="display:none;background:#dc2626;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:3px;" title="Ca lâu chưa cập nhật"></span></div>
   <div class="mnav" id="mnav-analysis" onclick="switchMain('analysis')"><span class="mn-ico">📊</span>Phân tích & Đánh giá</div>
 </div>
 
@@ -1044,6 +1061,8 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
         <div class="input-label" id="input-label-text">📝 Ghi chép Tiếp cận ban đầu</div>
         <div class="stage-hint-box" id="stage-hint">Nhập ghi chép lần gặp đầu tiên. AI sẽ trích xuất Form 0 (Hồ sơ) và Form 1 (Phiếu tiếp cận).</div>
         <div class="privacy-note"><span>🔒</span>Không ghi họ tên thật, địa chỉ cụ thể hoặc số điện thoại trong ô này. AI sẽ ẩn danh hóa để bảo vệ thông tin trẻ em.</div>
+        <div class="tpl-toggle-row"><button class="tpl-toggle-btn" id="tpl-toggle-btn" onclick="toggleTemplate()">💡 Gợi ý câu hỏi</button></div>
+        <div id="tpl-panel" class="tpl-panel" style="display:none;"></div>
         <textarea id="dash-notes" class="input-ta" placeholder="Paste ghi chép tiếp cận ban đầu...&#10;&#10;AI sẽ trích xuất Form 0 và Form 1."></textarea>
         <div class="input-footer">
           <span class="char-count" id="dash-cc">0 ký tự</span>
@@ -1300,6 +1319,107 @@ const STAGE_CONFIG = {
     lockedForms: [0, 1, 2, 3, 4, 5, 6, 7]
   }
 };
+
+// ════════════════════════════════════════════════════════════
+// TEMPLATE GỢI Ý CÂU HỎI THEO GIAI ĐOẠN
+// ════════════════════════════════════════════════════════════
+const STAGE_TEMPLATES = {
+  1: { title: 'Gợi ý — Tiếp cận ban đầu', items: [
+    'Nguồn tiếp cận: ai / tổ chức nào giới thiệu ca này đến?',
+    'Hoàn cảnh gia đình: trẻ đang sống cùng ai, quan hệ như thế nào?',
+    'Lý do cần can thiệp CTXH là gì?',
+    'Vấn đề nào cấp bách nhất tại thời điểm tiếp cận?',
+    'Thái độ và phản ứng của gia đình khi NVXH tiếp cận?',
+    'Trẻ có đang an toàn tại thời điểm tiếp cận không?',
+  ]},
+  2: { title: 'Gợi ý — Vãng gia & Đánh giá', items: [
+    'Điều kiện nhà ở, sinh hoạt: sạch sẽ, an toàn, đủ không gian không?',
+    'Quan sát quan hệ giữa các thành viên gia đình?',
+    'Ai là người chăm sóc chính? Năng lực chăm sóc ra sao?',
+    'Yếu tố bảo vệ của gia đình là gì (điểm mạnh, hỗ trợ xã hội)?',
+    'Yếu tố nguy cơ quan sát được (thể chất, tâm lý, môi trường)?',
+    'Trẻ thể hiện cảm xúc / hành vi như thế nào khi được thăm?',
+    'Nhu cầu hỗ trợ theo thứ tự ưu tiên của gia đình?',
+  ]},
+  3: { title: 'Gợi ý — Kế hoạch can thiệp', items: [
+    'Mục tiêu cụ thể, đo lường được cho 3–6 tháng tới?',
+    'Các hoạt động cụ thể và người chịu trách nhiệm từng hoạt động?',
+    'Nguồn lực huy động: gia đình, cộng đồng, dịch vụ xã hội nào?',
+    'Gia đình đã đồng ý với kế hoạch chưa? Thái độ ra sao?',
+    'Rào cản dự kiến khi thực hiện kế hoạch?',
+    'Lịch gặp mặt / theo dõi tiếp theo đã thống nhất?',
+  ]},
+  4: { title: 'Gợi ý — Cập nhật tiến trình', items: [
+    'Các hoạt động đã thực hiện từ lần gặp trước?',
+    'Tiến độ so với mục tiêu đề ra (đạt / chưa đạt, tại sao)?',
+    'Thay đổi ghi nhận ở trẻ và gia đình (hành vi, cảm xúc, quan hệ)?',
+    'Rào cản gặp phải và cách xử lý?',
+    'Cần điều chỉnh kế hoạch không? Điều chỉnh gì?',
+    'Dịch vụ bên ngoài đã kết nối — hiệu quả như thế nào?',
+  ]},
+  5: { title: 'Gợi ý — Kết thúc ca', items: [
+    'Kết quả đạt được so với mục tiêu ban đầu?',
+    'Năng lực của gia đình tự duy trì sau khi can thiệp kết thúc?',
+    'Chuyển gửi dịch vụ nào? Thông tin liên lạc đầu mối?',
+    'Lý do kết thúc ca (đạt mục tiêu / gia đình từ chối / chuyển vùng...)?',
+    'Đánh giá tổng thể: thành công / bài học cần cải thiện?',
+    'Kế hoạch theo dõi sau can thiệp (nếu có)?',
+  ]},
+};
+
+let _tplOpen = false;
+
+function toggleTemplate() {
+  _tplOpen = !_tplOpen;
+  _renderTemplate();
+}
+
+function _renderTemplate() {
+  const panel = document.getElementById('tpl-panel');
+  const btn   = document.getElementById('tpl-toggle-btn');
+  if (!panel) return;
+  if (!_tplOpen) {
+    panel.style.display = 'none';
+    if (btn) { btn.classList.remove('open'); btn.textContent = '💡 Gợi ý câu hỏi'; }
+    return;
+  }
+  const tpl = STAGE_TEMPLATES[currentStage];
+  if (!tpl) { panel.style.display = 'none'; return; }
+  if (btn) { btn.classList.add('open'); btn.textContent = '✕ Đóng gợi ý'; }
+  panel.style.display = 'block';
+  panel.innerHTML = `
+    <div class="tpl-title">${tpl.title}</div>
+    ${tpl.items.map(q => `<div class="tpl-item" onclick="insertTemplate(${JSON.stringify(q)})"><span class="tpl-item-ico">＋</span><span class="tpl-item-text">${esc(q)}</span></div>`).join('')}
+    <div class="tpl-actions">
+      <button class="tpl-use-all" onclick="insertAllTemplate()">↓ Chèn tất cả</button>
+      <button class="tpl-clear" onclick="clearNotes()">🗑 Xóa textarea</button>
+    </div>`;
+}
+
+function insertTemplate(q) {
+  const ta = document.getElementById('dash-notes');
+  if (!ta || ta.disabled) return;
+  const sep = ta.value && !ta.value.endsWith('\n') ? '\n' : '';
+  ta.value += sep + '— ' + q + '\n';
+  ta.dispatchEvent(new Event('input'));
+  ta.focus();
+}
+
+function insertAllTemplate() {
+  const tpl = STAGE_TEMPLATES[currentStage];
+  if (!tpl) return;
+  const ta = document.getElementById('dash-notes');
+  if (!ta || ta.disabled) return;
+  const sep = ta.value && !ta.value.endsWith('\n') ? '\n' : '';
+  ta.value += sep + tpl.items.map(q => '— ' + q).join('\n') + '\n';
+  ta.dispatchEvent(new Event('input'));
+  ta.focus();
+}
+
+function clearNotes() {
+  const ta = document.getElementById('dash-notes');
+  if (ta) { ta.value = ''; ta.dispatchEvent(new Event('input')); }
+}
 
 // ════════════════════════════════════════════════════════════
 // ★★★ ENHANCED PROMPT 1: SYS_REPORT (Đánh giá rủi ro) ★★★
@@ -1934,6 +2054,7 @@ function loadCases() { return _cases; }
 function saveCases(c) {
   _cases = JSON.parse(JSON.stringify(c));
   try { localStorage.setItem(CASES_KEY_LOCAL, JSON.stringify(_cases)); } catch(e) {}
+  updateStaleBadge();
   if (_currentUser) {
     Object.values(_cases).forEach(cs => {
       const risk = cs.lastAnalysis?._report?.risk?.level || cs.lastAnalysis?._report?.risk_level || null;
@@ -2057,6 +2178,27 @@ async function checkStaleCases() {
     if (risk === 'Cao' && days > 7) showNotif(`⚠️ Ca "${c.name}" rủi ro CAO — ${days} ngày chưa cập nhật!`, 'warn');
     else if (days > 14) showNotif(`📌 Ca "${c.name}" đã ${days} ngày chưa cập nhật`, 'warn');
   });
+  updateStaleBadge();
+}
+
+function updateStaleBadge() {
+  const now = new Date();
+  let count = 0;
+  Object.values(_cases).forEach(c => {
+    if (c.status !== 'open') return;
+    const days = Math.floor((now - new Date(c.updatedAt)) / 86400000);
+    const risk = c.lastAnalysis?._report?.risk?.level || c.lastAnalysis?._report?.risk_level || '';
+    if ((risk === 'Cao' && days > 7) || days > 14) count++;
+  });
+  const badge = document.getElementById('stale-count-badge');
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = '⚠️ ' + count;
+    badge.style.display = 'inline';
+    badge.title = count + ' ca lâu chưa cập nhật';
+  } else {
+    badge.style.display = 'none';
+  }
 }
 
 function genCaseId() { return 'c_'+Date.now()+'_'+Math.random().toString(36).substr(2,4); }
@@ -2192,6 +2334,24 @@ async function showStats() {
     return days > 14;
   });
 
+  const riskLow  = cases.filter(c => { const r = c.lastAnalysis?._report?.risk?.level || c.lastAnalysis?._report?.risk_level; return r === 'Thấp'; });
+  const riskNone = cases.length - riskHigh.length - riskMed.length - riskLow.length;
+  const stageLabels = ['','Tiếp cận','Vãng gia','Kế hoạch','Tiến trình','Kết thúc'];
+  const stageColors = ['','#6366f1','#0ea5e9','#f59e0b','#10b981','#8b5cf6'];
+  const maxStage = Math.max(1, ...stages.slice(1));
+  const riskData = [
+    { label:'Rủi ro cao',  val:riskHigh.length,  color:'#ef4444', bg:'#fef2f2' },
+    { label:'Rủi ro TB',   val:riskMed.length,   color:'#f59e0b', bg:'#fffbeb' },
+    { label:'Rủi ro thấp', val:riskLow.length,   color:'#22c55e', bg:'#f0fdf4' },
+    { label:'Chưa p/tích', val:riskNone,          color:'#94a3b8', bg:'#f8fafc' },
+  ];
+  const maxRisk = Math.max(1, ...riskData.map(r => r.val));
+
+  function bar(val, max, color, bg) {
+    const pct = max > 0 ? Math.round(val / max * 100) : 0;
+    return `<div style="background:${bg};border-radius:4px;height:8px;overflow:hidden;flex:1;"><div style="background:${color};height:100%;width:${pct}%;border-radius:4px;transition:width .4s ease;"></div></div>`;
+  }
+
   el.innerHTML = `
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-num">${cases.length}</div><div class="stat-label">Tổng ca</div></div>
@@ -2201,18 +2361,36 @@ async function showStats() {
       <div class="stat-card risk-med"><div class="stat-num">${riskMed.length}</div><div class="stat-label">Rủi ro TB</div></div>
       <div class="stat-card" style="background:#fef3c7;"><div class="stat-num" style="color:#92400e;">${stale.length}</div><div class="stat-label">Lâu chưa CN</div></div>
     </div>
-    <div style="font-weight:600;font-size:13px;margin-bottom:8px;">Ca đang mở theo giai đoạn:</div>
-    <div style="display:flex;gap:8px;margin-bottom:16px;">
-      ${[1,2,3,4,5].map(s => `<div style="flex:1;text-align:center;padding:8px;background:var(--bg2);border-radius:8px;">
-        <div style="font-size:18px;font-weight:700;">${stages[s]}</div>
-        <div style="font-size:10px;color:var(--t3);">GĐ${s}</div>
-      </div>`).join('')}
+
+    <div style="font-weight:700;font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin:14px 0 8px;">📊 Ca đang mở theo giai đoạn</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
+      ${[1,2,3,4,5].map(s => `
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:72px;font-size:10px;font-weight:600;color:${stageColors[s]};flex-shrink:0;">GĐ${s} ${stageLabels[s]}</div>
+          ${bar(stages[s], maxStage, stageColors[s], '#f1f5f9')}
+          <div style="width:20px;text-align:right;font-size:11px;font-weight:700;color:var(--text);flex-shrink:0;">${stages[s]}</div>
+        </div>`).join('')}
     </div>
-    ${stale.length ? `<div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#dc2626;">⚠️ Ca lâu chưa cập nhật:</div>
+
+    <div style="font-weight:700;font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">🎯 Phân bổ mức rủi ro</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
+      ${riskData.map(r => `
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:82px;font-size:10px;font-weight:600;color:${r.color};flex-shrink:0;">${r.label}</div>
+          ${bar(r.val, maxRisk, r.color, r.bg)}
+          <div style="width:20px;text-align:right;font-size:11px;font-weight:700;color:var(--text);flex-shrink:0;">${r.val}</div>
+        </div>`).join('')}
+    </div>
+
+    ${stale.length ? `<div style="font-weight:600;font-size:12px;margin-bottom:8px;color:#dc2626;">⚠️ Ca lâu chưa cập nhật (${stale.length}):</div>
     <div style="font-size:12px;">${stale.map(c => {
       const days = Math.floor((now - new Date(c.updatedAt)) / 86400000);
-      return `<div style="padding:6px 0;border-bottom:1px solid var(--bd);">📁 ${esc(c.name)} — <b>${days} ngày</b> · GĐ${c.currentStage||1}</div>`;
-    }).join('')}</div>` : '<div style="color:#16a34a;font-size:12px;">✅ Tất cả ca đều được cập nhật đều đặn</div>'}
+      const risk2 = c.lastAnalysis?._report?.risk?.level || c.lastAnalysis?._report?.risk_level || '';
+      const dot = risk2 === 'Cao' ? '🔴' : risk2 === 'Trung bình' ? '🟡' : '⚪';
+      return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd);font-size:11.5px;">`
+        + `<span>${dot} ${esc(c.name)}</span>`
+        + `<span style="color:#dc2626;font-weight:700;">${days} ngày · GĐ${c.currentStage||1}</span></div>`;
+    }).join('')}</div>` : '<div style="color:#16a34a;font-size:12px;padding:6px 0;">✅ Tất cả ca đều được cập nhật đều đặn</div>'}
   `;
 }
 
@@ -2439,6 +2617,9 @@ function updateStageUI() {
   }
   if (ta) ta.placeholder = cfg.placeholder;
 
+  // Refresh template panel if open
+  if (_tplOpen) _renderTemplate();
+
   // Mark locked forms in sidebar
   cfg.lockedForms.forEach(fi => {
     const item = document.querySelector(`.form-item[data-fi="${fi}"]`);
@@ -2633,6 +2814,7 @@ async function runAnalysis() {
       prog.style.transition = 'width .3s'; prog.style.width = '100%';
       setTimeout(() => { prog.style.width = '0'; prog.style.transition = 'none'; }, 600);
 
+      _logEdit('AI phân tích (GĐ4 append)', currentStage);
       renderProgressSummary();
       document.getElementById('btn-fill').disabled = false;
       document.getElementById('chat-input').disabled = false;
@@ -2686,6 +2868,7 @@ async function runAnalysis() {
         }
       });
 
+      _logEdit('AI phân tích', currentStage);
       if(window._markUnsaved) window._markUnsaved();
       showNotif(`✅ GĐ ${currentStage}: Phân tích hoàn tất — nhớ nhấn Lưu`);
     }
@@ -3747,6 +3930,26 @@ function newCase() {
   showNotif('✅ Đã tạo ca mới');
 }
 
+// ── Edit log: ghi lại mỗi lần AI cập nhật form data ──
+function _logEdit(source, stage) {
+  if (!curCaseId) return;
+  const cases = loadCases();
+  const c = cases[curCaseId];
+  if (!c) return;
+  if (!Array.isArray(c.editLog)) c.editLog = [];
+  const stageLabels = ['','Tiếp cận','Vãng gia','Kế hoạch','Tiến trình','Kết thúc'];
+  c.editLog.push({
+    ts: new Date().toISOString(),
+    source,
+    stage,
+    stageLabel: stageLabels[stage] || ('GĐ'+stage),
+  });
+  // Giữ tối đa 50 bản ghi
+  if (c.editLog.length > 50) c.editLog = c.editLog.slice(-50);
+  cases[curCaseId] = c;
+  _cases = cases;
+}
+
 function saveCaseNow() {
   if (!D && !document.getElementById('dash-notes').value.trim()) { showNotif('⚠️ Chưa có dữ liệu','warn'); return; }
   _commitDraft(); // lưu ca draft thành thật nếu chưa lưu
@@ -3902,6 +4105,18 @@ function showCaseDetail(id) {
     </div>
     <div class="case-detail-body">
       ${entries.length ? entries.map(e=>`<div class="ct-item"><div class="ct-date">📅 ${fmtVN(e.date)}</div><div class="ct-notes">${esc((e.notes||'').substring(0,300))}</div></div>`).join('') : '<div style="text-align:center;padding:40px;color:var(--t3);">Chưa có ghi chép</div>'}
+      ${(c.editLog && c.editLog.length) ? `
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);">
+        <div style="font-weight:700;font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px;">📝 Lịch sử chỉnh sửa form (${c.editLog.length})</div>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          ${[...c.editLog].reverse().slice(0,20).map(e=>`
+            <div style="display:flex;align-items:center;gap:8px;font-size:11px;padding:4px 0;border-bottom:1px solid #f1f5f9;">
+              <span style="color:var(--t3);white-space:nowrap;flex-shrink:0;">${fmtVN(e.ts)}</span>
+              <span style="background:#eff6ff;color:#1e40af;border-radius:4px;padding:1px 6px;font-weight:600;font-size:10px;flex-shrink:0;">GĐ${e.stage} ${esc(e.stageLabel)}</span>
+              <span style="color:var(--t2);">${esc(e.source)}</span>
+            </div>`).join('')}
+        </div>
+      </div>` : ''}
       <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);">
         <div style="font-weight:600;font-size:13px;margin-bottom:6px;">📎 Tài liệu đính kèm</div>
         ${renderFileUpload(id)}
