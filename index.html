@@ -781,7 +781,7 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 }
 
 /* ── LOGIN SCREEN ── */
-.login-overlay{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0f2d6b 0%,#1a3f8f 50%,#0a1f4d 100%);display:flex;align-items:center;justify-content:center;font-family:'Be Vietnam Pro',sans-serif;}
+.login-overlay{position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#0f2d6b 0%,#1a3f8f 50%,#0a1f4d 100%);display:flex;align-items:center;justify-content:center;font-family:'Be Vietnam Pro',sans-serif;isolation:isolate;}
 .login-box{background:#fff;border-radius:16px;padding:40px 36px;width:90%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center;}
 .login-logo{width:120px;margin:0 auto 16px;display:block;}
 .login-title{font-size:20px;font-weight:700;color:#0f2d6b;margin-bottom:4px;}
@@ -941,20 +941,6 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
   <div class="stats-box">
     <div class="stats-title">📊 Thống kê ca <button onclick="document.getElementById('stats-overlay').style.display='none'" style="background:none;border:none;cursor:pointer;font-size:18px;">✕</button></div>
     <div id="stats-content">Đang tải...</div>
-  </div>
-</div>
-
-<!-- LOGIN OVERLAY -->
-<div id="login-overlay" class="login-overlay">
-  <div class="login-box">
-    <img class="login-logo" src="https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/main/ThaoDanSSC_Digital-01.png" alt="Thảo Đàn" onerror="this.style.display='none'" style="width:110px;margin:0 auto 20px;display:block;">
-    <div class="login-title">Thảo Đàn AI</div>
-    <div class="login-sub">Case Management Assistant · Đăng nhập để tiếp tục</div>
-    <input id="login-email" class="login-input" type="email" placeholder="Email công tác" autocomplete="email">
-    <input id="login-pass" class="login-input" type="password" placeholder="Mật khẩu" onkeydown="if(event.key==='Enter')loginEmail()" autocomplete="current-password">
-    <button class="login-btn login-btn-primary" id="login-btn" onclick="loginEmail()">Đăng nhập</button>
-    <div id="login-err" class="login-err"></div>
-    <div class="login-footer">🔒 Dữ liệu được mã hóa và bảo mật · Liên hệ quản trị viên nếu chưa có tài khoản</div>
   </div>
 </div>
 
@@ -5472,6 +5458,20 @@ document.addEventListener('DOMContentLoaded', () => {
     _reset();
   })();
 </script>
+
+<!-- LOGIN OVERLAY — placed last so it paints above all content -->
+<div id="login-overlay" class="login-overlay">
+  <div class="login-box">
+    <img class="login-logo" src="https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/main/ThaoDanSSC_Digital-01.png" alt="Thảo Đàn" onerror="this.style.display='none'" style="width:110px;margin:0 auto 20px;display:block;">
+    <div class="login-title">Thảo Đàn AI</div>
+    <div class="login-sub">Case Management Assistant · Đăng nhập để tiếp tục</div>
+    <input id="login-email" class="login-input" type="email" placeholder="Email công tác" autocomplete="email">
+    <input id="login-pass" class="login-input" type="password" placeholder="Mật khẩu" onkeydown="if(event.key==='Enter')loginEmail()" autocomplete="current-password">
+    <button class="login-btn login-btn-primary" id="login-btn" onclick="loginEmail()">Đăng nhập</button>
+    <div id="login-err" class="login-err"></div>
+    <div class="login-footer">🔒 Dữ liệu được mã hóa và bảo mật · Liên hệ quản trị viên nếu chưa có tài khoản</div>
+  </div>
+</div>
 
 <!-- CUSTOM CONFIRM MODAL -->
 <div class="confirm-overlay" id="confirm-overlay" onclick="if(event.target===this)_cancelConfirm()">
