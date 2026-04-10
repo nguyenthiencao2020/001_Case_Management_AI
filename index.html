@@ -2044,16 +2044,13 @@ async function _checkSession() {
 
 // ════════════════════════════════════════════════════════════
 // STORAGE v22 — Supabase per-case rows + files + notifications
-// STORAGE v22 — Supabase per-case rows + files + notifications
 // ════════════════════════════════════════════════════════════
-const CASES_KEY_LOCAL = 'thaodan_cases_v22_local';
 let _cases = {};
 
 function loadCases() { return _cases; }
 
 function saveCases(c) {
   _cases = JSON.parse(JSON.stringify(c));
-  try { localStorage.setItem(CASES_KEY_LOCAL, JSON.stringify(_cases)); } catch(e) {}
   updateStaleBadge();
   if (_currentUser) {
     Object.values(_cases).forEach(cs => {
@@ -2075,7 +2072,6 @@ function saveCases(c) {
 function saveOneCase(caseId) {
   const cs = _cases[caseId];
   if (!cs) return;
-  try { localStorage.setItem(CASES_KEY_LOCAL, JSON.stringify(_cases)); } catch(e) {}
   if (_currentUser) {
     const risk = cs.lastAnalysis?._report?.risk?.level || cs.lastAnalysis?._report?.risk_level || null;
     _supabase.from('cases_v2').upsert({
@@ -2100,15 +2096,9 @@ async function initStorage() {
       if (data?.length) {
         _cases = {};
         data.forEach(row => { if (row.data) _cases[row.id] = row.data; });
-        try { localStorage.setItem(CASES_KEY_LOCAL, JSON.stringify(_cases)); } catch(e) {}
-        return;
       }
     } catch(e) { console.warn('Supabase load error:', e); }
   }
-  try {
-    const raw = localStorage.getItem(CASES_KEY_LOCAL) || localStorage.getItem('thaodan_cases_v21_local');
-    if (raw) _cases = JSON.parse(raw);
-  } catch(e) { _cases = {}; }
 }
 
 async function deleteCaseFromDB(caseId) {
@@ -3888,7 +3878,7 @@ function _discardDraft() {
   }
 }
 
-// Commit draft: lưu thật sự vào localStorage + Supabase
+// Commit draft: lưu thật sự vào Supabase
 function _commitDraft() {
   if (_draftCaseId && curCaseId === _draftCaseId) {
     _draftCaseId = null;
@@ -3899,7 +3889,7 @@ function _commitDraft() {
 function newCase() {
   _discardDraft(); // xóa draft cũ nếu chưa dùng gì
   const id = genCaseId();
-  // Tạo trong memory THÔI, chưa lưu xuống DB/localStorage
+  // Tạo trong memory THÔI, chưa lưu xuống DB
   _cases[id] = { id, name:'Ca mới '+new Date().toLocaleDateString('vi-VN'), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), status:'open', entries:[], currentStage:1 };
   _draftCaseId = id;
   curCaseId = id; D = null; chatHistory = [];
