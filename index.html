@@ -3707,7 +3707,12 @@ function newCase() {
   renderEntriesPanel();
   document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">💬</div><div style="font-weight:600;">Chuyên gia CTXH sẵn sàng</div><div>Hỏi bất kỳ điều gì về CTXH hoặc nhập ghi chép để phân tích ca.</div></div>';
   document.getElementById('btn-fill').disabled = true;
+  const chatInput = document.getElementById('chat-input');
+  const btnSend = document.getElementById('btn-send');
+  if (chatInput) chatInput.disabled = false;
+  if (btnSend) btnSend.disabled = false;
   updateStageUI();
+  applyClosedCaseUI(); // reset textarea disabled + action bar từ ca đóng trước đó
   switchMain('dash');
   showNotif('✅ Đã tạo ca mới');
 }
@@ -5089,21 +5094,30 @@ function applyClosedCaseUI() {
 
 function reopenCase() {
   if (!curCaseId) return;
-  if (!confirm('Mở lại ca này?\n\nCa sẽ chuyển về trạng thái "Đang mở" ở GĐ 5.')) return;
-  const cases = loadCases();
-  if (cases[curCaseId]) {
-    cases[curCaseId].status = 'open';
-    delete cases[curCaseId].closedAt;
-    cases[curCaseId].updatedAt = new Date().toISOString();
-    if (D) delete D._status;
-    saveCases(cases);
-  }
-  updateHeader();
-  updateStageUI();
-  applyClosedCaseUI();
-  renderCaseList();
-  updateCasesCount();
-  showNotif('🔓 Đã mở lại ca — GĐ 5');
+  const cName = loadCases()[curCaseId]?.name || 'ca này';
+  showConfirm({
+    icon: '🔓',
+    title: 'Mở lại ca?',
+    body: `"${cName}" sẽ chuyển về trạng thái Đang mở ở GĐ 5.`,
+    okText: 'Mở lại',
+    okClass: 'cmb-ok-blue',
+    onConfirm() {
+      const cases = loadCases();
+      if (cases[curCaseId]) {
+        cases[curCaseId].status = 'open';
+        delete cases[curCaseId].closedAt;
+        cases[curCaseId].updatedAt = new Date().toISOString();
+        if (D) delete D._status;
+        saveCases(cases);
+      }
+      updateHeader();
+      updateStageUI();
+      applyClosedCaseUI();
+      renderCaseList();
+      updateCasesCount();
+      showNotif('🔓 Đã mở lại ca — GĐ 5');
+    }
+  });
 }
 
 function toggleEntriesPanel() {
