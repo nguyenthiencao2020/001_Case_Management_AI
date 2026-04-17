@@ -3897,7 +3897,7 @@ Object.assign(window, {
   exportCaseJSON, importCaseJSON, exportSelected, dlDocx,
   // Misc
   printFullCase, closePov, generateComprehensiveEval,
-  showNotifications,
+  renderCaseList,
   // Confirm dialog
   _doConfirm, _cancelConfirm,
   // Files
