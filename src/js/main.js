@@ -745,13 +745,22 @@ function completeStage() {
           cases[curCaseId].status = 'closed';
           cases[curCaseId].closedAt = new Date().toISOString();
           cases[curCaseId].updatedAt = new Date().toISOString();
-          D._status = 'closed';
+          if (D) D._status = 'closed';
           saveCases(cases);
         }
-        updateHeader();
-        renderCaseList();
-        updateCasesCount();
-        applyClosedCaseUI();
+        // Reset dashboard về trạng thái sạch
+        D = null; curCaseId = null; currentStage = 1; chatHistory = [];
+        document.getElementById('dash-notes').value = '';
+        document.getElementById('dash-cc').textContent = '0 ký tự';
+        document.getElementById('btn-fill').disabled = true;
+        document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">✅</div><div style="font-weight:600;margin-bottom:4px;">Đã đóng ca thành công</div><div>Chọn ca khác hoặc nhấn <strong>+ Ca mới</strong> để tiếp tục.</div></div>';
+        document.getElementById('hdr-case-name').textContent = '';
+        document.getElementById('hdr-case-date').textContent = '';
+        const dl = document.getElementById('dash-case-label'); if (dl) dl.textContent = '';
+        document.getElementById('closed-banner')?.classList.remove('show');
+        const fp = document.getElementById('form-preview');
+        if (fp) fp.innerHTML = '<div id="fv" class="fv"><div style="padding:60px 40px;text-align:center;color:var(--t3);"><div style="font-size:48px;margin-bottom:14px;opacity:.3;">✅</div><div style="font-weight:800;font-size:15px;margin-bottom:6px;color:var(--t2)">Ca đã đóng</div><div style="font-size:12.5px;">Chọn ca khác từ <strong>Danh sách ca</strong></div></div></div>';
+        renderCaseList(); updateCasesCount(); updateStageUI(); renderEntriesPanel();
         showNotif('✅ Đã đóng ca thành công!');
       }
     });
