@@ -434,6 +434,14 @@ body {
   transition:all .15s;
 }
 .btn-cp:hover { background:rgba(255,255,255,.2); color:#fff; }
+.sec-acts { display:flex; gap:6px; align-items:center; }
+.btn-edit-sec {
+  background:rgba(255,255,255,.1); color:rgba(255,255,255,.8);
+  border:1px solid rgba(255,255,255,.18); padding:3px 10px;
+  border-radius:5px; font-size:10px; cursor:pointer; font-family:inherit;
+  transition:all .15s;
+}
+.btn-edit-sec:hover { background:rgba(255,200,100,.25); color:#fff; }
 .sec-bd { padding:14px 16px; }
 
 /* ══ DIVIDERS ══ */

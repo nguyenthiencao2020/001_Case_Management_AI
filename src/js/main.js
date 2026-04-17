@@ -931,6 +931,8 @@ async function runAnalysis() {
       D._currentStage = currentStage;
       if (!D.co_ban) D.co_ban = {};
 
+      _validateData(D);
+
       prog.style.transition = 'width .3s'; prog.style.width = '100%';
       setTimeout(() => { prog.style.width = '0'; prog.style.transition = 'none'; }, 600);
 
@@ -977,6 +979,62 @@ function renderProgressSummary() {
   renderEntriesPanel();
   if (D?._report) renderReport(D._report);
 }
+// ════════════════════════════════════════════════════════════
+// DATA VALIDATION — cảnh báo dữ liệu bất hợp lý
+// ════════════════════════════════════════════════════════════
+function _validateData(data) {
+  if (!data) return;
+  const warnings = [];
+  const cb = data.co_ban || {};
+  const gd = data.gia_dinh || {};
+  const ncs = gd.nguoi_cham_soc || {};
+
+  // Parse year helper
+  const parseYr = (v) => {
+    if (!v) return null;
+    const m = String(v).match(/\b(19|20)\d{2}\b/);
+    return m ? parseInt(m[0]) : null;
+  };
+
+  const childYr = parseYr(cb.ngay_sinh || cb.tuoi);
+  const careYr  = parseYr(ncs.ngay_sinh);
+
+  if (childYr && careYr) {
+    const diff = childYr - careYr;
+    if (diff < 13)  warnings.push(`⚠️ Tuổi người chăm sóc (${careYr}) và trẻ (${childYr}) bất hợp lý — chênh lệch chỉ ${diff} tuổi.`);
+    if (diff > 75)  warnings.push(`⚠️ Tuổi người chăm sóc (${careYr}) và trẻ (${childYr}) chênh lệch ${diff} tuổi — kiểm tra lại.`);
+  }
+
+  // Check members
+  (gd.thanh_vien || []).forEach(tv => {
+    if (!tv.ho_ten && !tv.quan_he) return;
+    const tvYr = parseYr(tv.nam_sinh);
+    if (childYr && tvYr) {
+      const diff = childYr - tvYr;
+      if (tv.quan_he && /cha|mẹ|bố|ba|mẹ/i.test(tv.quan_he) && diff < 13) {
+        warnings.push(`⚠️ "${tv.ho_ten || tv.quan_he}" (${tvYr}) có thể không hợp lý là cha/mẹ của trẻ (${childYr}).`);
+      }
+    }
+  });
+
+  // Missing critical fields
+  if (!cb.ho_ten) warnings.push('📋 Chưa có họ tên trẻ.');
+  if (!cb.ngay_sinh && !cb.tuoi) warnings.push('📋 Chưa có năm sinh / tuổi trẻ.');
+
+  if (!warnings.length) return;
+
+  // Show as dismissible banner above analysis
+  const eo = document.getElementById('eval-output');
+  if (!eo) return;
+  const existBanner = document.getElementById('_val-banner');
+  if (existBanner) existBanner.remove();
+  const banner = document.createElement('div');
+  banner.id = '_val-banner';
+  banner.style.cssText = 'background:#fff8e1;border:1px solid #f9a825;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;line-height:1.7;';
+  banner.innerHTML = `<div style="font-weight:700;margin-bottom:6px;color:#e65100;">🔍 Cảnh báo dữ liệu</div>${warnings.map(w=>`<div>${w}</div>`).join('')}<div style="text-align:right;margin-top:6px;"><button onclick="this.closest('#_val-banner').remove()" style="background:none;border:none;color:#999;cursor:pointer;font-size:11px;">Đóng ×</button></div>`;
+  eo.insertAdjacentElement('beforebegin', banner);
+}
+
 // ════════════════════════════════════════════════════════════
 // ★★★ REPORT RENDERER v22 — Stage-aware ★★★
 // ════════════════════════════════════════════════════════════
@@ -1801,7 +1859,8 @@ function F(lbl, val, ic='-') {
 }
 
 function Sec(ttl, id, body, ic='📌') {
-  return `<div class="sec"><div class="sec-hd"><div class="sec-hl"><span class="sec-ico">${ic}</span>${ttl}</div><button class="btn-cp" onclick="navigator.clipboard.writeText(document.getElementById('${id}').innerText).then(()=>{this.textContent='✓ Copied';setTimeout(()=>this.textContent='Copy',1400)}).catch(()=>{})">Copy</button></div><div class="sec-bd" id="${id}">${body}</div></div>`;
+  const safeTtl = ttl.replace(/'/g, '&apos;').replace(/"/g, '&quot;');
+  return `<div class="sec"><div class="sec-hd"><div class="sec-hl"><span class="sec-ico">${ic}</span>${ttl}</div><div class="sec-acts"><button class="btn-cp" onclick="navigator.clipboard.writeText(document.getElementById('${id}').innerText).then(()=>{this.textContent='✓ Copied';setTimeout(()=>this.textContent='Copy',1400)}).catch(()=>{})">Copy</button><button class="btn-edit-sec" onclick="(function(){var fc=document.getElementById('fec-collapse');if(fc)fc.style.display='block';var fi=document.getElementById('fec-input');if(fi){fi.value='Sửa mục ${safeTtl}: ';fi.focus();fi.setSelectionRange(9999,9999);}})()">✏️ Sửa</button></div></div><div class="sec-bd" id="${id}">${body}</div></div>`;
 }
 
 function Dv(t) { return `<div class="dv">${t}</div>`; }
@@ -1834,21 +1893,30 @@ function renderFormTab(idx) {
 
   if (idx===0) {
     h+=Sec("A. Thông tin trẻ","s0a",
-      F("Ngày tiếp cận",cb.ngay_tiep_can)+F("Họ tên trẻ",cb.ho_ten)+F("Giới tính",cb.gioi_tinh)+F("Năm sinh",cb.ngay_sinh)+F("Tuổi",cb.tuoi)+
+      F("Ngày tiếp cận",cb.ngay_tiep_can)+F("Nơi tiếp cận",cb.noi_tiep_can)+F("Người tiếp cận",cb.nguoi_tiep_can)+
+      F("Họ tên trẻ",cb.ho_ten)+F("Giới tính",cb.gioi_tinh)+F("Năm sinh",cb.ngay_sinh)+F("Tuổi",cb.tuoi)+
       F("SĐT trẻ",cb.sdt_tre)+F("SĐT người thân",cb.sdt_nguoi_than)+F("Địa chỉ thường trú",cb.dia_chi_thuong_tru)+F("Địa chỉ hiện tại",cb.dia_chi_hien_tai)+
       F("Sống với",cb.song_voi)+F("Nhóm trẻ",cb.nhom_tre));
     const tvR=(gd.thanh_vien||[]).map(tv=>[tv.ho_ten,tv.quan_he,tv.nam_sinh,tv.suc_khoe,tv.nghe_nghiep,tv.ghi_chu]);
     h+=Sec("B. Thông tin gia đình","s0b",
-      Dv("Người chăm sóc chính")+F("Họ tên",ncs.ho_ten)+F("Quan hệ",ncs.quan_he)+F("Năm sinh",ncs.ngay_sinh)+F("Nghề nghiệp",ncs.nghe_nghiep)+F("Sức khỏe",ncs.suc_khoe)+
+      Dv("Người chăm sóc chính")+F("Họ tên",ncs.ho_ten)+F("Quan hệ",ncs.quan_he)+F("Năm sinh",ncs.ngay_sinh)+F("SĐT",ncs.sdt)+F("Nghề nghiệp",ncs.nghe_nghiep)+F("Sức khỏe",ncs.suc_khoe)+
       Dv("Thành viên gia đình")+TBL(["Họ tên","Quan hệ","Năm sinh","SK","Nghề nghiệp","Ghi chú"],tvR)+
-      Dv("Hoàn cảnh")+F("Kinh tế/Nhà ở",[cf(gd.kinh_te),cf(gd.nha_o)].filter(Boolean).join(' | '))+F("Hoàn cảnh",gd.hoan_canh));
+      Dv("Hoàn cảnh gia đình")+F("Loại hình gia đình",gd.loai_hinh)+F("Tình trạng hôn nhân",gd.tinh_trang_hon_nhan)+F("Bầu khí gia đình",gd.bau_khi)+F("Mối quan hệ với trẻ",gd.moi_quan_he_voi_tre)+
+      F("Kinh tế/Nhà ở",[cf(gd.kinh_te),cf(gd.nha_o)].filter(Boolean).join(' | '))+F("Cộng đồng",gd.cong_dong)+F("Quá trình rời gia đình",gd.qua_trinh_roi_gd)+F("Hoàn cảnh",gd.hoan_canh));
     h+=Sec("C. Tình trạng trẻ","s0c",
-      Dv("Lao động")+F("Công việc",tt.cong_viec)+F("Thời gian (h/ngày)",tt.thoi_gian_lam_viec)+
+      Dv("Lao động")+F("Công việc",tt.cong_viec)+F("Thời gian (h/ngày)",tt.thoi_gian_lam_viec)+F("Bắt đầu làm từ",tt.bat_dau_lam_tu)+
       Dv("Giấy tờ")+F("Khai sinh",[cf(gks.co),cf(gks.ly_do)].filter(Boolean).join(' — '))+F("Thường trú",[cf(tr.co),cf(tr.ly_do)].filter(Boolean).join(' — '))+F("CCCD",[cf(cc.co),cf(cc.ly_do)].filter(Boolean).join(' — '))+
-      Dv("Giáo dục")+F("Đang học",cf(hv.lop)?'Lớp '+cf(hv.lop)+(cf(hv.truong)?' — '+cf(hv.truong):''):'')+F("Bỏ học",cf(hv.bo_hoc)?'Lớp '+cf(hv.bo_hoc):'')+F("Lý do bỏ học",hv.ly_do_bo_hoc)+
-      Dv("Sức khỏe")+F("Tình trạng",sk.tinh_trang)+F("BHYT",sk.bhyt)+
-      Dv("Tâm lý")+F("Tăng động",tl.tang_dong)+F("Bi quan",tl.bi_quan)+F("Tự tổn thương",tl.tu_ton_thuong)+F("Mô tả",tl.mo_ta)+
-      Dv("Nhận xét NVXH")+F("Nhận xét",dg.nhan_xet_nvxh));
+      Dv("Giáo dục")+F("Đang học",cf(hv.lop)?'Lớp '+cf(hv.lop)+(cf(hv.truong)?' — '+cf(hv.truong):''):'')+F("Kết quả học tập",hv.ket_qua)+F("Bỏ học",cf(hv.bo_hoc)?('Lớp '+cf(hv.bo_hoc)+(cf(hv.nam_bo_hoc)?' ('+cf(hv.nam_bo_hoc)+')'):''):'')+F("Lý do bỏ học",hv.ly_do_bo_hoc)+F("Học nghề",cf(hv.hoc_nghe)?(cf(hv.nghe_da_hoc)||'Có'):'Không')+F("Sở thích",hv.so_thich)+F("Ước mơ",hv.uoc_mo)+
+      Dv("Sức khỏe")+F("Tình trạng",sk.tinh_trang)+F("Cân nặng (kg)",sk.can_nang)+F("Chiều cao (cm)",sk.chieu_cao)+F("Bệnh trong 6 tháng",sk.benh_trong_6t)+F("Được khám",sk.duoc_kham)+F("BHYT",sk.bhyt)+
+      Dv("Tâm lý")+F("Tăng động",tl.tang_dong)+F("Bi quan",tl.bi_quan)+F("Tự tổn thương",tl.tu_ton_thuong)+F("Mô tả",tl.mo_ta));
+    h+=Sec("D. Đánh giá ban đầu","s0d",
+      F("Vấn đề thể chất",dg.van_de_the_chat)+F("Vấn đề tâm lý",dg.van_de_tam_ly)+F("Vấn đề nhận thức",dg.van_de_nhan_thuc)+
+      F("Nhu cầu thể chất",dg.nhu_cau_the_chat)+F("Nhu cầu tâm lý",dg.nhu_cau_tam_ly)+F("Nhu cầu nhận thức",dg.nhu_cau_nhan_thuc)+
+      F("Yêu cầu của trẻ",dg.yeu_cau_tre)+F("Yêu cầu gia đình",dg.yeu_cau_gia_dinh)+
+      F("Ưu thế trẻ",dg.uu_the_tre)+F("Ưu thế gia đình",dg.uu_the_gia_dinh)+F("Nguồn lực trẻ",dg.nguon_luc_tre)+
+      F("Nguy cơ",dg.nguy_co)+F("Mức khẩn cấp",dg.muc_khan_cap)+F("Yếu tố bảo vệ",dg.yeu_to_bao_ve)+F("Nhận xét NVXH",dg.nhan_xet_nvxh));
+    h+=Sec("E. Nguồn lực xã hội","s0e",
+      F("Quan phường/Chính quyền",nlxh.quan_phuong)+F("Tôn giáo/Chùa",nlxh.ton_giao)+F("Tổ chức/Hội đoàn",nlxh.to_chuc)+F("Đường đi kết nối",nlxh.duong_di),'🤝');
   } else if (idx===1) {
     h+=Sec("A. Thông tin trẻ","s1a",F("Họ tên",cb.ho_ten)+F("Giới tính",cb.gioi_tinh)+F("Năm sinh",cb.ngay_sinh)+F("Tuổi",cb.tuoi)+F("Sống với",cb.song_voi)+F("Nhóm trẻ",cb.nhom_tre));
     h+=Sec("B. Hoàn cảnh gia đình","s1b",F("Hoàn cảnh",gd.hoan_canh));
@@ -1867,7 +1935,7 @@ function renderFormTab(idx) {
   } else if (idx===5) {
     const ncR=(kh.nhu_cau_ho_tro||[]).map((nc,i)=>[i+1,nc.loai,nc.uu_tien||'',nc.muc_tieu||'']);
     h+=Sec("Nhu cầu hỗ trợ","s5a",TBL(["TT","Nhu cầu","Ưu tiên","Mục tiêu"],ncR));
-    h+=Sec("Hoạt động","s5b",TBL(["Mục tiêu","Hoạt động","Thời gian","Nguồn lực","GĐ","CS"],(kh.hoat_dong||[]).map(h=>[h.muc_tieu_so,h.noi_dung,h.thoi_gian,h.nguon_luc,h.nguon_luc_gd,h.nguon_luc_cs])));
+    h+=Sec("Hoạt động","s5b",TBL(["Mục tiêu","Hoạt động","Ưu tiên","Người phụ trách","Thời gian","Nguồn lực"],(kh.hoat_dong||[]).map(h=>[h.muc_tieu_so,h.noi_dung,h.uu_tien||'',h.nguoi_phu_trach||'',h.thoi_gian,h.nguon_luc])));
     h+=Sec("Nguồn lực","s5c",F("",kh.nguon_luc_ket_noi));
     if (kh.cam_ket_gia_dinh || kh.cam_ket_tre || kh.cam_ket_nvxh) {
       h+=Sec("Cam kết 2 phía","s5d",

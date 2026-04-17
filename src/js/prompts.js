@@ -279,7 +279,7 @@ Chỉ điền key "ke_hoach". Không điền bất kỳ key nào khác.
     "bat_dau_case":"",
     "thoi_gian_kh":"",
     "nhu_cau_ho_tro":[{"loai":"(PHẢI là 1 trong: Học bổng | Học nghề, việc làm | Chăm sóc sức khỏe, y tế | Nâng cao năng lực kỹ năng sống | Mối quan hệ gia đình và xã hội | Tâm lý | Hòa nhập cộng đồng | Nhu cầu khác)","uu_tien":"(1|2|3)","muc_tieu":""}],
-    "hoat_dong":[{"muc_tieu_so":"","noi_dung":"","thoi_gian":"","nguon_luc":"","nguon_luc_gd":"","nguon_luc_cs":""}],
+    "hoat_dong":[{"muc_tieu_so":"","noi_dung":"","uu_tien":"(1|2|3)","nguoi_phu_trach":"(NVXH|Gia đình|Trẻ|Tổ chức)","thoi_gian":"","nguon_luc":""}],
     "nguon_luc_ket_noi":"",
     "xem_xet":[""],
     "cam_ket_gia_dinh":"Gia đình cam kết cụ thể điều gì",
