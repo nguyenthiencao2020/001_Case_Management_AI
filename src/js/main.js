@@ -74,6 +74,14 @@ async function logoutUser() {
   // Cases tab
   document.getElementById('cases-list').innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3);font-size:12px;">Chưa có ca nào</div>';
   document.getElementById('cases-main').innerHTML = '<div class="case-detail-empty"><div><div style="font-size:36px;margin-bottom:12px;">🗂</div><div style="font-size:14px;font-weight:600;margin-bottom:6px;">Chọn một ca để xem</div></div></div>';
+  // Analysis tab
+  const eo = document.getElementById('eval-output');
+  if (eo) eo.innerHTML = '<div class="eval-placeholder"><div class="ep-icon">📝</div><div class="ep-title">Báo cáo Phân tích & Đánh giá Tổng hợp</div><div class="ep-sub">Nhấn nút bên trên để AI tạo báo cáo đánh giá toàn diện.</div></div>';
+  const al = document.getElementById('analysis-left');
+  if (al) al.innerHTML = '<div class="eval-placeholder" style="padding:32px 10px;"><div class="ep-icon">📊</div><div class="ep-title">Chưa có ca nào</div><div class="ep-sub">Mở một ca ở tab Dashboard để xem phân tích</div></div>';
+  const fecMsgs = document.getElementById('fec-msgs');
+  if (fecMsgs) fecMsgs.innerHTML = '<div class="fec-hint">VD: "sửa họ tên thành Nguyễn Văn A" · "bổ sung địa chỉ 123 Q.1"</div>';
+  document.getElementById('chat-suggestions').style.display = 'none';
   // Stage / banners
   document.getElementById('closed-banner')?.classList.remove('show');
   updateStageUI();
@@ -856,7 +864,7 @@ async function runAnalysis() {
     // Giai đoạn 4: chỉ cần extract (không cần parallel report)
     if (currentStage === 4) {
       prog.style.transition = 'width 2.5s'; prog.style.width = '70%';
-      const formRaw = await callAI(extractPrompt, 'Ghi chép NVXH (Cập nhật tiến trình):\n\n' + notesAI, 0, 2000);
+      const formRaw = await callAI(extractPrompt, 'Ghi chép NVXH (Cập nhật tiến trình):\n\n' + notesAI, 0, 3000);
       let appendData = {};
       try { appendData = robustJSON(formRaw); } catch(e) { console.warn('Stage 4 JSON error:', e); }
 
@@ -888,7 +896,7 @@ async function runAnalysis() {
 
       // ★ Thêm báo cáo AI cho GĐ 4
       try {
-        const report4Raw = await callAI(SYS_REPORT_4, 'Ghi chép NVXH (Tiến trình):\n\n' + notesAI + '\n\nDữ liệu cập nhật hiện tại:\n' + JSON.stringify({cap_nhat: D.cap_nhat, ke_hoach: D.ke_hoach}).substring(0, 800), 0.3, 1500);
+        const report4Raw = await callAI(SYS_REPORT_4, 'Ghi chép NVXH (Tiến trình):\n\n' + notesAI + '\n\nDữ liệu hiện tại:\n' + JSON.stringify({cap_nhat: (D.cap_nhat||[]).slice(-3), ke_hoach: D.ke_hoach}).substring(0, 600), 0.3, 2000);
         const report4 = robustJSON(report4Raw);
         D._report = report4;
         D._report._stage = 4;
@@ -1777,7 +1785,7 @@ function showForm(idx) {
   curForm = idx;
   document.querySelectorAll('.form-item').forEach(el => el.classList.toggle('active', parseInt(el.dataset.fi)===idx));
   const fv = document.getElementById('fv');
-  if (!D?.co_ban) {
+  if (!D) {
     fv.innerHTML = '<div style="padding:40px;text-align:center;color:var(--t3);"><div style="font-size:36px;margin-bottom:12px;">📋</div><div style="font-weight:700;margin-bottom:6px;">Chưa có dữ liệu</div><div style="font-size:12px;">Phân tích ghi chép trong tab <strong>Dashboard</strong> trước</div></div>';
     fv.style.display = 'block'; return;
   }
@@ -2315,13 +2323,19 @@ function loadCaseIntoApp(id) {
   curCaseId = id;
   // ★ Khôi phục giai đoạn đã lưu
   currentStage = c.currentStage || (c.lastAnalysis?._currentStage) || 1;
-  if (c.lastAnalysis?.co_ban) {
+  // ★ FIX: load D nếu có bất kỳ lastAnalysis nào (không chỉ khi co_ban tồn tại)
+  if (c.lastAnalysis) {
     D = c.lastAnalysis;
     if (!Array.isArray(D.cap_nhat)) D.cap_nhat = [];
-    document.getElementById('btn-fill').disabled = false;
-    document.getElementById('chat-input').disabled = false;
-    document.getElementById('btn-send').disabled = false;
-    renderReport(D._report);
+    if (D.co_ban && Object.keys(D.co_ban).length) {
+      document.getElementById('btn-fill').disabled = false;
+      document.getElementById('chat-input').disabled = false;
+      document.getElementById('btn-send').disabled = false;
+    }
+    if (D._report) renderReport(D._report);
+  } else {
+    D = null;
+    document.getElementById('btn-fill').disabled = true;
   }
   // ★ Luôn hiển thị ghi chép mới nhất vào textarea để NVXH có thể xem và sửa
   const entries = c.entries || [];

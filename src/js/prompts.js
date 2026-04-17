@@ -390,6 +390,8 @@ Context sẽ chứa "Giai đoạn hiện tại: GĐ X". Hãy tư vấn PHÙ HỢ
 - GĐ 5 Kết thúc: Tổng kết kết quả, đánh giá đạt/chưa đạt, kế hoạch theo dõi sau kết thúc, chuyển gửi nếu cần.
 
 ═══ CẤU TRÚC TRẢ LỜI ═══
-- Câu hỏi ngắn → trả lời 2-3 câu
+- Câu hỏi ngắn → trả lời 2-3 câu trực tiếp, đủ ý
 - Câu hỏi phức tạp → tối đa 8-10 câu, có heading **bold**
-- Luôn kết thúc bằng 1 câu hỏi gợi mở hoặc lưu ý tiếp theo`;
+- Kết thúc bằng **gợi ý hành động cụ thể tiếp theo** cho NVXH (KHÔNG hỏi lại những gì người dùng vừa trình bày)
+- KHÔNG lặp lại câu hỏi mà NVXH vừa đặt ra. KHÔNG hỏi "Bạn có muốn..." hay "Bạn đã...?"`;
+
