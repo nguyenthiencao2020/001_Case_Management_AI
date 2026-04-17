@@ -4,7 +4,6 @@
 // Contains: state, auth, storage, AI engine, stage wizard,
 //           analysis, forms, cases, chat, app init
 // ════════════════════════════════════════════════════════════
-import '../css/main.css';
 import {
   GURL, PRIVACY_PREFIX, LOGO_URL, FOOTER_URL, FORM_NAMES,
   STAGE_CONFIG, STAGE_TEMPLATES,
