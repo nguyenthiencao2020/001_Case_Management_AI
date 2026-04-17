@@ -1,23 +1,7 @@
 // ════════════════════════════════════════════════════════════
 // MAIN — App entry point
-// Imports config, prompts, utils modules
-// Contains: state, auth, storage, AI engine, stage wizard,
-//           analysis, forms, cases, chat, app init
+// Loaded after config.js, prompts.js, utils.js via plain <script> tags
 // ════════════════════════════════════════════════════════════
-import {
-  GURL, PRIVACY_PREFIX, LOGO_URL, FOOTER_URL, FORM_NAMES,
-  STAGE_CONFIG, STAGE_TEMPLATES,
-} from './config.js';
-import {
-  SYS_REPORT, SYS_REPORT_1, SYS_REPORT_2, SYS_REPORT_3, SYS_REPORT_4, SYS_REPORT_5,
-  STAGE_REPORT_MAP, _EXTRACT_DISCIPLINE,
-  PROMPT_STAGE_1, PROMPT_STAGE_2, PROMPT_STAGE_3, PROMPT_STAGE_4, PROMPT_STAGE_5,
-  SYS_CHAT,
-} from './prompts.js';
-import {
-  esc, formatMd, clean, cf, robustJSON, fmtDate, fmtVN, showNotif,
-  FIELD_MERGE_KEYS, deepMergeFields, deepMerge,
-} from './utils.js';
 
 // ════════════════════════════════════════════════════════════
 // SUPABASE CONFIG
@@ -3866,41 +3850,3 @@ document.addEventListener('DOMContentLoaded', () => {
     _reset();
   })();
 
-// ════════════════════════════════════════════════════════════
-// WINDOW EXPORTS — ES modules are scoped; expose onclick handlers globally
-// ════════════════════════════════════════════════════════════
-Object.assign(window, {
-  // Auth
-  loginEmail, logoutUser,
-  // Navigation
-  switchMain,
-  // Dashboard / Analysis
-  runAnalysis, fillForms, newCase, saveCaseNow,
-  showStats, showNotifications,
-  // Stage wizard
-  completeStage, rollbackStage, reopenCase,
-  // Forms
-  showForm, toggleFormSidebar,
-  // Template panel
-  toggleTemplate, insertTemplate, insertAllTemplate, clearNotes,
-  // Chat
-  sendChat, useSuggestion,
-  // FEC panel
-  toggleFEC, sendFEC,
-  // Entries
-  loadEntryToEditor, deleteEntry, toggleEntriesPanel,
-  // Cases list
-  selectCase, loadCaseIntoApp, deleteCase,
-  _reopenCaseFromList, _closeCaseFromList,
-  // Export / Import
-  exportCaseJSON, importCaseJSON, exportSelected, dlDocx,
-  // Misc
-  printFullCase, closePov, generateComprehensiveEval,
-  renderCaseList,
-  // Confirm dialog
-  _doConfirm, _cancelConfirm,
-  // Files
-  deleteCaseFile, refreshFileList,
-  // Notifications
-  markNotifRead,
-});
