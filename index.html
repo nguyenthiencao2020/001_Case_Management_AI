@@ -1248,8 +1248,8 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 // ════════════════════════════════════════════════════════════
 
 // ── CONFIG ──
-// Proxy URL — API key được giấu an toàn phía Cloudflare Worker
-const GURL = "https://thaodan-proxy.asif-foundation.workers.dev";
+// Proxy URL — API key được giấu an toàn phía Vercel serverless function
+const GURL = "/api/chat";
 // ── PRIVACY DIRECTIVE — prepended to every AI call ──
 const PRIVACY_PREFIX = `\n\n⚠️ BẢO MẬT DỮ LIỆU TRẺ EM (Luật ATTTM 2015 & NĐ 13/2023): Dữ liệu đã được ẩn danh hóa trước khi gửi. KHÔNG suy đoán danh tính thật. KHÔNG lưu trữ, tái tạo hoặc phổ biến thông tin định danh cá nhân. Chỉ phân tích nội dung chuyên môn bảo vệ trẻ em.`;
 const LOGO_URL = "https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/main/ThaoDanSSC_Digital-01.png";
@@ -2270,8 +2270,7 @@ async function _fetchWithRetry(body, maxTok) {
     try {
       const res = await fetch(GURL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-App-Origin': 'https://thaodan.vercel.app/' },
-        referrer: 'https://thaodan.vercel.app/',
+        headers: { 'Content-Type': 'application/json' },
         body,
         signal: ctrl.signal
       });
