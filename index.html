@@ -2270,7 +2270,8 @@ async function _fetchWithRetry(body, maxTok) {
     try {
       const res = await fetch(GURL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-App-Origin': 'https://thaodan.vercel.app/' },
+        referrer: 'https://thaodan.vercel.app/',
         body,
         signal: ctrl.signal
       });
