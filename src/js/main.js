@@ -155,6 +155,7 @@ async function _checkSession() {
 // STORAGE v22 — Supabase per-case rows + files + notifications
 // ════════════════════════════════════════════════════════════
 let _cases = {};
+let _tplOpen = false;
 
 function loadCases() { return _cases; }
 
@@ -1542,6 +1543,59 @@ function deleteEntry(idx) {
   saveCases(cases);
   renderEntriesPanel();
   showNotif('🗑 Đã xóa ghi chép');
+}
+
+// ── TEMPLATE PANEL (gợi ý câu hỏi) ──
+function toggleTemplate() {
+  _tplOpen = !_tplOpen;
+  _renderTemplate();
+}
+
+function _renderTemplate() {
+  const panel = document.getElementById('tpl-panel');
+  const btn   = document.getElementById('tpl-toggle-btn');
+  if (!panel) return;
+  if (!_tplOpen) {
+    panel.style.display = 'none';
+    if (btn) { btn.classList.remove('open'); btn.textContent = '💡 Gợi ý câu hỏi'; }
+    return;
+  }
+  const tpl = STAGE_TEMPLATES[currentStage];
+  if (!tpl) { panel.style.display = 'none'; return; }
+  if (btn) { btn.classList.add('open'); btn.textContent = '✕ Đóng gợi ý'; }
+  panel.style.display = 'block';
+  panel.innerHTML = `
+    <div class="tpl-title">${tpl.title}</div>
+    ${tpl.items.map(q => `<div class="tpl-item" onclick="insertTemplate(${JSON.stringify(q)})"><span class="tpl-item-ico">＋</span><span class="tpl-item-text">${esc(q)}</span></div>`).join('')}
+    <div class="tpl-actions">
+      <button class="tpl-use-all" onclick="insertAllTemplate()">↓ Chèn tất cả</button>
+      <button class="tpl-clear" onclick="clearNotes()">🗑 Xóa textarea</button>
+    </div>`;
+}
+
+function insertTemplate(q) {
+  const ta = document.getElementById('dash-notes');
+  if (!ta || ta.disabled) return;
+  const sep = ta.value && !ta.value.endsWith('\n') ? '\n' : '';
+  ta.value += sep + '— ' + q + '\n';
+  ta.dispatchEvent(new Event('input'));
+  ta.focus();
+}
+
+function insertAllTemplate() {
+  const tpl = STAGE_TEMPLATES[currentStage];
+  if (!tpl) return;
+  const ta = document.getElementById('dash-notes');
+  if (!ta || ta.disabled) return;
+  const sep = ta.value && !ta.value.endsWith('\n') ? '\n' : '';
+  ta.value += sep + tpl.items.map(q => '— ' + q).join('\n') + '\n';
+  ta.dispatchEvent(new Event('input'));
+  ta.focus();
+}
+
+function clearNotes() {
+  const ta = document.getElementById('dash-notes');
+  if (ta) { ta.value = ''; ta.dispatchEvent(new Event('input')); }
 }
 
 // toggleFormSidebar — toggle class on .forms-tab for CSS grid collapse
@@ -3812,3 +3866,42 @@ document.addEventListener('DOMContentLoaded', () => {
     // Bắt đầu bộ đếm khi load trang
     _reset();
   })();
+
+// ════════════════════════════════════════════════════════════
+// WINDOW EXPORTS — ES modules are scoped; expose onclick handlers globally
+// ════════════════════════════════════════════════════════════
+Object.assign(window, {
+  // Auth
+  loginEmail, logoutUser,
+  // Navigation
+  switchMain,
+  // Dashboard / Analysis
+  runAnalysis, fillForms, newCase, saveCaseNow,
+  showStats, showNotifications,
+  // Stage wizard
+  completeStage, rollbackStage, reopenCase,
+  // Forms
+  showForm, toggleFormSidebar,
+  // Template panel
+  toggleTemplate, insertTemplate, insertAllTemplate, clearNotes,
+  // Chat
+  sendChat, useSuggestion,
+  // FEC panel
+  toggleFEC, sendFEC,
+  // Entries
+  loadEntryToEditor, deleteEntry, toggleEntriesPanel,
+  // Cases list
+  selectCase, loadCaseIntoApp, deleteCase,
+  _reopenCaseFromList, _closeCaseFromList,
+  // Export / Import
+  exportCaseJSON, importCaseJSON, exportSelected, dlDocx,
+  // Misc
+  printFullCase, closePov, generateComprehensiveEval,
+  showNotifications,
+  // Confirm dialog
+  _doConfirm, _cancelConfirm,
+  // Files
+  deleteCaseFile, refreshFileList,
+  // Notifications
+  markNotifRead,
+});
