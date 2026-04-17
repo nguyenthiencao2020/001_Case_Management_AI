@@ -97,43 +97,30 @@ async function logoutUser() {
 
 function _onLogin(user) {
   _currentUser = user;
-  window._sessionReset?.(); // bắt đầu đếm session timeout từ đầu
+  window._sessionReset?.();
   document.getElementById('login-overlay').style.display = 'none';
   document.getElementById('user-bar').style.display = 'flex';
   document.getElementById('user-email').textContent = user.email;
-  // Load cases from Supabase
+  // Load cases từ Supabase rồi hiển thị màn hình sạch — user chọn ca từ danh sách
   initStorage().then(() => {
     updateCasesCount();
     renderCaseList();
-    const list = Object.values(loadCases()).sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
-    if (list.length) {
-      curCaseId = list[0].id;
-      currentStage = list[0].currentStage || 1;
-      const entries = list[0].entries || [];
-      if (entries.length) {
-        const latest = entries[entries.length - 1];
-        document.getElementById('dash-notes').value = latest.notes || '';
-        document.getElementById('dash-cc').textContent = (latest.notes || '').length + ' ký tự';
-      }
-      if (list[0].lastAnalysis?.co_ban) {
-        D = list[0].lastAnalysis;
-        document.getElementById('btn-fill').disabled = false;
-        document.getElementById('chat-input').disabled = false;
-        document.getElementById('btn-send').disabled = false;
-      } else {
-        D = null;
-        document.getElementById('btn-fill').disabled = true;
-        document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">💬</div><div style="font-weight:600;">Chuyên gia CTXH sẵn sàng</div><div>Nhập ghi chép và nhấn Phân tích để bắt đầu.</div></div>';
-      }
-    }
-    updateHeader();
+    // Reset dashboard về trạng thái sạch (không auto-load ca cũ)
+    D = null; curCaseId = null; currentStage = 1; chatHistory = [];
+    document.getElementById('dash-notes').value = '';
+    document.getElementById('dash-cc').textContent = '0 ký tự';
+    document.getElementById('btn-fill').disabled = true;
+    document.getElementById('btn-send').disabled = false;
+    document.getElementById('chat-input').disabled = false;
+    document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">💬</div><div style="font-weight:600;margin-bottom:4px;">Chào mừng trở lại!</div><div>Chọn ca từ tab <strong>Danh sách ca</strong> hoặc nhấn <strong>+ Ca mới</strong> để bắt đầu.</div></div>';
+    document.getElementById('hdr-case-name').textContent = '';
+    document.getElementById('hdr-case-date').textContent = '';
+    const dl = document.getElementById('dash-case-label'); if (dl) dl.textContent = '';
+    const fp = document.getElementById('form-preview');
+    if (fp) fp.innerHTML = '<div id="fv" class="fv"><div style="padding:60px 40px;text-align:center;color:var(--t3);"><div style="font-size:48px;margin-bottom:14px;opacity:.3;">📋</div><div style="font-weight:800;font-size:15px;margin-bottom:6px;color:var(--t2)">Chưa có dữ liệu</div><div style="font-size:12.5px;">Phân tích ghi chép trong tab <strong>Dashboard</strong> để điền form</div></div></div>';
+    document.getElementById('closed-banner')?.classList.remove('show');
     updateStageUI();
-    restoreFormChecks();
-    // Render lại report nếu có
-    if (D?._report) renderReport(D._report);
     renderEntriesPanel();
-    applyClosedCaseUI();
-    // Check notifications and stale cases
     setTimeout(() => { checkStaleCases(); showNotifications(); }, 2000);
   });
 }
@@ -2291,7 +2278,20 @@ function _closeCaseFromList(id) {
         cases[id].updatedAt = new Date().toISOString();
       }
       saveCases(cases);
-      if (curCaseId === id && D) { D._status = 'closed'; applyClosedCaseUI(); }
+      if (curCaseId === id) {
+        // Reset dashboard về trạng thái sạch sau khi đóng ca
+        D = null; curCaseId = null; currentStage = 1; chatHistory = [];
+        document.getElementById('dash-notes').value = '';
+        document.getElementById('dash-cc').textContent = '0 ký tự';
+        document.getElementById('btn-fill').disabled = true;
+        document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">✅</div><div style="font-weight:600;margin-bottom:4px;">Đã đóng ca thành công</div><div>Chọn ca khác hoặc nhấn <strong>+ Ca mới</strong> để tiếp tục.</div></div>';
+        document.getElementById('hdr-case-name').textContent = '';
+        document.getElementById('hdr-case-date').textContent = '';
+        document.getElementById('closed-banner')?.classList.remove('show');
+        const fp = document.getElementById('form-preview');
+        if (fp) fp.innerHTML = '<div id="fv" class="fv"><div style="padding:60px 40px;text-align:center;color:var(--t3);"><div style="font-size:48px;margin-bottom:14px;opacity:.3;">✅</div><div style="font-weight:800;font-size:15px;margin-bottom:6px;color:var(--t2)">Ca đã đóng</div><div style="font-size:12.5px;">Chọn ca khác từ <strong>Danh sách ca</strong></div></div></div>';
+        updateStageUI();
+      }
       renderCaseList(); showCaseDetail(id);
       showNotif('✅ Đã đóng ca');
     }
