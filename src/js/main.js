@@ -12,6 +12,16 @@ const SUPABASE_ANON_KEY = 'sb_publishable_SemT5e_eSp8FqkONPGTr0g_HWWtgRT2';
 const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let _currentUser = null;
 
+// ── STATE ──
+let D = null;
+let curMain = 'dash';
+let curForm = 0;
+let curCaseId = null;
+let _draftCaseId = null;
+let chatHistory = [];
+let docxLib = null;
+let currentStage = 1;
+
 // ── AUTH ──
 async function loginEmail() {
   const email = document.getElementById('login-email').value.trim();
