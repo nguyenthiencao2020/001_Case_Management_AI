@@ -1112,3 +1112,20 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 .fup-ci-badge { font-size:9px; font-weight:700; padding:1px 6px; border-radius:10px; }
 .fup-ci-over  { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
 .fup-ci-due   { background:#fffbeb; color:#d97706; border:1px solid #fde68a; }
+
+/* ════════════════════════════════════════════════════
+   STAGE PREVIEW PANEL
+   ════════════════════════════════════════════════════ */
+.sp-step.done { background:var(--sc); opacity:.75; transition:opacity .15s, transform .15s; }
+.sp-step.done:hover { opacity:1; transform:scale(1.25); }
+.stage-preview-panel {
+  background:var(--bg);
+  border:1px solid var(--bd);
+  border-radius:10px;
+  padding:14px 16px;
+  margin-bottom:10px;
+  box-shadow:0 4px 16px rgba(0,0,0,.08);
+  animation:fadeSlideIn .18s ease;
+  max-height:320px;
+  overflow-y:auto;
+}
