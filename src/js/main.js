@@ -34,6 +34,156 @@ let _stageHistoryCache = {
   1: [], 2: [], 3: [], 4: [], 5: []
 };
 
+// ════════════════════════════════════════════════════════════
+// STAGE STATE HELPERS — nguồn sự thật duy nhất cho dữ liệu từng GĐ
+// ════════════════════════════════════════════════════════════
+function _ensureStageStores(c) {
+  if (!c) return;
+  if (!c.stageData) c.stageData = { 1:null, 2:null, 3:null, 4:null, 5:null };
+  if (!c.stageHistory) c.stageHistory = { 1:[], 2:[], 3:[], 4:[], 5:[] };
+  for (let s = 1; s <= 5; s++) {
+    if (c.stageData[s] === undefined) c.stageData[s] = null;
+    if (!Array.isArray(c.stageHistory[s])) c.stageHistory[s] = [];
+  }
+}
+
+// Lấy snapshot hiện tại từ textarea + D (KHÔNG clone lại chỗ gọi)
+function _snapshotCurrent() {
+  const ta = document.getElementById('dash-notes');
+  return {
+    notes: ta ? ta.value : '',
+    D: D ? JSON.parse(JSON.stringify(D)) : null
+  };
+}
+
+// Ghi snapshot hiện tại vào ô dữ liệu của stage X (bộ nhớ + case)
+function _flushStage(stage) {
+  if (!stage) stage = currentStage;
+  const snap = _snapshotCurrent();
+  _stageDataCache[stage] = snap;
+  if (curCaseId) {
+    const cases = loadCases();
+    const c = cases[curCaseId];
+    if (c) {
+      _ensureStageStores(c);
+      c.stageData[stage] = snap;
+      _cases = cases;
+    }
+  }
+}
+
+// Đổ dữ liệu của stage X ra textarea + D + UI. KHÔNG động chạm stage khác.
+function _hydrateStage(stage) {
+  let snap = null;
+  if (curCaseId) {
+    const c = loadCases()[curCaseId];
+    if (c) { _ensureStageStores(c); snap = c.stageData[stage] || null; }
+  }
+  if (!snap && _stageDataCache[stage]) snap = _stageDataCache[stage];
+  if (!snap && curCaseId) {
+    // Fallback: legacy entries (lần nhập cuối cho stage này)
+    const c = loadCases()[curCaseId];
+    const last = (c?.entries || []).filter(e => (e.stage || 1) === stage).pop();
+    if (last) snap = { notes: last.notes || '', D: last.analysis ? JSON.parse(JSON.stringify(last.analysis)) : null };
+  }
+  const ta = document.getElementById('dash-notes');
+  const cc = document.getElementById('dash-cc');
+  if (snap) {
+    if (ta) ta.value = snap.notes || '';
+    if (cc) cc.textContent = (snap.notes || '').length + ' ký tự';
+    D = snap.D ? JSON.parse(JSON.stringify(snap.D)) : null;
+    if (D) {
+      D._currentStage = stage;
+      if (D._report) renderReport(D._report);
+      const bf = document.getElementById('btn-fill'); if (bf) bf.disabled = false;
+      const ci = document.getElementById('chat-input'); if (ci) ci.disabled = false;
+      const bs = document.getElementById('btn-send'); if (bs) bs.disabled = false;
+    } else {
+      const bf = document.getElementById('btn-fill'); if (bf) bf.disabled = true;
+    }
+  } else {
+    if (ta) ta.value = '';
+    if (cc) cc.textContent = '0 ký tự';
+    D = null;
+    const bf = document.getElementById('btn-fill'); if (bf) bf.disabled = true;
+  }
+  _editingEntryIdx = null;
+  _stageDataCache[stage] = snap;
+}
+
+// Đẩy một phiên bản vào Lịch sử nhập của stage X (tự động de-dup)
+function _pushStageHistory(stage, source) {
+  if (!stage) stage = currentStage;
+  const snap = _snapshotCurrent();
+  if (!snap.notes.trim() && !snap.D) return;
+  _stageHistoryCache[stage] = _stageHistoryCache[stage] || [];
+  const last = _stageHistoryCache[stage].slice(-1)[0];
+  if (last && last.notes === snap.notes && last.source === source
+      && (Date.now() - new Date(last.ts).getTime()) < 4000) return;
+  const item = {
+    id: 'h_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    ts: new Date().toISOString(),
+    source: source || 'save',
+    notes: snap.notes,
+    D: snap.D
+  };
+  _stageHistoryCache[stage].push(item);
+  if (_stageHistoryCache[stage].length > 30) _stageHistoryCache[stage] = _stageHistoryCache[stage].slice(-30);
+  if (curCaseId) {
+    const cases = loadCases();
+    const c = cases[curCaseId];
+    if (c) {
+      _ensureStageStores(c);
+      c.stageHistory[stage].push(item);
+      if (c.stageHistory[stage].length > 30) c.stageHistory[stage] = c.stageHistory[stage].slice(-30);
+      _cases = cases;
+    }
+  }
+  renderStageHistory();
+}
+
+// Khôi phục một phiên bản lịch sử CHỈ cho stage đã chọn
+function _restoreStageHistory(stage, histId) {
+  if (!curCaseId) return;
+  const cases = loadCases();
+  const c = cases[curCaseId];
+  if (!c) return;
+  _ensureStageStores(c);
+  const item = (c.stageHistory[stage] || []).find(h => h.id === histId);
+  if (!item) return;
+  // ⚠️ CHỈ ghi vào stageData[stage] — các stage khác không bị ảnh hưởng
+  c.stageData[stage] = { notes: item.notes || '', D: item.D ? JSON.parse(JSON.stringify(item.D)) : null };
+  _stageDataCache[stage] = c.stageData[stage];
+  _cases = cases;
+  if (stage === currentStage) {
+    _hydrateStage(stage);
+    updateStageUI();
+  }
+  renderStageHistory();
+  if (window._markUnsaved) window._markUnsaved();
+  showNotif(`⏪ GĐ ${stage}: đã khôi phục phiên bản ${fmtVN(item.ts)}`);
+}
+
+// Khởi tạo stageData + stageHistory từ case hiện hành + mirror vào cache toàn cục
+function _bootstrapStageStoresFromCase(c) {
+  _stageDataCache = { 1:null, 2:null, 3:null, 4:null, 5:null };
+  _stageHistoryCache = { 1:[], 2:[], 3:[], 4:[], 5:[] };
+  if (!c) return;
+  _ensureStageStores(c);
+  for (let s = 1; s <= 5; s++) {
+    if (c.stageData[s]) _stageDataCache[s] = c.stageData[s];
+    // Migrate một lần từ legacy entries nếu stageData[s] rỗng
+    if (!_stageDataCache[s]) {
+      const last = (c.entries || []).filter(e => (e.stage || 1) === s).pop();
+      if (last) {
+        _stageDataCache[s] = { notes: last.notes || '', D: last.analysis ? JSON.parse(JSON.stringify(last.analysis)) : null };
+        c.stageData[s] = _stageDataCache[s];
+      }
+    }
+    _stageHistoryCache[s] = Array.isArray(c.stageHistory[s]) ? c.stageHistory[s].slice() : [];
+  }
+}
+
 // ── AUTH ──
 async function loginEmail() {
   const email = document.getElementById('login-email').value.trim();
@@ -769,87 +919,12 @@ function previewStage(s) {
     return;
   }
 
-  // ✅ FIX: LƯU DỮ LIỆU CỦA STAGE HIỆN TẠI VÀO CACHE TRƯỚC KHI RỜI ĐI
-  // Điều này đảm bảo dữ liệu không bị mất khi chuyển stage
-  _stageDataCache[currentStage] = D ? JSON.parse(JSON.stringify(D)) : null;
-
-  // ─── LƯU DỮ LIỆU CỦA STAGE HIỆN TẠI VÀO ENTRY TRƯỚC KHI RỜI ĐI ───
-  const currentNotes = document.getElementById('dash-notes').value.trim();
-  if (currentNotes && curCaseId) {
-    const cases = loadCases();
-    const c = cases[curCaseId];
-    if (c) {
-      c.entries = c.entries || [];
-      const nowIso = new Date().toISOString();
-      if (_editingEntryIdx !== null && c.entries[_editingEntryIdx] && (c.entries[_editingEntryIdx].stage || 1) === currentStage) {
-        c.entries[_editingEntryIdx] = {
-          ...c.entries[_editingEntryIdx],
-          notes: currentNotes,
-          analysis: D ? JSON.parse(JSON.stringify(D)) : null,
-          date: nowIso,
-          stage: currentStage
-        };
-      } else {
-        c.entries.push({
-          id: 'en_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-          date: nowIso,
-          notes: currentNotes,
-          analysis: D ? JSON.parse(JSON.stringify(D)) : null,
-          stage: currentStage
-        });
-      }
-      c.updatedAt = nowIso;
-      cases[curCaseId] = c;
-      saveCases(cases);
-    }
-  }
-
-  // ─── CHUYỂN SANG STAGE MỚI ───
+  // Lưu dữ liệu stage hiện tại rồi đổ dữ liệu stage mới ra — KHÔNG tạo entry mới
+  _flushStage(currentStage);
   currentStage = s;
+  _hydrateStage(s);
 
-  // ─── KHÔI PHỤC DỮ LIỆU TỪ CACHE HOẶC ENTRY CUỐI CÙNG CỦA STAGE NÀY ───
-  const cases = loadCases();
-  const c = curCaseId ? cases[curCaseId] : null;
-  const entriesOfStage = (c?.entries || []).filter(e => (e.stage || 1) === s);
-  const lastEntry = entriesOfStage.length ? entriesOfStage[entriesOfStage.length - 1] : null;
-
-  // ✅ FIX: Ưu tiên khôi phục từ cache (dữ liệu hiện tại chưa lưu)
-  // Nếu cache có dữ liệu, dùng cache. Nếu không, dùng entry cuối cùng
-  if (_stageDataCache[s]) {
-    D = JSON.parse(JSON.stringify(_stageDataCache[s]));
-    D._currentStage = s;
-    if (D._report) renderReport(D._report);
-    document.getElementById('btn-fill').disabled = false;
-    document.getElementById('chat-input').disabled = false;
-    document.getElementById('btn-send').disabled = false;
-    const ta = document.getElementById('dash-notes');
-    if (ta) {
-      // Nếu cache có dữ liệu nhưng không có notes, lấy từ entry cuối cùng
-      if (lastEntry && !ta.value) {
-        ta.value = lastEntry.notes || '';
-      }
-      document.getElementById('dash-cc').textContent = (ta.value || '').length + ' ký tự';
-    }
-    _editingEntryIdx = null;
-  } else if (lastEntry && lastEntry.analysis) {
-    D = JSON.parse(JSON.stringify(lastEntry.analysis));
-    D._currentStage = s;
-    if (D._report) renderReport(D._report);
-    document.getElementById('btn-fill').disabled = false;
-    document.getElementById('chat-input').disabled = false;
-    document.getElementById('btn-send').disabled = false;
-    const ta = document.getElementById('dash-notes');
-    if (ta) {
-      ta.value = lastEntry.notes || '';
-      document.getElementById('dash-cc').textContent = (lastEntry.notes || '').length + ' ký tự';
-    }
-    _editingEntryIdx = entriesOfStage.length - 1;
-  } else {
-    D = null;
-    document.getElementById('dash-notes').value = '';
-    document.getElementById('dash-cc').textContent = '0 ký tự';
-    document.getElementById('btn-fill').disabled = true;
-    _editingEntryIdx = null;
+  if (!D) {
     const chatMsgs = document.getElementById('chat-msgs');
     if (chatMsgs && !chatMsgs.querySelector('.chat-empty')) {
       chatMsgs.innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">📋</div><div style="font-weight:600;">Chưa có dữ liệu cho giai đoạn này</div><div>Hãy nhập ghi chép và bấm "Phân tích"</div></div>';
@@ -859,6 +934,7 @@ function previewStage(s) {
   updateStageUI();
   renderAnalysisPanel();
   renderEntriesPanel();
+  renderStageHistory();
   _renderStagePreviewPanel(s);
 }
 
@@ -969,7 +1045,11 @@ function completeStage() {
     }
   });
 
-  // ★ Lưu entry cho giai đoạn HIỆN TẠI trước khi chuyển sang giai đoạn mới
+  // ★ Snapshot stage hiện tại + push vào Lịch sử nhập
+  _flushStage(currentStage);
+  _pushStageHistory(currentStage, 'complete');
+
+  // ★ Giữ lại legacy entry cho tab "Danh sách ca" (để vẫn hiện số lần ghi chép)
   const _completeNotes = document.getElementById('dash-notes').value.trim();
   if (_completeNotes && curCaseId) {
     const _cc = loadCases();
@@ -989,14 +1069,10 @@ function completeStage() {
     }
   }
 
-  // Lưu stage vào D
-  D._currentStage = nextStage;
+  // Chuyển sang stage mới và nạp dữ liệu đã có sẵn của stage đó (nếu có)
   currentStage = nextStage;
-
-  // Clear textarea cho giai đoạn mới
-  document.getElementById('dash-notes').value = '';
-  document.getElementById('dash-cc').textContent = '0 ký tự';
-  _editingEntryIdx = null;
+  _hydrateStage(nextStage);
+  if (D) D._currentStage = nextStage;
 
   updateStageUI();
   saveCaseNow();
@@ -1023,22 +1099,11 @@ function rollbackStage() {
     });
   }
 
+  // Snapshot stage hiện tại trước khi lùi (giúp quay lại không mất)
+  _flushStage(currentStage);
   currentStage = prevStage;
-  D._currentStage = prevStage;
-
-  // ★ Khôi phục notes + analysis của giai đoạn trước vào textarea
-  const _rbCases = curCaseId ? loadCases() : null;
-  const _rbC = _rbCases?.[curCaseId];
-  const _rbEntries = (_rbC?.entries || []).filter(e => (e.stage||1) === prevStage);
-  const _rbLast = _rbEntries.length ? _rbEntries[_rbEntries.length-1] : null;
-  if (_rbLast) {
-    const ta = document.getElementById('dash-notes');
-    if (ta) { ta.value = _rbLast.notes || ''; document.getElementById('dash-cc').textContent = (_rbLast.notes||'').length + ' ký tự'; }
-    if (_rbLast.analysis) { D = JSON.parse(JSON.stringify(_rbLast.analysis)); D._currentStage = prevStage; if (D._report) renderReport(D._report); }
-  } else {
-    document.getElementById('dash-notes').value = '';
-    document.getElementById('dash-cc').textContent = '0 ký tự';
-  }
+  _hydrateStage(prevStage);
+  if (D) D._currentStage = prevStage;
 
   updateStageUI();
   saveCaseNow();
@@ -1187,6 +1252,9 @@ async function runAnalysis() {
       showNotif(`✅ GĐ ${currentStage}: Phân tích hoàn tất — nhớ nhấn Lưu`);
     }
 
+    // ★ Auto-push vào Lịch sử nhập + cập nhật stageData cho stage hiện tại
+    _flushStage(currentStage);
+    _pushStageHistory(currentStage, 'analyze');
     updateStageUI();
 
   } catch(e) {
@@ -1730,6 +1798,41 @@ function renderReport5(r) {
   _setReport(h);
 }
 
+function renderStageHistory() {
+  const panel = document.getElementById('stage-history-panel');
+  if (!panel) return;
+  const stage = currentStage;
+  const stageNames = ['','Tiếp cận','Vãng gia','Kế hoạch','Tiến trình','Kết thúc'];
+  let list = [];
+  if (curCaseId) {
+    const c = loadCases()[curCaseId];
+    if (c) { _ensureStageStores(c); list = c.stageHistory[stage] || []; }
+  } else {
+    list = _stageHistoryCache[stage] || [];
+  }
+  if (!list.length) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  const srcLabel = { analyze:'🔬 Phân tích', complete:'✅ Hoàn thành', save:'💾 Lưu', rollback:'↩ Lùi GĐ' };
+  const rows = [...list].reverse().map(h => {
+    const src = h.source || 'save';
+    const preview = (h.notes || '').replace(/\n+/g, ' ').substring(0, 120);
+    return `<div class="shp-item" onclick="_restoreStageHistory(${stage}, '${h.id}')">
+      <div class="shp-item-main">
+        <div class="shp-item-top">
+          <span class="shp-item-src src-${src}">${srcLabel[src] || src}</span>
+          <span class="shp-item-ts">${fmtVN(h.ts)}</span>
+        </div>
+        <div class="shp-item-preview">${esc(preview) || '<em>(không có ghi chép)</em>'}</div>
+      </div>
+      <button class="shp-item-btn" onclick="event.stopPropagation();_restoreStageHistory(${stage}, '${h.id}')">⏪ Khôi phục</button>
+    </div>`;
+  }).join('');
+  panel.innerHTML = `<div class="shp-hd">
+    <span class="shp-hd-title">📚 Lịch sử nhập — GĐ ${stage} ${stageNames[stage] || ''}</span>
+    <span class="shp-hd-count">${list.length} phiên bản</span>
+  </div>${rows}`;
+}
+
 function renderEntriesPanel() {
   const panel = document.getElementById('entries-panel');
   if (!panel) return;
@@ -1785,38 +1888,27 @@ function loadEntryToEditor(idx) {
   const entry = c.entries[idx];
   const entryStage = entry.stage || 1;
 
-  // ✅ FIX: Lưu dữ liệu giai đoạn hiện tại vào cache TRƯỚC khi chuyển
-  _stageDataCache[currentStage] = D ? JSON.parse(JSON.stringify(D)) : null;
+  // ✅ Flush stage hiện tại để không mất draft
+  _flushStage(currentStage);
 
   _editingEntryIdx = idx;
 
-  // Khôi phục notes
-  const ta = document.getElementById('dash-notes');
-  if (ta) {
-    ta.value = entry.notes || '';
-    document.getElementById('dash-cc').textContent = (entry.notes || '').length + ' ký tự';
-  }
+  // Ghi entry vào stageData của đúng stage (không đụng stage khác)
+  _ensureStageStores(c);
+  c.stageData[entryStage] = {
+    notes: entry.notes || '',
+    D: entry.analysis ? JSON.parse(JSON.stringify(entry.analysis)) : null
+  };
+  _stageDataCache[entryStage] = c.stageData[entryStage];
+  _cases = cases;
 
-  // ✅ FIX: Chỉ thay đổi stage nếu entry thuộc stage khác
-  // Nếu entry cùng stage hiện tại, không cần thay đổi stage
   if (entryStage !== currentStage) {
     currentStage = entryStage;
     updateStageUI();
     renderAnalysisPanel();
   }
-
-  // Khôi phục D
-  if (entry.analysis) {
-    D = JSON.parse(JSON.stringify(entry.analysis));
-    D._currentStage = currentStage;
-    document.getElementById('btn-fill').disabled = false;
-    document.getElementById('chat-input').disabled = false;
-    document.getElementById('btn-send').disabled = false;
-    if (D._report) renderReport(D._report);
-  } else {
-    D = null;
-    document.getElementById('btn-fill').disabled = true;
-  }
+  _hydrateStage(entryStage);
+  renderStageHistory();
 
   // Highlight entry
   document.querySelectorAll('.entry-card').forEach(el => el.classList.remove('active-entry'));
@@ -2431,10 +2523,12 @@ function newCase() {
   _discardDraft(); // xóa draft cũ nếu chưa dùng gì
   const id = genCaseId();
   // Tạo trong memory THÔI, chưa lưu xuống DB
-  _cases[id] = { id, name:'Ca mới '+new Date().toLocaleDateString('vi-VN'), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), status:'open', entries:[], currentStage:1 };
+  _cases[id] = { id, name:'Ca mới '+new Date().toLocaleDateString('vi-VN'), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), status:'open', entries:[], currentStage:1, stageData:{1:null,2:null,3:null,4:null,5:null}, stageHistory:{1:[],2:[],3:[],4:[],5:[]} };
   _draftCaseId = id;
   curCaseId = id; D = null; chatHistory = []; _editingEntryIdx = null;
   currentStage = 1;
+  _stageDataCache = {1:null,2:null,3:null,4:null,5:null};
+  _stageHistoryCache = {1:[],2:[],3:[],4:[],5:[]};
   // Xóa checkmark cam + unlock forms từ ca cũ
   document.querySelectorAll('.fi-ck').forEach(el => el.remove());
   document.querySelectorAll('.form-item').forEach(el => { el.classList.remove('form-locked'); el.style.opacity = ''; el.title = ''; });
@@ -2457,6 +2551,7 @@ function newCase() {
   document.getElementById('closed-banner')?.classList.remove('show');
   updateStageUI();
   applyClosedCaseUI();
+  renderStageHistory();
   switchMain('dash');
   showNotif('✅ Đã tạo ca mới');
 }
@@ -2510,8 +2605,14 @@ function saveCaseNow() {
   }
   cases[curCaseId] = c;
   saveCases(cases);
+  // ★ Auto-push Lịch sử nhập cho stage hiện tại + mirror stageData
+  _flushStage(currentStage);
+  _pushStageHistory(currentStage, 'save');
+  // saveCases mới lưu lần đầu — flush sau đó cần commit lại stageData/stageHistory
+  saveCases(loadCases());
   updateHeader(); renderCaseList(); updateCasesCount();
   renderEntriesPanel();
+  renderStageHistory();
   showNotif('💾 Đã lưu: '+c.name);
 }
 
@@ -2747,39 +2848,24 @@ function loadCaseIntoApp(id) {
   _editingEntryIdx = null;
   // ★ Khôi phục giai đoạn đã lưu
   currentStage = c.currentStage || (c.lastAnalysis?._currentStage) || 1;
-  // ★ FIX: load D nếu có bất kỳ lastAnalysis nào (không chỉ khi co_ban tồn tại)
-  if (c.lastAnalysis) {
-    D = c.lastAnalysis;
-    if (!Array.isArray(D.cap_nhat)) D.cap_nhat = [];
-    if (D.co_ban && Object.keys(D.co_ban).length) {
-      document.getElementById('btn-fill').disabled = false;
-      document.getElementById('chat-input').disabled = false;
-      document.getElementById('btn-send').disabled = false;
-    }
-    if (D._report) renderReport(D._report);
-  } else {
-    D = null;
-    document.getElementById('btn-fill').disabled = true;
+  // ★ Khởi tạo stageData/stageHistory từ case + migrate legacy entries nếu cần
+  _bootstrapStageStoresFromCase(c);
+  // Nếu chưa có stageData cho stage hiện tại mà có lastAnalysis, dùng lastAnalysis làm seed
+  if (!_stageDataCache[currentStage] && c.lastAnalysis) {
+    _stageDataCache[currentStage] = { notes: (c.entries||[]).filter(e=>(e.stage||1)===currentStage).slice(-1)[0]?.notes || '', D: c.lastAnalysis };
+    c.stageData[currentStage] = _stageDataCache[currentStage];
   }
-  // ★ Hiển thị ghi chép mới nhất của giai đoạn HIỆN TẠI vào textarea
-  const entries = c.entries || [];
-  const stageEntries = entries.filter(e => (e.stage||1) === currentStage);
-  const latestForStage = stageEntries.length ? stageEntries[stageEntries.length-1] : (entries.length ? entries[entries.length-1] : null);
-  if (latestForStage) {
-    document.getElementById('dash-notes').value = latestForStage.notes || '';
-    document.getElementById('dash-cc').textContent = (latestForStage.notes || '').length + ' ký tự';
-  } else {
-    document.getElementById('dash-notes').value = '';
-    document.getElementById('dash-cc').textContent = '0 ký tự';
-  }
+  _hydrateStage(currentStage);
   chatHistory = [];
   updateHeader();
   updateStageUI();
   restoreFormChecks();
   renderEntriesPanel();
+  renderStageHistory();
   applyClosedCaseUI();
   checkReminders();
-  showNotif('📂 Đã mở: ' + c.name + ' — GĐ ' + currentStage + ' · ' + entries.length + ' ghi chép');
+  const entriesLen = (c.entries || []).length;
+  showNotif('📂 Đã mở: ' + c.name + ' — GĐ ' + currentStage + ' · ' + entriesLen + ' ghi chép');
 }
 
 // ── CUSTOM CONFIRM MODAL ──
@@ -4452,7 +4538,11 @@ function _formatEvalReport(text) {
 // ════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
   const ta = document.getElementById('dash-notes');
-  ta?.addEventListener('input', e => document.getElementById('dash-cc').textContent = e.target.value.length+' ký tự');
+  ta?.addEventListener('input', e => {
+    document.getElementById('dash-cc').textContent = e.target.value.length+' ký tự';
+    // ★ Mirror draft vào _stageDataCache[currentStage] để không mất khi chuyển GĐ
+    _stageDataCache[currentStage] = { notes: e.target.value, D: D ? JSON.parse(JSON.stringify(D)) : null };
+  });
 
   function fixHeights() {
     const hdr = document.querySelector('.hdr');
