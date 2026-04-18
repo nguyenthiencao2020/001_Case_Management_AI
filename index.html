@@ -101,6 +101,7 @@
       <div class="action-bar" id="action-bar">
         <button class="btn-analyze" id="btn-analyze" onclick="runAnalysis()">🔬 Phân tích Tiếp cận</button>
         <button class="btn-secondary" onclick="fillForms()" id="btn-fill" disabled>📋 Xem form</button>
+        <button class="btn-secondary btn-dass" onclick="openDASS()" id="btn-dass" title="Đánh giá trầm cảm, lo âu, stress (DASS-21/42)">🧠 DASS</button>
       </div>
       <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
       <div class="closed-banner" id="closed-banner">
@@ -196,6 +197,17 @@
       <button class="btn-gen-eval" id="btn-gen-eval" onclick="generateComprehensiveEval()">✨ Tạo Báo cáo Phân tích & Đánh giá Tổng hợp</button>
       <div class="eval-output" id="eval-output"><div class="eval-placeholder"><div class="ep-icon">📝</div><div class="ep-title">Báo cáo Phân tích & Đánh giá Tổng hợp</div><div class="ep-sub">Nhấn nút bên trên để AI tạo báo cáo đánh giá toàn diện.</div></div></div>
     </div>
+  </div>
+</div>
+
+<!-- ══ DASS MODAL ══ -->
+<div id="dass-overlay" class="dass-overlay" style="display:none" onclick="if(event.target===this)closeDASS()">
+  <div class="dass-modal">
+    <div class="dass-modal-hd">
+      <span class="dass-modal-title">🧠 DASS — Đánh giá Sức khỏe Tâm thần</span>
+      <button class="dass-close" onclick="closeDASS()">✕</button>
+    </div>
+    <div id="dass-body" class="dass-body"></div>
   </div>
 </div>
 

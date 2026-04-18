@@ -1921,7 +1921,8 @@ function renderFormTab(idx) {
       Dv("Giấy tờ")+F("Khai sinh",[cf(gks.co),cf(gks.ly_do)].filter(Boolean).join(' — '))+F("Thường trú",[cf(tr.co),cf(tr.ly_do)].filter(Boolean).join(' — '))+F("CCCD",[cf(cc.co),cf(cc.ly_do)].filter(Boolean).join(' — '))+
       Dv("Giáo dục")+F("Đang học",cf(hv.lop)?'Lớp '+cf(hv.lop)+(cf(hv.truong)?' — '+cf(hv.truong):''):'')+F("Kết quả học tập",hv.ket_qua)+F("Bỏ học",cf(hv.bo_hoc)?'Lớp '+cf(hv.bo_hoc)+(cf(hv.nam_bo_hoc)?' ('+cf(hv.nam_bo_hoc)+')':''):'')+F("Lý do bỏ học",hv.ly_do_bo_hoc)+F("Học nghề",cf(hv.hoc_nghe)?(cf(hv.nghe_da_hoc)||'Có'):'Không')+F("Sở thích",hv.so_thich)+F("Ước mơ",hv.uoc_mo)+
       Dv("Sức khỏe")+F("Tình trạng",sk.tinh_trang)+F("Cân nặng (kg)",sk.can_nang)+F("Chiều cao (cm)",sk.chieu_cao)+F("Bệnh trong 6 tháng",sk.benh_trong_6t)+F("Được khám",sk.duoc_kham)+F("BHYT",sk.bhyt)+
-      Dv("Tâm lý")+F("Tăng động",tl.tang_dong)+F("Bi quan",tl.bi_quan)+F("Tự tổn thương",tl.tu_ton_thuong)+F("Mô tả",tl.mo_ta));
+      Dv("Tâm lý")+F("Tăng động",tl.tang_dong)+F("Bi quan",tl.bi_quan)+F("Tự tổn thương",tl.tu_ton_thuong)+F("Mô tả",tl.mo_ta)+
+      (()=>{ const dass=(tt.dass||null); if(!dass) return ''; const dL=_getDASSSeverity('D',dass.D||0),aL=_getDASSSeverity('A',dass.A||0),sL=_getDASSSeverity('S',dass.S||0); return Dv('DASS-'+dass.version+' ('+dass.date+')')+`<div class="dass-form-result"><span class="dass-fb" style="color:${dL.c};border-color:${dL.c};background:${dL.c}15">😔 TC: ${dass.D} — ${dL.lv}</span><span class="dass-fb" style="color:${aL.c};border-color:${aL.c};background:${aL.c}15">😰 LA: ${dass.A} — ${aL.lv}</span><span class="dass-fb" style="color:${sL.c};border-color:${sL.c};background:${sL.c}15">😤 CT: ${dass.S} — ${sL.lv}</span></div>`; })());
     h+=Sec("D. Đánh giá ban đầu","s0d",
       F("Vấn đề thể chất",dg.van_de_the_chat)+F("Vấn đề tâm lý",dg.van_de_tam_ly)+F("Vấn đề nhận thức",dg.van_de_nhan_thuc)+
       F("Nhu cầu thể chất",dg.nhu_cau_the_chat)+F("Nhu cầu tâm lý",dg.nhu_cau_tam_ly)+F("Nhu cầu nhận thức",dg.nhu_cau_nhan_thuc)+
@@ -3963,4 +3964,218 @@ document.addEventListener('DOMContentLoaded', () => {
     // Bắt đầu bộ đếm khi load trang
     _reset();
   })();
+
+// ════════════════════════════════════════════════════════════
+// DASS-42/21 — Thang đo Trầm cảm, Lo âu, Căng thẳng
+// Items 1-21 of DASS-42 are identical to DASS-21 (standard)
+// For DASS-21: raw score × 2 to normalize to DASS-42 scale
+// ════════════════════════════════════════════════════════════
+
+const DASS_Q = [
+  // [question_text, subscale]  subscale: D=trầm cảm, A=lo âu, S=căng thẳng
+  // Items 1-21 = DASS-21 subset; Items 1-42 = DASS-42
+  ['Tôi thấy khó mà thoải mái được.','S'],
+  ['Tôi bị khô miệng.','A'],
+  ['Tôi dường như không có cảm giác tích cực nào cả.','D'],
+  ['Tôi bị rối loạn hơi thở (thở gấp, khó thở kể cả khi không gắng sức).','A'],
+  ['Tôi thấy thật khó bắt tay vào công việc.','D'],
+  ['Tôi có xu hướng phản ứng thái quá với các tình huống.','S'],
+  ['Tôi bị run tay chân.','A'],
+  ['Tôi cảm thấy mình tiêu tốn rất nhiều sức lực.','S'],
+  ['Tôi lo lắng về những tình huống có thể khiến tôi hoảng sợ hoặc tự làm mình ngốc nghếch.','A'],
+  ['Tôi cảm thấy không có gì để mong đợi cả.','D'],
+  ['Tôi thấy bản thân dễ bị kích động.','S'],
+  ['Tôi thấy khó mà thư giãn được.','S'],
+  ['Tôi cảm thấy chán nản và thất vọng.','D'],
+  ['Tôi không thể chịu được việc có điều gì đó cản trở công việc tôi đang làm.','S'],
+  ['Tôi cảm thấy sắp hoảng loạn.','A'],
+  ['Tôi không thấy hào hứng với bất kỳ điều gì cả.','D'],
+  ['Tôi cảm thấy bản thân chẳng đáng là bao.','D'],
+  ['Tôi cảm thấy mình khá dễ tự ái, dễ phật ý.','S'],
+  ['Tôi nhận thức được nhịp tim dù không gắng sức (tim đập nhanh, loạn nhịp).','A'],
+  ['Tôi cảm thấy sợ hãi vô cớ.','A'],
+  ['Tôi cảm thấy cuộc sống chẳng có ý nghĩa gì.','D'],
+  // Items 22-42 (DASS-42 only)
+  ['Tôi thấy bản thân khó mà bình tĩnh lại được.','S'],
+  ['Tôi thấy khó nuốt.','A'],
+  ['Tôi không cảm nhận được niềm vui từ những điều tốt đẹp đang diễn ra.','D'],
+  ['Tôi nhận thấy sự gián đoạn trong nhịp thở của mình (đôi khi thở hổn hển).','A'],
+  ['Tôi cảm thấy xuống tinh thần và buồn bã.','D'],
+  ['Tôi thấy khó bình tâm trước bất kỳ gián đoạn nào.','S'],
+  ['Tôi cảm thấy sắp bị "vỡ tim" (tim đập dữ dội).','A'],
+  ['Tôi thấy bản thân thiếu kiên nhẫn khi bị điều gì trì hoãn.','S'],
+  ['Tôi cảm thấy yếu ớt (gần ngất xỉu).','A'],
+  ['Tôi thấy khó có thể tìm thấy điều gì tốt đẹp trong cuộc sống.','D'],
+  ['Tôi thấy thật khó chấp nhận việc bị gián đoạn khi đang làm gì đó.','S'],
+  ['Tôi cảm thấy căng thẳng.','S'],
+  ['Tôi cảm thấy mình vô dụng.','D'],
+  ['Tôi không thể chịu đựng những điều cản trở tôi tiếp tục công việc đang làm.','S'],
+  ['Tôi cảm thấy sợ hãi.','A'],
+  ['Tôi không thấy bất kỳ điều gì trong tương lai để hy vọng.','D'],
+  ['Tôi cảm thấy cuộc sống không có ý nghĩa.','D'],
+  ['Tôi thấy mình đang bị kích động.','S'],
+  ['Tôi lo lắng về những tình huống có thể khiến tôi hoảng sợ hoặc bị chế nhạo.','A'],
+  ['Tôi cảm thấy run rẩy (tay chân run).','A'],
+  ['Tôi thấy khó mà tận hưởng những điều tôi đang làm.','D'],
+];
+
+// Severity cutoffs (DASS-42 normalized scale)
+const DASS_LEVELS = {
+  D:[{max:9,lv:'Bình thường',c:'#16a34a',bg:'#f0fdf4'},{max:13,lv:'Nhẹ',c:'#ca8a04',bg:'#fefce8'},{max:20,lv:'Trung bình',c:'#ea580c',bg:'#fff7ed'},{max:27,lv:'Nặng',c:'#dc2626',bg:'#fef2f2'},{max:99,lv:'Rất nặng',c:'#7f1d1d',bg:'#fee2e2'}],
+  A:[{max:7,lv:'Bình thường',c:'#16a34a',bg:'#f0fdf4'},{max:9,lv:'Nhẹ',c:'#ca8a04',bg:'#fefce8'},{max:14,lv:'Trung bình',c:'#ea580c',bg:'#fff7ed'},{max:19,lv:'Nặng',c:'#dc2626',bg:'#fef2f2'},{max:99,lv:'Rất nặng',c:'#7f1d1d',bg:'#fee2e2'}],
+  S:[{max:14,lv:'Bình thường',c:'#16a34a',bg:'#f0fdf4'},{max:18,lv:'Nhẹ',c:'#ca8a04',bg:'#fefce8'},{max:25,lv:'Trung bình',c:'#ea580c',bg:'#fff7ed'},{max:33,lv:'Nặng',c:'#dc2626',bg:'#fef2f2'},{max:99,lv:'Rất nặng',c:'#7f1d1d',bg:'#fee2e2'}],
+};
+
+let _dass = { version:21, cur:-1, answers:[] };
+let _dassResult = null;
+
+function openDASS() {
+  _dass = { version:21, cur:-1, answers:[] };
+  _dassResult = null;
+  document.getElementById('dass-overlay').style.display = 'flex';
+  _renderDASS();
+}
+function closeDASS() {
+  document.getElementById('dass-overlay').style.display = 'none';
+}
+function _startDASS(v) {
+  _dass.version = v;
+  _dass.answers = new Array(v === 42 ? 42 : 21).fill(null);
+  _dass.cur = 0;
+  _renderDASS();
+}
+function _prevDASS() {
+  if (_dass.cur > 0) { _dass.cur--; _renderDASS(); }
+}
+function _answerDASS(val) {
+  _dass.answers[_dass.cur] = val;
+  const total = _dass.version === 42 ? 42 : 21;
+  if (_dass.cur < total - 1) { _dass.cur++; _renderDASS(); }
+  else _renderDASSResults();
+}
+function _getDASSSeverity(sub, score) {
+  for (const lvl of DASS_LEVELS[sub]) { if (score <= lvl.max) return lvl; }
+  return DASS_LEVELS[sub][4];
+}
+function _calcDASS() {
+  const total = _dass.version === 42 ? 42 : 21;
+  let D=0, A=0, S=0;
+  for (let i=0; i<total; i++) {
+    const v = _dass.answers[i] || 0;
+    const sub = DASS_Q[i][1];
+    if (sub==='D') D+=v; else if (sub==='A') A+=v; else S+=v;
+  }
+  if (_dass.version === 21) { D*=2; A*=2; S*=2; }
+  return {D, A, S};
+}
+function _renderDASS() {
+  const el = document.getElementById('dass-body');
+  if (_dass.cur === -1) {
+    el.innerHTML = `<div class="dass-sel">
+      <div class="dass-sel-title">Đánh giá Sức khỏe Tâm thần</div>
+      <div class="dass-sel-sub">Mô tả những gì bạn đã cảm nhận <strong>trong 1 tuần qua</strong>.<br>Không có câu trả lời đúng hay sai.</div>
+      <div class="dass-ver-cards">
+        <div class="dass-ver-card" onclick="_startDASS(21)">
+          <div class="dvc-num">21</div>
+          <div class="dvc-title">DASS-21</div>
+          <div class="dvc-sub">Phiên bản ngắn · ~5 phút</div>
+          <div class="dvc-badge">Khuyên dùng</div>
+        </div>
+        <div class="dass-ver-card" onclick="_startDASS(42)">
+          <div class="dvc-num">42</div>
+          <div class="dvc-title">DASS-42</div>
+          <div class="dvc-sub">Phiên bản đầy đủ · ~10 phút</div>
+        </div>
+      </div>
+    </div>`;
+    return;
+  }
+  const total = _dass.version === 42 ? 42 : 21;
+  const i = _dass.cur;
+  const q = DASS_Q[i];
+  const pct = Math.round((i / total) * 100);
+  const subName = {D:'Cảm xúc / Trầm cảm', A:'Lo âu', S:'Căng thẳng'}[q[1]];
+  el.innerHTML = `
+    <div class="dass-prog-wrap">
+      <div class="dass-prog-bar"><div class="dass-prog-fill" style="width:${pct}%"></div></div>
+      <div class="dass-prog-txt">${i+1} / ${total}</div>
+    </div>
+    <div class="dass-q-num">Câu ${i+1} &nbsp;·&nbsp; ${subName}</div>
+    <div class="dass-q-text">${q[0]}</div>
+    <div class="dass-q-hint">Trong <strong>1 tuần vừa qua</strong>, điều này xảy ra với bạn ở mức nào?</div>
+    <div class="dass-ans-grid">
+      ${[0,1,2,3].map(v => `<button class="dass-ans-btn${_dass.answers[i]===v?' selected':''}" onclick="_answerDASS(${v})">
+        <div class="dab-score">${v}</div>
+        <div class="dab-label">${['Không đúng','Đôi khi','Thường xuyên','Hầu như luôn'][v]}</div>
+      </button>`).join('')}
+    </div>
+    ${i > 0 ? '<button class="dass-back-btn" onclick="_prevDASS()">← Câu trước</button>' : ''}`;
+}
+function _renderDASSResults() {
+  const el = document.getElementById('dass-body');
+  const s = _calcDASS();
+  _dassResult = s;
+  const dL = _getDASSSeverity('D', s.D);
+  const aL = _getDASSSeverity('A', s.A);
+  const sL = _getDASSSeverity('S', s.S);
+  const bar = (score, sub) => {
+    const maxMap = {D:42, A:42, S:42};
+    const pct = Math.min(100, Math.round(score / maxMap[sub] * 100));
+    const c = _getDASSSeverity(sub, score).c;
+    return `<div class="dass-res-bar"><div class="dass-res-fill" style="width:${pct}%;background:${c}"></div></div>`;
+  };
+  el.innerHTML = `<div class="dass-results">
+    <div class="dass-res-title">Kết quả DASS-${_dass.version}</div>
+    <div class="dass-res-note">Điểm chuẩn hóa theo thang DASS-42 (điểm tối đa 42)</div>
+    <div class="dass-res-cards">
+      <div class="dass-res-card" style="border-color:${dL.c}20;background:${dL.bg}">
+        <div class="drc-icon">😔</div>
+        <div class="drc-label">Trầm cảm</div>
+        <div class="drc-score" style="color:${dL.c}">${s.D}</div>
+        <div class="drc-level" style="color:${dL.c}">${dL.lv}</div>
+        ${bar(s.D,'D')}
+      </div>
+      <div class="dass-res-card" style="border-color:${aL.c}20;background:${aL.bg}">
+        <div class="drc-icon">😰</div>
+        <div class="drc-label">Lo âu</div>
+        <div class="drc-score" style="color:${aL.c}">${s.A}</div>
+        <div class="drc-level" style="color:${aL.c}">${aL.lv}</div>
+        ${bar(s.A,'A')}
+      </div>
+      <div class="dass-res-card" style="border-color:${sL.c}20;background:${sL.bg}">
+        <div class="drc-icon">😤</div>
+        <div class="drc-label">Căng thẳng</div>
+        <div class="drc-score" style="color:${sL.c}">${s.S}</div>
+        <div class="drc-level" style="color:${sL.c}">${sL.lv}</div>
+        ${bar(s.S,'S')}
+      </div>
+    </div>
+    <div class="dass-res-footer">
+      <div class="dass-res-date">📅 ${new Date().toLocaleDateString('vi-VN')}</div>
+      <div class="dass-res-btns">
+        <button class="btn-dass-redo" onclick="_dass.cur=-1;_dass.answers=[];_renderDASS()">🔄 Làm lại</button>
+        <button class="btn-dass-save" onclick="_saveDASS()">💾 Lưu vào hồ sơ</button>
+      </div>
+    </div>
+  </div>`;
+}
+function _saveDASS() {
+  if (!D) { showNotif('⚠️ Chưa mở ca nào', 'warn'); return; }
+  if (!_dassResult) return;
+  if (!D.tinh_trang) D.tinh_trang = {};
+  const s = _dassResult;
+  const dL = _getDASSSeverity('D', s.D);
+  const aL = _getDASSSeverity('A', s.A);
+  const sL = _getDASSSeverity('S', s.S);
+  D.tinh_trang.dass = {
+    version: _dass.version,
+    date: new Date().toLocaleDateString('vi-VN'),
+    D: s.D, D_level: dL.lv,
+    A: s.A, A_level: aL.lv,
+    S: s.S, S_level: sL.lv,
+  };
+  if (window._markUnsaved) window._markUnsaved();
+  closeDASS();
+  showNotif('✅ Đã lưu kết quả DASS vào hồ sơ — nhớ nhấn Lưu');
+}
 

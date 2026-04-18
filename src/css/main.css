@@ -988,3 +988,83 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 .login-btn-primary:hover{background:linear-gradient(135deg,#e05a10,#c84a00);transform:translateY(-1px);box-shadow:0 4px 14px rgba(240,112,32,.4);}
 .login-footer{font-size:11px;color:#94a3b8;margin-top:20px;}
 
+/* ══ DASS MODAL ══ */
+.btn-dass { background:linear-gradient(135deg,#6d28d9,#5b21b6) !important; color:#fff !important; border:none !important; font-weight:700 !important; }
+.btn-dass:hover { background:linear-gradient(135deg,#7c3aed,#6d28d9) !important; }
+.dass-overlay { position:fixed; inset:0; background:rgba(15,45,107,.65); z-index:10000; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+.dass-modal { background:#fff; border-radius:20px; width:92%; max-width:520px; max-height:90vh; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 24px 72px rgba(0,0,0,.35); animation:fadeSlideIn .2s ease; }
+.dass-modal-hd { background:linear-gradient(135deg,#3b0764,#6d28d9); color:#fff; padding:14px 20px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
+.dass-modal-title { font-weight:800; font-size:13.5px; }
+.dass-close { background:none; border:none; color:rgba(255,255,255,.7); font-size:18px; cursor:pointer; padding:2px 7px; border-radius:5px; transition:all .15s; }
+.dass-close:hover { color:#fff; background:rgba(255,255,255,.18); }
+.dass-body { flex:1; overflow-y:auto; padding:22px 20px; }
+
+/* ── Version select ── */
+.dass-sel { text-align:center; }
+.dass-sel-title { font-size:17px; font-weight:800; color:var(--navy); margin-bottom:6px; }
+.dass-sel-sub { font-size:13px; color:var(--t2); margin-bottom:28px; line-height:1.6; }
+.dass-ver-cards { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+.dass-ver-card { border:2px solid var(--bd); border-radius:16px; padding:22px 26px 18px; cursor:pointer; transition:all .2s; min-width:140px; text-align:center; position:relative; }
+.dass-ver-card:hover { border-color:#6d28d9; box-shadow:0 4px 20px rgba(109,40,217,.18); transform:translateY(-3px); }
+.dvc-num { font-size:44px; font-weight:900; color:#6d28d9; line-height:1; }
+.dvc-title { font-size:15px; font-weight:800; color:var(--navy); margin:4px 0 3px; }
+.dvc-sub { font-size:11.5px; color:var(--t3); }
+.dvc-badge { background:#6d28d9; color:#fff; font-size:9px; font-weight:800; padding:2px 9px; border-radius:10px; margin-top:8px; display:inline-block; letter-spacing:.3px; }
+
+/* ── Progress ── */
+.dass-prog-wrap { margin-bottom:18px; }
+.dass-prog-bar { height:7px; background:#e5e7eb; border-radius:4px; overflow:hidden; margin-bottom:6px; }
+.dass-prog-fill { height:100%; background:linear-gradient(90deg,#6d28d9,#f07020); border-radius:4px; transition:width .35s ease; }
+.dass-prog-txt { font-size:11px; color:var(--t3); text-align:right; font-family:'JetBrains Mono',monospace; }
+
+/* ── Question ── */
+.dass-q-num { font-size:9.5px; font-weight:800; color:var(--t3); text-transform:uppercase; letter-spacing:1.2px; margin-bottom:8px; }
+.dass-q-text { font-size:15.5px; font-weight:700; color:var(--navy); line-height:1.55; margin-bottom:10px; padding:14px 16px; background:#f5f0ff; border-radius:10px; border-left:4px solid #6d28d9; }
+.dass-q-hint { font-size:11.5px; color:var(--t3); margin-bottom:18px; }
+.dass-ans-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+.dass-ans-btn { border:2px solid var(--bd); background:#fff; border-radius:12px; padding:14px 8px; cursor:pointer; transition:all .15s; font-family:inherit; text-align:center; min-height:72px; }
+.dass-ans-btn:hover { border-color:#6d28d9; background:#f5f0ff; }
+.dass-ans-btn.selected { border-color:#6d28d9; background:#f5f0ff; box-shadow:0 0 0 3px rgba(109,40,217,.15); }
+.dab-score { font-size:26px; font-weight:900; color:var(--navy); line-height:1; margin-bottom:4px; }
+.dass-ans-btn.selected .dab-score { color:#6d28d9; }
+.dab-label { font-size:11px; color:var(--t2); font-weight:600; line-height:1.3; }
+.dass-back-btn { background:none; border:1px solid var(--bd); padding:7px 16px; border-radius:8px; font-size:12px; cursor:pointer; font-family:inherit; color:var(--t2); transition:all .15s; }
+.dass-back-btn:hover { border-color:var(--navy); color:var(--navy); }
+
+/* ── Results ── */
+.dass-res-title { font-size:19px; font-weight:900; color:var(--navy); margin-bottom:2px; }
+.dass-res-note { font-size:11px; color:var(--t3); margin-bottom:20px; }
+.dass-res-cards { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:20px; }
+.dass-res-card { border:1.5px solid var(--bd); border-radius:14px; padding:14px 10px 12px; text-align:center; background:#fafbfc; }
+.drc-icon { font-size:22px; margin-bottom:3px; }
+.drc-label { font-size:9.5px; font-weight:800; color:var(--t3); text-transform:uppercase; letter-spacing:.8px; margin-bottom:8px; }
+.drc-score { font-size:34px; font-weight:900; color:var(--navy); line-height:1; margin-bottom:3px; }
+.drc-level { font-size:12px; font-weight:800; margin-bottom:10px; }
+.dass-res-bar { height:5px; background:#e5e7eb; border-radius:3px; overflow:hidden; }
+.dass-res-fill { height:100%; border-radius:3px; transition:width .5s ease; }
+.dass-res-footer { border-top:1px solid var(--bd); padding-top:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
+.dass-res-date { font-size:11px; color:var(--t3); }
+.dass-res-btns { display:flex; gap:8px; }
+.btn-dass-redo { background:none; border:1.5px solid var(--bd); padding:8px 14px; border-radius:8px; font-size:12px; cursor:pointer; font-family:inherit; color:var(--t2); transition:all .15s; }
+.btn-dass-redo:hover { border-color:var(--navy); color:var(--navy); }
+.btn-dass-save { background:linear-gradient(135deg,#6d28d9,#5b21b6); color:#fff; border:none; padding:8px 18px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; transition:all .15s; }
+.btn-dass-save:hover { background:linear-gradient(135deg,#7c3aed,#6d28d9); }
+
+/* DASS badge in form view */
+.dass-form-result { display:flex; gap:8px; flex-wrap:wrap; margin-top:2px; }
+.dass-fb { padding:3px 10px; border-radius:12px; font-size:11px; font-weight:700; border:1.5px solid; }
+
+/* DASS responsive */
+@media (max-width:768px) {
+  .dass-modal { border-radius:18px 18px 0 0; max-height:92vh; position:fixed; bottom:0; left:0; right:0; width:100%; max-width:100%; }
+  .dass-overlay { align-items:flex-end; }
+  .dass-res-cards { grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .dass-res-card { padding:10px 6px 8px; }
+  .drc-score { font-size:26px; }
+}
+@media (max-width:480px) {
+  .dass-ans-grid { grid-template-columns:1fr 1fr; }
+  .dass-res-cards { grid-template-columns:1fr; }
+  .dass-ver-cards { flex-direction:column; align-items:center; }
+}
+
