@@ -904,86 +904,26 @@ function updateStageUI() {
   renderSuggestions();
 }
 
-// ─── Stage preview panel ─────────────────────────────────────
+// ─── Click thanh tiến trình → chuyển GĐ + tự khôi phục phiên bản mới nhất
 function previewStage(s) {
-  const panel = document.getElementById('stage-preview-panel');
-  if (!panel) return;
-
-  // Nếu chọn cùng stage hiện tại thì chỉ toggle panel
-  if (s === currentStage) {
-    if (panel.style.display === 'block' && panel.dataset.stage === String(s)) {
-      closeStagePreview();
-    } else {
-      _renderStagePreviewPanel(s);
-    }
-    return;
-  }
-
-  // Lưu dữ liệu stage hiện tại rồi đổ dữ liệu stage mới ra — KHÔNG tạo entry mới
+  if (s === currentStage) { renderStageHistory(); return; }
   _flushStage(currentStage);
   currentStage = s;
   _hydrateStage(s);
-
   if (!D) {
     const chatMsgs = document.getElementById('chat-msgs');
     if (chatMsgs && !chatMsgs.querySelector('.chat-empty')) {
       chatMsgs.innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">📋</div><div style="font-weight:600;">Chưa có dữ liệu cho giai đoạn này</div><div>Hãy nhập ghi chép và bấm "Phân tích"</div></div>';
     }
   }
-
   updateStageUI();
   renderAnalysisPanel();
   renderEntriesPanel();
   renderStageHistory();
-  _renderStagePreviewPanel(s);
 }
 
-function _renderStagePreviewPanel(s) {
-  const panel = document.getElementById('stage-preview-panel');
-  if (!panel) return;
-  const cases = loadCases();
-  const c = curCaseId ? cases[curCaseId] : null;
-  const entries = (c?.entries || []).filter(e => (e.stage || 1) === s);
-  const stageNames = ['', 'Tiếp cận ban đầu', 'Vãng gia & Đánh giá', 'Kế hoạch can thiệp', 'Tiến trình', 'Kết thúc ca'];
-
-  if (!entries.length) {
-    panel.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <span style="font-weight:700;font-size:13px;">GĐ ${s} — ${stageNames[s] || ''}</span>
-      <button onclick="closeStagePreview()" style="background:none;border:none;font-size:18px;color:var(--t3);cursor:pointer;padding:0;">✕</button>
-    </div>
-    <div style="color:var(--t3);font-size:13px;padding:12px 0;">Chưa có ghi chép nào cho giai đoạn này.</div>`;
-    panel.dataset.stage = s;
-    panel.style.display = 'block';
-    return;
-  }
-
-  const rows = [...entries].reverse().map(e => {
-    const preview = (e.notes || '').substring(0, 280);
-    const hasMore = (e.notes || '').length > 280;
-    const realIdx = c.entries.findIndex(ent => ent.id === e.id);
-    return `<div style="padding:10px 0;border-bottom:1px solid var(--bd);">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-        <span style="font-size:11px;color:var(--t3);">📅 ${fmtVN(e.date)}</span>
-        <span style="flex:1"></span>
-        <button onclick="loadEntryToEditor(${realIdx});closeStagePreview()"
-          style="padding:4px 12px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">✏️ Sửa nội dung</button>
-      </div>
-      <div style="font-size:12px;color:var(--t1);white-space:pre-wrap;line-height:1.6;max-height:140px;overflow:hidden;">${esc(preview)}${hasMore ? '<span style="color:var(--t3);">…</span>' : ''}</div>
-    </div>`;
-  }).join('');
-
-  panel.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-    <span style="font-weight:700;font-size:13px;">GĐ ${s} — ${stageNames[s] || ''} <span style="font-size:11px;color:var(--t3);font-weight:400;">(${entries.length} lần ghi chép)</span></span>
-    <button onclick="closeStagePreview()" style="background:none;border:none;font-size:18px;color:var(--t3);cursor:pointer;padding:0;line-height:1;">✕</button>
-  </div>${rows}`;
-  panel.dataset.stage = s;
-  panel.style.display = 'block';
-}
-
-function closeStagePreview() {
-  const p = document.getElementById('stage-preview-panel');
-  if (p) { p.style.display = 'none'; p.dataset.stage = ''; }
-}
+// No-op: giữ lại để các chỗ gọi legacy không vỡ
+function closeStagePreview() {}
 
 function completeStage() {
   if (!D) { showNotif('⚠️ Hãy phân tích ghi chép trước khi hoàn thành giai đoạn', 'warn'); return; }
@@ -1075,6 +1015,7 @@ function completeStage() {
   if (D) D._currentStage = nextStage;
 
   updateStageUI();
+  renderStageHistory();
   saveCaseNow();
   showNotif(`✅ Đã hoàn thành GĐ ${currentStage - 1} — Bắt đầu GĐ ${currentStage}: ${STAGE_CONFIG[currentStage].label}`);
 }
@@ -1106,6 +1047,7 @@ function rollbackStage() {
   if (D) D._currentStage = prevStage;
 
   updateStageUI();
+  renderStageHistory();
   saveCaseNow();
   showNotif(`↩ Đã lùi về GĐ ${prevStage}: ${STAGE_CONFIG[prevStage].label}`);
 }
