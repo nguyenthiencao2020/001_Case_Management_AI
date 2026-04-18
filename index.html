@@ -102,6 +102,7 @@
         <button class="btn-analyze" id="btn-analyze" onclick="runAnalysis()">🔬 Phân tích Tiếp cận</button>
         <button class="btn-secondary" onclick="fillForms()" id="btn-fill" disabled>📋 Xem form</button>
         <button class="btn-secondary btn-dass" onclick="openDASS()" id="btn-dass" title="Đánh giá trầm cảm, lo âu, stress (DASS-21/42)">🧠 DASS</button>
+        <button class="btn-secondary btn-export-bundle" id="btn-export-all-docx" onclick="exportAllDocx()" title="Xuất toàn bộ biểu mẫu thành 1 file Word">📦 Xuất bộ hồ sơ</button>
       </div>
       <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
       <div class="closed-banner" id="closed-banner">
@@ -159,7 +160,10 @@
         <div class="form-item" data-fi="9" onclick="showForm(9)"><input type="checkbox" onclick="event.stopPropagation()"><div class="fi-ico">✅</div><div class="fi-lbl"><span class="fi-num">Form 8</span>Phiếu kết thúc ca</div></div>
         <div class="form-item" data-fi="10" onclick="showForm(10)"><input type="checkbox" onclick="event.stopPropagation()"><div class="fi-ico">📑</div><div class="fi-lbl"><span class="fi-num">Tổng hợp</span>Báo cáo QLTH</div></div>
       </div>
-      <div class="forms-export"><button class="btn-export-all" onclick="exportSelected()">📄 Tải form đã chọn</button></div>
+      <div class="forms-export">
+        <button class="btn-export-all" onclick="exportSelected()">📄 Tải form đã chọn</button>
+        <button class="btn-export-bundle" onclick="exportAllDocx()" style="margin-top:6px;">📦 Xuất bộ đầy đủ</button>
+      </div>
     </div>
     <div class="forms-content">
       <div class="form-preview" id="form-preview">

@@ -2602,7 +2602,7 @@ async function dlDocx(fi){
   }catch(e){showNotif('❌ '+e.message,'err');}
 }
 
-async function buildDocx(fi,logoData,footerData){
+async function buildDocx(fi,logoData,footerData,_collector){
   const lib=docxLib;
   const{Document,Paragraph,TextRun,Table,TableRow,TableCell,AlignmentType,BorderStyle,WidthType,ShadingType,VerticalAlign,ImageRun}=lib;
   const PW=11906,PH2=16838,MG=1134,CW=11906-2*1134;
@@ -3334,7 +3334,47 @@ async function buildDocx(fi,logoData,footerData){
     }catch(e){}
   }
 
+  // _collector: nếu truyền vào array, ghi body+footer vào đó thay vì trả Document (dùng cho exportAllDocx)
+  if (_collector) { _collector.push({ body, footerSection }); return null; }
   return new Document({sections:[{properties:{page:{size:{width:PW,height:PH2},margin:{top:MG,right:MG,bottom:720,left:MG,footer:0}}},footers:footerSection,children:body}]});
+}
+
+// ════════════════════════════════════════════════════════════
+// EXPORT BỘ HỒ SƠ ĐẦY ĐỦ — 1 file .docx chứa tất cả biểu mẫu
+// ════════════════════════════════════════════════════════════
+async function exportAllDocx() {
+  if (!D) { showNotif('⚠️ Chưa có dữ liệu — mở ca trước', 'warn'); return; }
+  const btn = document.getElementById('btn-export-all-docx');
+  const origTxt = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Đang tạo...'; }
+  let lib;
+  try { lib = await loadDocxLib(); } catch(e) {
+    showNotif('❌ ' + e.message, 'err');
+    if (btn) { btn.disabled = false; btn.innerHTML = origTxt; }
+    return;
+  }
+  showNotif('📄 Đang tạo bộ hồ sơ đầy đủ...');
+  const imgs = await Promise.all([fetchImg(LOGO_URL), fetchImg(FOOTER_URL)]);
+  try {
+    const pageProps = { size:{width:11906,height:16838}, margin:{top:1134,right:1134,bottom:720,left:1134,footer:0} };
+    const sections = [];
+    // Forms 0–9 (10 = báo cáo tổng hợp cuối danh sách)
+    for (const fi of [0,1,2,3,4,5,6,7,8,9]) {
+      const col = [];
+      await buildDocx(fi, imgs[0], imgs[1], col);
+      if (col[0]) sections.push({ properties:{ page: pageProps }, footers: col[0].footerSection, children: col[0].body });
+    }
+    if (!sections.length) throw new Error('Không có biểu mẫu nào để xuất');
+    const doc = new lib.Document({ sections });
+    const blob = await lib.Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const childName = (D.co_ban?.ho_ten || 'BoDayDu').replace(/\s+/g,'_');
+    a.href = url; a.download = 'ThaoDan_' + childName + '_BoDayDu.docx'; a.click();
+    URL.revokeObjectURL(url);
+    showNotif('✅ Đã xuất bộ hồ sơ đầy đủ (10 biểu mẫu)');
+  } catch(e) { showNotif('❌ ' + e.message, 'err'); console.error(e); }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = origTxt; } }
 }
 // ════════════════════════════════════════════════════════════
 // FEATURE 4.1 — Export ca ra file JSON (backup)

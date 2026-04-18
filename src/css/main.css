@@ -339,6 +339,9 @@ body {
 .forms-export { margin-top:auto; padding:12px; border-top:1px solid rgba(255,255,255,.07); }
 .btn-export-all { width:100%; background:var(--org); color:#fff; border:none; padding:9px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; transition:all .2s; }
 .btn-export-all:hover { background:var(--org2); }
+.btn-export-bundle { width:100%; background:linear-gradient(135deg,#0f2d6b,#1a3f8f); color:#fff; border:none; padding:9px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; transition:all .2s; }
+.btn-export-bundle:hover { background:linear-gradient(135deg,#1a3f8f,#2563eb); }
+.btn-export-bundle:disabled { opacity:.6; cursor:not-allowed; }
 
 /* ══ FORM CONTENT — ALWAYS FILLS REMAINING GRID COLUMN ══ */
 .forms-content {
@@ -991,6 +994,9 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 /* ══ DASS MODAL ══ */
 .btn-dass { background:linear-gradient(135deg,#6d28d9,#5b21b6) !important; color:#fff !important; border:none !important; font-weight:700 !important; }
 .btn-dass:hover { background:linear-gradient(135deg,#7c3aed,#6d28d9) !important; }
+#btn-export-all-docx { background:linear-gradient(135deg,#0f2d6b,#1a3f8f) !important; color:#fff !important; border:none !important; font-weight:700 !important; }
+#btn-export-all-docx:hover { background:linear-gradient(135deg,#1a3f8f,#2563eb) !important; }
+#btn-export-all-docx:disabled { opacity:.6 !important; cursor:not-allowed !important; }
 .dass-overlay { position:fixed; inset:0; background:rgba(15,45,107,.65); z-index:10000; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
 .dass-modal { background:#fff; border-radius:20px; width:92%; max-width:520px; max-height:90vh; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 24px 72px rgba(0,0,0,.35); animation:fadeSlideIn .2s ease; }
 .dass-modal-hd { background:linear-gradient(135deg,#3b0764,#6d28d9); color:#fff; padding:14px 20px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
