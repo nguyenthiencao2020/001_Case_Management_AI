@@ -1,24 +1,7 @@
 // ════════════════════════════════════════════════════════════
 // MAIN — App entry point
-// Imports config, prompts, utils modules
-// Contains: state, auth, storage, AI engine, stage wizard,
-//           analysis, forms, cases, chat, app init
+// Loaded after config.js, prompts.js, utils.js via plain <script> tags
 // ════════════════════════════════════════════════════════════
-import '../css/main.css';
-import {
-  GURL, PRIVACY_PREFIX, LOGO_URL, FOOTER_URL, FORM_NAMES,
-  STAGE_CONFIG, STAGE_TEMPLATES,
-} from './config.js';
-import {
-  SYS_REPORT, SYS_REPORT_1, SYS_REPORT_2, SYS_REPORT_3, SYS_REPORT_4, SYS_REPORT_5,
-  STAGE_REPORT_MAP, _EXTRACT_DISCIPLINE,
-  PROMPT_STAGE_1, PROMPT_STAGE_2, PROMPT_STAGE_3, PROMPT_STAGE_4, PROMPT_STAGE_5,
-  SYS_CHAT,
-} from './prompts.js';
-import {
-  esc, formatMd, clean, cf, robustJSON, fmtDate, fmtVN, showNotif,
-  FIELD_MERGE_KEYS, deepMergeFields, deepMerge,
-} from './utils.js';
 
 // ════════════════════════════════════════════════════════════
 // SUPABASE CONFIG
@@ -28,6 +11,16 @@ const SUPABASE_URL = 'https://mlhtvxoricudzstpzquh.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_SemT5e_eSp8FqkONPGTr0g_HWWtgRT2';
 const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let _currentUser = null;
+
+// ── STATE ──
+let D = null;
+let curMain = 'dash';
+let curForm = 0;
+let curCaseId = null;
+let _draftCaseId = null;
+let chatHistory = [];
+let docxLib = null;
+let currentStage = 1;
 
 // ── AUTH ──
 async function loginEmail() {
@@ -81,6 +74,14 @@ async function logoutUser() {
   // Cases tab
   document.getElementById('cases-list').innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3);font-size:12px;">Chưa có ca nào</div>';
   document.getElementById('cases-main').innerHTML = '<div class="case-detail-empty"><div><div style="font-size:36px;margin-bottom:12px;">🗂</div><div style="font-size:14px;font-weight:600;margin-bottom:6px;">Chọn một ca để xem</div></div></div>';
+  // Analysis tab
+  const eo = document.getElementById('eval-output');
+  if (eo) eo.innerHTML = '<div class="eval-placeholder"><div class="ep-icon">📝</div><div class="ep-title">Báo cáo Phân tích & Đánh giá Tổng hợp</div><div class="ep-sub">Nhấn nút bên trên để AI tạo báo cáo đánh giá toàn diện.</div></div>';
+  const al = document.getElementById('analysis-left');
+  if (al) al.innerHTML = '<div class="eval-placeholder" style="padding:32px 10px;"><div class="ep-icon">📊</div><div class="ep-title">Chưa có ca nào</div><div class="ep-sub">Mở một ca ở tab Dashboard để xem phân tích</div></div>';
+  const fecMsgs = document.getElementById('fec-msgs');
+  if (fecMsgs) fecMsgs.innerHTML = '<div class="fec-hint">VD: "sửa họ tên thành Nguyễn Văn A" · "bổ sung địa chỉ 123 Q.1"</div>';
+  document.getElementById('chat-suggestions').style.display = 'none';
   // Stage / banners
   document.getElementById('closed-banner')?.classList.remove('show');
   updateStageUI();
@@ -96,43 +97,30 @@ async function logoutUser() {
 
 function _onLogin(user) {
   _currentUser = user;
-  window._sessionReset?.(); // bắt đầu đếm session timeout từ đầu
+  window._sessionReset?.();
   document.getElementById('login-overlay').style.display = 'none';
   document.getElementById('user-bar').style.display = 'flex';
   document.getElementById('user-email').textContent = user.email;
-  // Load cases from Supabase
+  // Load cases từ Supabase rồi hiển thị màn hình sạch — user chọn ca từ danh sách
   initStorage().then(() => {
     updateCasesCount();
     renderCaseList();
-    const list = Object.values(loadCases()).sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
-    if (list.length) {
-      curCaseId = list[0].id;
-      currentStage = list[0].currentStage || 1;
-      const entries = list[0].entries || [];
-      if (entries.length) {
-        const latest = entries[entries.length - 1];
-        document.getElementById('dash-notes').value = latest.notes || '';
-        document.getElementById('dash-cc').textContent = (latest.notes || '').length + ' ký tự';
-      }
-      if (list[0].lastAnalysis?.co_ban) {
-        D = list[0].lastAnalysis;
-        document.getElementById('btn-fill').disabled = false;
-        document.getElementById('chat-input').disabled = false;
-        document.getElementById('btn-send').disabled = false;
-      } else {
-        D = null;
-        document.getElementById('btn-fill').disabled = true;
-        document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">💬</div><div style="font-weight:600;">Chuyên gia CTXH sẵn sàng</div><div>Nhập ghi chép và nhấn Phân tích để bắt đầu.</div></div>';
-      }
-    }
-    updateHeader();
+    // Reset dashboard về trạng thái sạch (không auto-load ca cũ)
+    D = null; curCaseId = null; currentStage = 1; chatHistory = [];
+    document.getElementById('dash-notes').value = '';
+    document.getElementById('dash-cc').textContent = '0 ký tự';
+    document.getElementById('btn-fill').disabled = true;
+    document.getElementById('btn-send').disabled = false;
+    document.getElementById('chat-input').disabled = false;
+    document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">💬</div><div style="font-weight:600;margin-bottom:4px;">Chào mừng trở lại!</div><div>Chọn ca từ tab <strong>Danh sách ca</strong> hoặc nhấn <strong>+ Ca mới</strong> để bắt đầu.</div></div>';
+    document.getElementById('hdr-case-name').textContent = '';
+    document.getElementById('hdr-case-date').textContent = '';
+    const dl = document.getElementById('dash-case-label'); if (dl) dl.textContent = '';
+    const fp = document.getElementById('form-preview');
+    if (fp) fp.innerHTML = '<div id="fv" class="fv"><div style="padding:60px 40px;text-align:center;color:var(--t3);"><div style="font-size:48px;margin-bottom:14px;opacity:.3;">📋</div><div style="font-weight:800;font-size:15px;margin-bottom:6px;color:var(--t2)">Chưa có dữ liệu</div><div style="font-size:12.5px;">Phân tích ghi chép trong tab <strong>Dashboard</strong> để điền form</div></div></div>';
+    document.getElementById('closed-banner')?.classList.remove('show');
     updateStageUI();
-    restoreFormChecks();
-    // Render lại report nếu có
-    if (D?._report) renderReport(D._report);
     renderEntriesPanel();
-    applyClosedCaseUI();
-    // Check notifications and stale cases
     setTimeout(() => { checkStaleCases(); showNotifications(); }, 2000);
   });
 }
@@ -757,13 +745,22 @@ function completeStage() {
           cases[curCaseId].status = 'closed';
           cases[curCaseId].closedAt = new Date().toISOString();
           cases[curCaseId].updatedAt = new Date().toISOString();
-          D._status = 'closed';
+          if (D) D._status = 'closed';
           saveCases(cases);
         }
-        updateHeader();
-        renderCaseList();
-        updateCasesCount();
-        applyClosedCaseUI();
+        // Reset dashboard về trạng thái sạch
+        D = null; curCaseId = null; currentStage = 1; chatHistory = [];
+        document.getElementById('dash-notes').value = '';
+        document.getElementById('dash-cc').textContent = '0 ký tự';
+        document.getElementById('btn-fill').disabled = true;
+        document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">✅</div><div style="font-weight:600;margin-bottom:4px;">Đã đóng ca thành công</div><div>Chọn ca khác hoặc nhấn <strong>+ Ca mới</strong> để tiếp tục.</div></div>';
+        document.getElementById('hdr-case-name').textContent = '';
+        document.getElementById('hdr-case-date').textContent = '';
+        const dl = document.getElementById('dash-case-label'); if (dl) dl.textContent = '';
+        document.getElementById('closed-banner')?.classList.remove('show');
+        const fp = document.getElementById('form-preview');
+        if (fp) fp.innerHTML = '<div id="fv" class="fv"><div style="padding:60px 40px;text-align:center;color:var(--t3);"><div style="font-size:48px;margin-bottom:14px;opacity:.3;">✅</div><div style="font-weight:800;font-size:15px;margin-bottom:6px;color:var(--t2)">Ca đã đóng</div><div style="font-size:12.5px;">Chọn ca khác từ <strong>Danh sách ca</strong></div></div></div>';
+        renderCaseList(); updateCasesCount(); updateStageUI(); renderEntriesPanel();
         showNotif('✅ Đã đóng ca thành công!');
       }
     });
@@ -863,7 +860,7 @@ async function runAnalysis() {
     // Giai đoạn 4: chỉ cần extract (không cần parallel report)
     if (currentStage === 4) {
       prog.style.transition = 'width 2.5s'; prog.style.width = '70%';
-      const formRaw = await callAI(extractPrompt, 'Ghi chép NVXH (Cập nhật tiến trình):\n\n' + notesAI, 0, 2000);
+      const formRaw = await callAI(extractPrompt, 'Ghi chép NVXH (Cập nhật tiến trình):\n\n' + notesAI, 0, 3000);
       let appendData = {};
       try { appendData = robustJSON(formRaw); } catch(e) { console.warn('Stage 4 JSON error:', e); }
 
@@ -895,7 +892,7 @@ async function runAnalysis() {
 
       // ★ Thêm báo cáo AI cho GĐ 4
       try {
-        const report4Raw = await callAI(SYS_REPORT_4, 'Ghi chép NVXH (Tiến trình):\n\n' + notesAI + '\n\nDữ liệu cập nhật hiện tại:\n' + JSON.stringify({cap_nhat: D.cap_nhat, ke_hoach: D.ke_hoach}).substring(0, 800), 0.3, 1500);
+        const report4Raw = await callAI(SYS_REPORT_4, 'Ghi chép NVXH (Tiến trình):\n\n' + notesAI + '\n\nDữ liệu hiện tại:\n' + JSON.stringify({cap_nhat: (D.cap_nhat||[]).slice(-3), ke_hoach: D.ke_hoach}).substring(0, 600), 0.3, 2000);
         const report4 = robustJSON(report4Raw);
         D._report = report4;
         D._report._stage = 4;
@@ -933,6 +930,8 @@ async function runAnalysis() {
       D._notes = notes;
       D._currentStage = currentStage;
       if (!D.co_ban) D.co_ban = {};
+
+      _validateData(D);
 
       prog.style.transition = 'width .3s'; prog.style.width = '100%';
       setTimeout(() => { prog.style.width = '0'; prog.style.transition = 'none'; }, 600);
@@ -981,6 +980,62 @@ function renderProgressSummary() {
   if (D?._report) renderReport(D._report);
 }
 // ════════════════════════════════════════════════════════════
+// DATA VALIDATION — cảnh báo dữ liệu bất hợp lý
+// ════════════════════════════════════════════════════════════
+function _validateData(data) {
+  if (!data) return;
+  const warnings = [];
+  const cb = data.co_ban || {};
+  const gd = data.gia_dinh || {};
+  const ncs = gd.nguoi_cham_soc || {};
+
+  // Parse year helper
+  const parseYr = (v) => {
+    if (!v) return null;
+    const m = String(v).match(/\b(19|20)\d{2}\b/);
+    return m ? parseInt(m[0]) : null;
+  };
+
+  const childYr = parseYr(cb.ngay_sinh || cb.tuoi);
+  const careYr  = parseYr(ncs.ngay_sinh);
+
+  if (childYr && careYr) {
+    const diff = childYr - careYr;
+    if (diff < 13)  warnings.push(`⚠️ Tuổi người chăm sóc (${careYr}) và trẻ (${childYr}) bất hợp lý — chênh lệch chỉ ${diff} tuổi.`);
+    if (diff > 75)  warnings.push(`⚠️ Tuổi người chăm sóc (${careYr}) và trẻ (${childYr}) chênh lệch ${diff} tuổi — kiểm tra lại.`);
+  }
+
+  // Check members
+  (gd.thanh_vien || []).forEach(tv => {
+    if (!tv.ho_ten && !tv.quan_he) return;
+    const tvYr = parseYr(tv.nam_sinh);
+    if (childYr && tvYr) {
+      const diff = childYr - tvYr;
+      if (tv.quan_he && /cha|mẹ|bố|ba|mẹ/i.test(tv.quan_he) && diff < 13) {
+        warnings.push(`⚠️ "${tv.ho_ten || tv.quan_he}" (${tvYr}) có thể không hợp lý là cha/mẹ của trẻ (${childYr}).`);
+      }
+    }
+  });
+
+  // Missing critical fields
+  if (!cb.ho_ten) warnings.push('📋 Chưa có họ tên trẻ.');
+  if (!cb.ngay_sinh && !cb.tuoi) warnings.push('📋 Chưa có năm sinh / tuổi trẻ.');
+
+  if (!warnings.length) return;
+
+  // Show as dismissible banner above analysis
+  const eo = document.getElementById('eval-output');
+  if (!eo) return;
+  const existBanner = document.getElementById('_val-banner');
+  if (existBanner) existBanner.remove();
+  const banner = document.createElement('div');
+  banner.id = '_val-banner';
+  banner.style.cssText = 'background:#fff8e1;border:1px solid #f9a825;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;line-height:1.7;';
+  banner.innerHTML = `<div style="font-weight:700;margin-bottom:6px;color:#e65100;">🔍 Cảnh báo dữ liệu</div>${warnings.map(w=>`<div>${w}</div>`).join('')}<div style="text-align:right;margin-top:6px;"><button onclick="this.closest('#_val-banner').remove()" style="background:none;border:none;color:#999;cursor:pointer;font-size:11px;">Đóng ×</button></div>`;
+  eo.insertAdjacentElement('beforebegin', banner);
+}
+
+// ════════════════════════════════════════════════════════════
 // ★★★ REPORT RENDERER v22 — Stage-aware ★★★
 // ════════════════════════════════════════════════════════════
 function renderReport(report) {
@@ -1026,7 +1081,8 @@ function _header(stageName,stageNum,color) {
       <div><div style="font-size:14px;font-weight:900">Báo cáo GĐ ${stageNum} — ${stageName}</div>
       <div style="font-size:10px;opacity:.6;margin-top:2px">${esc(cb.ho_ten||'—')} · ${now}</div></div>
     </div>
-    <div style="font-size:10px;opacity:.6">v22</div></div>`;
+    <button onclick="dlReportDocx()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:5px 12px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">⬇ .docx</button>
+  </div>`;
 }
 function _urgentBanner(report) {
   if (!report.urgent||!report.urgent_reason) return '';
@@ -1599,21 +1655,34 @@ function clearNotes() {
 }
 
 // toggleFormSidebar — toggle class on .forms-tab for CSS grid collapse
-let sidebarVisible = true;
+let sidebarVisible = window.innerWidth > 768;
 function toggleFormSidebar() {
   sidebarVisible = !sidebarVisible;
   const tab = document.querySelector('.forms-tab');
   const btn = document.getElementById('sidebar-toggle');
   const isMobile = window.innerWidth <= 768;
   if (isMobile) {
-    // Mobile: dùng sidebar-shown (mặc định ẩn)
+    // Mobile: overlay sidebar, hidden by default
     if (tab) tab.classList.toggle('sidebar-shown', sidebarVisible);
   } else {
-    // Desktop: dùng sidebar-hidden (mặc định hiện)
+    // Desktop: sidebar visible by default
     if (tab) tab.classList.toggle('sidebar-hidden', !sidebarVisible);
   }
   if (btn) btn.textContent = sidebarVisible ? '☰' : '▶';
 }
+// Reset sidebar state on resize
+window.addEventListener('resize', () => {
+  const isMobile = window.innerWidth <= 768;
+  const tab = document.querySelector('.forms-tab');
+  if (!tab) return;
+  if (!isMobile) {
+    tab.classList.remove('sidebar-shown');
+    if (!sidebarVisible) tab.classList.add('sidebar-hidden');
+  } else {
+    tab.classList.remove('sidebar-hidden');
+    if (!sidebarVisible) tab.classList.remove('sidebar-shown');
+  }
+});
 
 // ════════════════════════════════════════════════════════════
 // CHAT
@@ -1784,7 +1853,7 @@ function showForm(idx) {
   curForm = idx;
   document.querySelectorAll('.form-item').forEach(el => el.classList.toggle('active', parseInt(el.dataset.fi)===idx));
   const fv = document.getElementById('fv');
-  if (!D?.co_ban) {
+  if (!D) {
     fv.innerHTML = '<div style="padding:40px;text-align:center;color:var(--t3);"><div style="font-size:36px;margin-bottom:12px;">📋</div><div style="font-weight:700;margin-bottom:6px;">Chưa có dữ liệu</div><div style="font-size:12px;">Phân tích ghi chép trong tab <strong>Dashboard</strong> trước</div></div>';
     fv.style.display = 'block'; return;
   }
@@ -1804,7 +1873,8 @@ function F(lbl, val, ic='-') {
 }
 
 function Sec(ttl, id, body, ic='📌') {
-  return `<div class="sec"><div class="sec-hd"><div class="sec-hl"><span class="sec-ico">${ic}</span>${ttl}</div><button class="btn-cp" onclick="navigator.clipboard.writeText(document.getElementById('${id}').innerText).then(()=>{this.textContent='✓ Copied';setTimeout(()=>this.textContent='Copy',1400)}).catch(()=>{})">Copy</button></div><div class="sec-bd" id="${id}">${body}</div></div>`;
+  const safeTtl = ttl.replace(/'/g, '&apos;').replace(/"/g, '&quot;');
+  return `<div class="sec"><div class="sec-hd"><div class="sec-hl"><span class="sec-ico">${ic}</span>${ttl}</div><div class="sec-acts"><button class="btn-cp" onclick="navigator.clipboard.writeText(document.getElementById('${id}').innerText).then(()=>{this.textContent='✓ Copied';setTimeout(()=>this.textContent='Copy',1400)}).catch(()=>{})">Copy</button><button class="btn-edit-sec" onclick="(function(){var fc=document.getElementById('fec-collapse');if(fc)fc.style.display='block';var fi=document.getElementById('fec-input');if(fi){fi.value='Sửa mục ${safeTtl}: ';fi.focus();fi.setSelectionRange(9999,9999);}})()">✏️ Sửa</button></div></div><div class="sec-bd" id="${id}">${body}</div></div>`;
 }
 
 function Dv(t) { return `<div class="dv">${t}</div>`; }
@@ -1837,21 +1907,31 @@ function renderFormTab(idx) {
 
   if (idx===0) {
     h+=Sec("A. Thông tin trẻ","s0a",
-      F("Ngày tiếp cận",cb.ngay_tiep_can)+F("Họ tên trẻ",cb.ho_ten)+F("Giới tính",cb.gioi_tinh)+F("Năm sinh",cb.ngay_sinh)+F("Tuổi",cb.tuoi)+
+      F("Ngày tiếp cận",cb.ngay_tiep_can)+F("Nơi tiếp cận",cb.noi_tiep_can)+F("Người tiếp cận",cb.nguoi_tiep_can)+
+      F("Họ tên trẻ",cb.ho_ten)+F("Giới tính",cb.gioi_tinh)+F("Năm sinh",cb.ngay_sinh)+F("Tuổi",cb.tuoi)+
       F("SĐT trẻ",cb.sdt_tre)+F("SĐT người thân",cb.sdt_nguoi_than)+F("Địa chỉ thường trú",cb.dia_chi_thuong_tru)+F("Địa chỉ hiện tại",cb.dia_chi_hien_tai)+
       F("Sống với",cb.song_voi)+F("Nhóm trẻ",cb.nhom_tre));
     const tvR=(gd.thanh_vien||[]).map(tv=>[tv.ho_ten,tv.quan_he,tv.nam_sinh,tv.suc_khoe,tv.nghe_nghiep,tv.ghi_chu]);
     h+=Sec("B. Thông tin gia đình","s0b",
-      Dv("Người chăm sóc chính")+F("Họ tên",ncs.ho_ten)+F("Quan hệ",ncs.quan_he)+F("Năm sinh",ncs.ngay_sinh)+F("Nghề nghiệp",ncs.nghe_nghiep)+F("Sức khỏe",ncs.suc_khoe)+
+      Dv("Người chăm sóc chính")+F("Họ tên",ncs.ho_ten)+F("Quan hệ",ncs.quan_he)+F("Năm sinh",ncs.ngay_sinh)+F("SĐT",ncs.sdt)+F("Nghề nghiệp",ncs.nghe_nghiep)+F("Sức khỏe",ncs.suc_khoe)+
       Dv("Thành viên gia đình")+TBL(["Họ tên","Quan hệ","Năm sinh","SK","Nghề nghiệp","Ghi chú"],tvR)+
-      Dv("Hoàn cảnh")+F("Kinh tế/Nhà ở",[cf(gd.kinh_te),cf(gd.nha_o)].filter(Boolean).join(' | '))+F("Hoàn cảnh",gd.hoan_canh));
+      Dv("Hoàn cảnh gia đình")+F("Loại hình gia đình",gd.loai_hinh)+F("Tình trạng hôn nhân",gd.tinh_trang_hon_nhan)+F("Bầu khí gia đình",gd.bau_khi)+F("Mối quan hệ với trẻ",gd.moi_quan_he_voi_tre)+
+      F("Kinh tế/Nhà ở",[cf(gd.kinh_te),cf(gd.nha_o)].filter(Boolean).join(' | '))+F("Cộng đồng",gd.cong_dong)+F("Quá trình rời gia đình",gd.qua_trinh_roi_gd)+F("Hoàn cảnh",gd.hoan_canh));
     h+=Sec("C. Tình trạng trẻ","s0c",
-      Dv("Lao động")+F("Công việc",tt.cong_viec)+F("Thời gian (h/ngày)",tt.thoi_gian_lam_viec)+
+      Dv("Lao động")+F("Công việc",tt.cong_viec)+F("Thời gian (h/ngày)",tt.thoi_gian_lam_viec)+F("Bắt đầu làm từ",tt.bat_dau_lam_tu)+
       Dv("Giấy tờ")+F("Khai sinh",[cf(gks.co),cf(gks.ly_do)].filter(Boolean).join(' — '))+F("Thường trú",[cf(tr.co),cf(tr.ly_do)].filter(Boolean).join(' — '))+F("CCCD",[cf(cc.co),cf(cc.ly_do)].filter(Boolean).join(' — '))+
-      Dv("Giáo dục")+F("Đang học",cf(hv.lop)?'Lớp '+cf(hv.lop)+(cf(hv.truong)?' — '+cf(hv.truong):''):'')+F("Bỏ học",cf(hv.bo_hoc)?'Lớp '+cf(hv.bo_hoc):'')+F("Lý do bỏ học",hv.ly_do_bo_hoc)+
-      Dv("Sức khỏe")+F("Tình trạng",sk.tinh_trang)+F("BHYT",sk.bhyt)+
+      Dv("Giáo dục")+F("Đang học",cf(hv.lop)?'Lớp '+cf(hv.lop)+(cf(hv.truong)?' — '+cf(hv.truong):''):'')+F("Kết quả học tập",hv.ket_qua)+F("Bỏ học",cf(hv.bo_hoc)?'Lớp '+cf(hv.bo_hoc)+(cf(hv.nam_bo_hoc)?' ('+cf(hv.nam_bo_hoc)+')':''):'')+F("Lý do bỏ học",hv.ly_do_bo_hoc)+F("Học nghề",cf(hv.hoc_nghe)?(cf(hv.nghe_da_hoc)||'Có'):'Không')+F("Sở thích",hv.so_thich)+F("Ước mơ",hv.uoc_mo)+
+      Dv("Sức khỏe")+F("Tình trạng",sk.tinh_trang)+F("Cân nặng (kg)",sk.can_nang)+F("Chiều cao (cm)",sk.chieu_cao)+F("Bệnh trong 6 tháng",sk.benh_trong_6t)+F("Được khám",sk.duoc_kham)+F("BHYT",sk.bhyt)+
       Dv("Tâm lý")+F("Tăng động",tl.tang_dong)+F("Bi quan",tl.bi_quan)+F("Tự tổn thương",tl.tu_ton_thuong)+F("Mô tả",tl.mo_ta)+
-      Dv("Nhận xét NVXH")+F("Nhận xét",dg.nhan_xet_nvxh));
+      (()=>{ const dass=(tt.dass||null); if(!dass) return ''; const dL=_getDASSSeverity('D',dass.D||0),aL=_getDASSSeverity('A',dass.A||0),sL=_getDASSSeverity('S',dass.S||0); return Dv('DASS-'+dass.version+' ('+dass.date+')')+`<div class="dass-form-result"><span class="dass-fb" style="color:${dL.c};border-color:${dL.c};background:${dL.c}15">😔 TC: ${dass.D} — ${dL.lv}</span><span class="dass-fb" style="color:${aL.c};border-color:${aL.c};background:${aL.c}15">😰 LA: ${dass.A} — ${aL.lv}</span><span class="dass-fb" style="color:${sL.c};border-color:${sL.c};background:${sL.c}15">😤 CT: ${dass.S} — ${sL.lv}</span></div>`; })());
+    h+=Sec("D. Đánh giá ban đầu","s0d",
+      F("Vấn đề thể chất",dg.van_de_the_chat)+F("Vấn đề tâm lý",dg.van_de_tam_ly)+F("Vấn đề nhận thức",dg.van_de_nhan_thuc)+
+      F("Nhu cầu thể chất",dg.nhu_cau_the_chat)+F("Nhu cầu tâm lý",dg.nhu_cau_tam_ly)+F("Nhu cầu nhận thức",dg.nhu_cau_nhan_thuc)+
+      F("Yêu cầu của trẻ",dg.yeu_cau_tre)+F("Yêu cầu gia đình",dg.yeu_cau_gia_dinh)+
+      F("Ưu thế trẻ",dg.uu_the_tre)+F("Ưu thế gia đình",dg.uu_the_gia_dinh)+F("Nguồn lực trẻ",dg.nguon_luc_tre)+
+      F("Nguy cơ",dg.nguy_co)+F("Mức khẩn cấp",dg.muc_khan_cap)+F("Yếu tố bảo vệ",dg.yeu_to_bao_ve)+F("Nhận xét NVXH",dg.nhan_xet_nvxh));
+    h+=Sec("E. Nguồn lực xã hội","s0e",
+      F("Quan phường/Chính quyền",nlxh.quan_phuong)+F("Tôn giáo/Chùa",nlxh.ton_giao)+F("Tổ chức/Hội đoàn",nlxh.to_chuc)+F("Đường đi kết nối",nlxh.duong_di),'🤝');
   } else if (idx===1) {
     h+=Sec("A. Thông tin trẻ","s1a",F("Họ tên",cb.ho_ten)+F("Giới tính",cb.gioi_tinh)+F("Năm sinh",cb.ngay_sinh)+F("Tuổi",cb.tuoi)+F("Sống với",cb.song_voi)+F("Nhóm trẻ",cb.nhom_tre));
     h+=Sec("B. Hoàn cảnh gia đình","s1b",F("Hoàn cảnh",gd.hoan_canh));
@@ -1870,7 +1950,7 @@ function renderFormTab(idx) {
   } else if (idx===5) {
     const ncR=(kh.nhu_cau_ho_tro||[]).map((nc,i)=>[i+1,nc.loai,nc.uu_tien||'',nc.muc_tieu||'']);
     h+=Sec("Nhu cầu hỗ trợ","s5a",TBL(["TT","Nhu cầu","Ưu tiên","Mục tiêu"],ncR));
-    h+=Sec("Hoạt động","s5b",TBL(["Mục tiêu","Hoạt động","Thời gian","Nguồn lực","GĐ","CS"],(kh.hoat_dong||[]).map(h=>[h.muc_tieu_so,h.noi_dung,h.thoi_gian,h.nguon_luc,h.nguon_luc_gd,h.nguon_luc_cs])));
+    h+=Sec("Hoạt động","s5b",TBL(["Mục tiêu","Hoạt động","Ưu tiên","Người phụ trách","Thời gian","Nguồn lực"],(kh.hoat_dong||[]).map(h=>[h.muc_tieu_so,h.noi_dung,h.uu_tien||'',h.nguoi_phu_trach||'',h.thoi_gian,h.nguon_luc])));
     h+=Sec("Nguồn lực","s5c",F("",kh.nguon_luc_ket_noi));
     if (kh.cam_ket_gia_dinh || kh.cam_ket_tre || kh.cam_ket_nvxh) {
       h+=Sec("Cam kết 2 phía","s5d",
@@ -2290,7 +2370,20 @@ function _closeCaseFromList(id) {
         cases[id].updatedAt = new Date().toISOString();
       }
       saveCases(cases);
-      if (curCaseId === id && D) { D._status = 'closed'; applyClosedCaseUI(); }
+      if (curCaseId === id) {
+        // Reset dashboard về trạng thái sạch sau khi đóng ca
+        D = null; curCaseId = null; currentStage = 1; chatHistory = [];
+        document.getElementById('dash-notes').value = '';
+        document.getElementById('dash-cc').textContent = '0 ký tự';
+        document.getElementById('btn-fill').disabled = true;
+        document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">✅</div><div style="font-weight:600;margin-bottom:4px;">Đã đóng ca thành công</div><div>Chọn ca khác hoặc nhấn <strong>+ Ca mới</strong> để tiếp tục.</div></div>';
+        document.getElementById('hdr-case-name').textContent = '';
+        document.getElementById('hdr-case-date').textContent = '';
+        document.getElementById('closed-banner')?.classList.remove('show');
+        const fp = document.getElementById('form-preview');
+        if (fp) fp.innerHTML = '<div id="fv" class="fv"><div style="padding:60px 40px;text-align:center;color:var(--t3);"><div style="font-size:48px;margin-bottom:14px;opacity:.3;">✅</div><div style="font-weight:800;font-size:15px;margin-bottom:6px;color:var(--t2)">Ca đã đóng</div><div style="font-size:12.5px;">Chọn ca khác từ <strong>Danh sách ca</strong></div></div></div>';
+        updateStageUI();
+      }
       renderCaseList(); showCaseDetail(id);
       showNotif('✅ Đã đóng ca');
     }
@@ -2322,13 +2415,19 @@ function loadCaseIntoApp(id) {
   curCaseId = id;
   // ★ Khôi phục giai đoạn đã lưu
   currentStage = c.currentStage || (c.lastAnalysis?._currentStage) || 1;
-  if (c.lastAnalysis?.co_ban) {
+  // ★ FIX: load D nếu có bất kỳ lastAnalysis nào (không chỉ khi co_ban tồn tại)
+  if (c.lastAnalysis) {
     D = c.lastAnalysis;
     if (!Array.isArray(D.cap_nhat)) D.cap_nhat = [];
-    document.getElementById('btn-fill').disabled = false;
-    document.getElementById('chat-input').disabled = false;
-    document.getElementById('btn-send').disabled = false;
-    renderReport(D._report);
+    if (D.co_ban && Object.keys(D.co_ban).length) {
+      document.getElementById('btn-fill').disabled = false;
+      document.getElementById('chat-input').disabled = false;
+      document.getElementById('btn-send').disabled = false;
+    }
+    if (D._report) renderReport(D._report);
+  } else {
+    D = null;
+    document.getElementById('btn-fill').disabled = true;
   }
   // ★ Luôn hiển thị ghi chép mới nhất vào textarea để NVXH có thể xem và sửa
   const entries = c.entries || [];
@@ -2452,6 +2551,190 @@ function importCasesJSON() {
 // DOCX EXPORT ENGINE v14.1 — FULL FIELDS + PRO FORMATTING
 // Chuẩn văn phong hành chính Việt Nam
 // ════════════════════════════════════════════════════════════
+// EXPORT BÁO CÁO PHÂN TÍCH AI → .docx
+// ════════════════════════════════════════════════════════════
+async function dlReportDocx() {
+  if (!D || !D._report) { showNotif('⚠️ Chưa có báo cáo phân tích', 'warn'); return; }
+  let lib;
+  try { lib = await loadDocxLib(); } catch(e) { showNotif('❌ ' + e.message, 'err'); return; }
+  showNotif('📄 Đang tạo báo cáo Word...');
+  const imgs = await Promise.all([fetchImg(LOGO_URL), fetchImg(FOOTER_URL)]);
+  try {
+    const r = D._report, stage = currentStage, cb = D.co_ban||{};
+    const { Document, Paragraph, TextRun, ImageRun, AlignmentType, BorderStyle, WidthType } = lib;
+    const PW=11906, MG=1134, CW=PW-2*MG, TNR='Times New Roman', NAVY='0F2D6B';
+    const LS = { value:276, rule:'auto' };
+    const Tx = (t,o) => new TextRun(Object.assign({text:t||'',font:TNR,size:24},o||{}));
+    const Pg = (ch,o) => new Paragraph(Object.assign({children:Array.isArray(ch)?ch:[ch],spacing:{before:60,after:50,line:LS.value}},o||{}));
+    const SH = (t) => new Paragraph({children:[Tx(t,{bold:true,color:NAVY,size:26})],spacing:{before:300,after:100,line:LS.value},border:{bottom:{style:BorderStyle.SINGLE,size:3,color:NAVY}}});
+    const BL = (items) => (items||[]).map(i=>new Paragraph({children:[Tx('• '+String(i||''),{color:'1E293B'})],spacing:{before:30,after:30,line:LS.value}}));
+    const HR = () => new Paragraph({border:{bottom:{style:BorderStyle.SINGLE,size:1,color:'CCCCCC'}},spacing:{before:160,after:80}});
+    const SN = {1:'TIẾP CẬN BAN ĐẦU',2:'VÃNG GIA & ĐÁNH GIÁ',3:'KẾ HOẠCH CAN THIỆP',4:'TIẾN TRÌNH CẬP NHẬT',5:'KẾT THÚC CA'};
+
+    const body = [];
+
+    // ── Logo header ──
+    if (imgs[0]) {
+      try {
+        body.push(new Paragraph({children:[new ImageRun({data:imgs[0],transformation:{width:50,height:50},type:'png'})],alignment:AlignmentType.LEFT,spacing:{before:0,after:60}}));
+      } catch(e) {}
+    }
+    body.push(Pg([Tx('BÁO CÁO PHÂN TÍCH GĐ '+stage+' — '+(SN[stage]||''),{bold:true,color:NAVY,size:32})],{alignment:AlignmentType.CENTER}));
+    body.push(Pg([Tx((cb.ho_ten||'—')+'   |   Ngày: '+new Date().toLocaleDateString('vi-VN'),{size:20,color:'666666',italics:true})],{alignment:AlignmentType.CENTER}));
+    body.push(new Paragraph({border:{bottom:{style:BorderStyle.SINGLE,size:4,color:NAVY}},spacing:{before:80,after:120}}));
+
+    // ── Stage 1 ──
+    if (stage===1) {
+      const rm=r.risk_matrix||{}, nw=r.needs_vs_wants||{}, pf=r.parentification||{};
+      body.push(SH('I. MA TRẬN RỦI RO ĐA CHIỀU'));
+      body.push(Pg([Tx('Mức rủi ro tổng thể: ',{bold:true}),Tx(r.risk||'?',{bold:true,color:r.risk==='Cao'?'DC2626':r.risk==='Trung bình'?'D97706':'059669'})]));
+      if (r.risk_reason) body.push(Pg([Tx(r.risk_reason,{italics:true,color:'555555',size:22})]));
+      [['an_toan_the_chat','An toàn Thể chất'],['an_toan_tam_ly','An toàn Tâm lý'],['moi_truong','Môi trường Sống'],['giao_duc','Giáo dục'],['he_thong_bao_ve','Hệ thống Bảo vệ']].forEach(([k,v])=>{
+        const o=rm[k]||{}; body.push(Pg([Tx('• '+v+': ',{bold:true}),Tx('['+( o.level||'?')+']  '),Tx(o.detail||'',{color:'555555',size:22})]));
+      });
+      body.push(SH('II. DẤU HIỆU NGUY HIỂM (RED FLAGS)'));
+      body.push(...BL(r.red_flags));
+      if (pf.detected) {
+        body.push(SH('III. PHỤ MẪU HÓA'));
+        body.push(Pg([Tx('Loại: ',{bold:true}),Tx(pf.type||'')]));
+        body.push(Pg([Tx(pf.description||'',{color:'333333'})]));
+      }
+      body.push(SH(pf.detected?'IV. NHU CẦU & YÊU CẦU':'III. NHU CẦU & YÊU CẦU'));
+      if (nw.needs?.length) { body.push(Pg([Tx('Nhu cầu khách quan:',{bold:true})])); body.push(...BL(nw.needs)); }
+      if (nw.wants?.length) { body.push(Pg([Tx('Yêu cầu chủ quan:',{bold:true})])); body.push(...BL(nw.wants)); }
+      body.push(SH(pf.detected?'V. ƯU THẾ':'IV. ƯU THẾ'));
+      body.push(...BL(r.strengths));
+      body.push(SH(pf.detected?'VI. ĐỀ XUẤT':'V. ĐỀ XUẤT CAN THIỆP'));
+      (r.suggestions||[]).forEach((s,i)=>{
+        body.push(Pg([Tx((i+1)+'. [Ưu tiên '+s.priority+'] '+( s.action||''),{bold:true})]));
+        if (s.reason) body.push(Pg([Tx('   Lý do: '+s.reason,{color:'555555',size:22})]));
+        if (s.who||s.timeline) body.push(Pg([Tx('   Người thực hiện: '+(s.who||'—')+'  ·  Thời hạn: '+(s.timeline||'—'),{color:'555555',size:22})]));
+      });
+      body.push(SH(pf.detected?'VII. CÂU HỎI TIẾP THEO':'VI. CÂU HỎI TIẾP THEO'));
+      body.push(...BL(r.next_questions));
+    }
+
+    // ── Stage 2 ──
+    else if (stage===2) {
+      const he=r.home_environment||{}, fd=r.family_dynamics||{}, vs=r.vs_stage1||{}, nw=r.needs_updated||{};
+      body.push(SH('I. CẬP NHẬT MỨC RỦI RO'));
+      body.push(Pg([Tx('Hiện tại: ',{bold:true}),Tx(r.risk_current||'?',{bold:true,color:'DC2626'}),Tx('  ('+( r.risk_update||'Không đổi')+')',{color:'888888'})]));
+      if (r.risk_change_reason) body.push(Pg([Tx(r.risk_change_reason,{color:'555555',italics:true,size:22})]));
+      body.push(SH('II. MÔI TRƯỜNG NHÀ Ở'));
+      body.push(Pg([Tx('Mức an toàn: ',{bold:true}),Tx(he.safety_level||'?')]));
+      if (he.key_observations?.length) { body.push(Pg([Tx('Quan sát:',{bold:true})])); body.push(...BL(he.key_observations)); }
+      if (he.concerns?.length) { body.push(Pg([Tx('Mối lo ngại:',{bold:true})])); body.push(...BL(he.concerns)); }
+      body.push(SH('III. ĐÁNH GIÁ GIA ĐÌNH'));
+      body.push(Pg([Tx('Năng lực chăm sóc: ',{bold:true}),Tx(fd.caregiver_capacity||'?')]));
+      body.push(Pg([Tx('Chất lượng quan hệ: ',{bold:true}),Tx(fd.relationship_quality||'?')]));
+      if (fd.protective_factors?.length) { body.push(Pg([Tx('Yếu tố bảo vệ:',{bold:true})])); body.push(...BL(fd.protective_factors)); }
+      if (fd.risk_factors?.length) { body.push(Pg([Tx('Yếu tố nguy cơ:',{bold:true})])); body.push(...BL(fd.risk_factors)); }
+      body.push(SH('IV. SO VỚI GĐ 1'));
+      if (vs.confirmed?.length) { body.push(Pg([Tx('✓ Xác nhận:',{bold:true})])); body.push(...BL(vs.confirmed)); }
+      if (vs.new_findings?.length) { body.push(Pg([Tx('+ Phát hiện mới:',{bold:true})])); body.push(...BL(vs.new_findings)); }
+      if (vs.contradictions?.length) { body.push(Pg([Tx('≠ Mâu thuẫn:',{bold:true})])); body.push(...BL(vs.contradictions)); }
+      body.push(SH('V. CÂU HỎI TIẾP THEO'));
+      body.push(...BL(r.next_questions));
+    }
+
+    // ── Stage 3 ──
+    else if (stage===3) {
+      const pa=r.plan_assessment||{}, rr=r.resources_review||{};
+      body.push(SH('I. ĐÁNH GIÁ KẾ HOẠCH'));
+      body.push(Pg([Tx('Tính khả thi: ',{bold:true}),Tx(pa.feasibility||'?')]));
+      body.push(Pg([Tx('Mức độ tham gia của GĐ: ',{bold:true}),Tx(r.family_engagement||'?')]));
+      body.push(Pg([Tx('Đánh giá thời gian: ',{bold:true}),Tx(r.timeline_assessment||'?')]));
+      if (pa.strengths?.length) { body.push(Pg([Tx('Điểm mạnh:',{bold:true})])); body.push(...BL(pa.strengths)); }
+      if (pa.gaps?.length) { body.push(Pg([Tx('Thiếu sót:',{bold:true})])); body.push(...BL(pa.gaps)); }
+      if (pa.risks?.length) { body.push(Pg([Tx('Rủi ro:',{bold:true})])); body.push(...BL(pa.risks)); }
+      body.push(SH('II. NHẬN XÉT TỪNG MỤC TIÊU'));
+      (r.goals_review||[]).forEach(g=>{
+        body.push(Pg([Tx('• '+(g.goal||''),{bold:true}),Tx('  →  Khả thi: '+(g.realistic?'Có':'Không'),{color:g.realistic?'059669':'DC2626'})]));
+        if (g.comment) body.push(Pg([Tx('   '+g.comment,{color:'555555',size:22})]));
+      });
+      body.push(SH('III. NGUỒN LỰC'));
+      if (rr.available?.length) { body.push(Pg([Tx('Sẵn có:',{bold:true})])); body.push(...BL(rr.available)); }
+      if (rr.missing?.length) { body.push(Pg([Tx('Còn thiếu:',{bold:true})])); body.push(...BL(rr.missing)); }
+      if (rr.suggestions?.length) { body.push(Pg([Tx('Đề xuất:',{bold:true})])); body.push(...BL(rr.suggestions)); }
+      if ((r.priority_order||[]).length) { body.push(SH('IV. THỨ TỰ ƯU TIÊN')); body.push(...BL(r.priority_order)); }
+    }
+
+    // ── Stage 4 ──
+    else if (stage===4) {
+      const wb=r.child_wellbeing||{}, ns=r.next_session||{}, pa=r.plan_adjustment||{};
+      body.push(SH('I. WELLBEING TRẺ'));
+      [['Thể chất',wb.physical],['Tâm lý',wb.psychological],['Giáo dục',wb.education]].forEach(([lbl,val])=>{
+        body.push(Pg([Tx(lbl+': ',{bold:true}),Tx(val||'Chưa đánh giá')]));
+      });
+      body.push(SH('II. TIẾN ĐỘ MỤC TIÊU'));
+      (r.goals_progress||[]).forEach(g=>{
+        const c={'Đạt':'059669','Đang tiến hành':'D97706','Chưa đạt':'DC2626','Bỏ qua':'888888'}[g.status]||'333333';
+        body.push(Pg([Tx('• ['+( g.status||'?')+'] ',{bold:true,color:c}),Tx(g.goal||'',{bold:true})]));
+        if (g.evidence) body.push(Pg([Tx('   📌 Bằng chứng: '+g.evidence,{color:'059669',size:22})]));
+        if (g.comment) body.push(Pg([Tx('   '+g.comment,{color:'555555',size:22})]));
+      });
+      if ((r.positive_changes||[]).length) { body.push(SH('III. THAY ĐỔI TÍCH CỰC')); body.push(...BL(r.positive_changes)); }
+      if ((r.barriers||[]).length) { body.push(SH('IV. RÀO CẢN')); body.push(...BL(r.barriers)); }
+      if (pa.needed && pa.suggestions?.length) { body.push(SH('V. ĐIỀU CHỈNH KẾ HOẠCH')); body.push(...BL(pa.suggestions)); }
+      body.push(SH('VI. ĐỊNH HƯỚNG BUỔI TIẾP THEO'));
+      if (ns.focus) body.push(Pg([Tx(ns.focus,{bold:true})]));
+      body.push(...BL(ns.actions));
+    }
+
+    // ── Stage 5 ──
+    else if (stage===5) {
+      const oc=r.outcomes||{}, cs=r.child_status_final||{}, rec=r.recommendations||{};
+      body.push(SH('I. TÓM TẮT TOÀN CA'));
+      if (r.case_summary) body.push(Pg([Tx(r.case_summary,{color:'1E293B'})]));
+      body.push(SH('II. KẾT QUẢ ĐẠT ĐƯỢC'));
+      body.push(Pg([Tx('Tỉ lệ đạt mục tiêu: ',{bold:true}),Tx(oc.achievement_rate||'?',{bold:true,color:oc.achievement_rate==='Cao'?'059669':oc.achievement_rate==='Thấp'?'DC2626':'D97706'})]));
+      if (oc.achieved?.length) { body.push(Pg([Tx('✅ Đạt được:',{bold:true,color:'059669'})])); body.push(...BL(oc.achieved)); }
+      if (oc.partial?.length) { body.push(Pg([Tx('⚡ Đạt một phần:',{bold:true,color:'D97706'})])); body.push(...BL(oc.partial)); }
+      if (oc.not_achieved?.length) { body.push(Pg([Tx('❌ Chưa đạt:',{bold:true,color:'DC2626'})])); body.push(...BL(oc.not_achieved)); }
+      body.push(SH('III. TÌNH TRẠNG TRẺ KHI ĐÓNG CA'));
+      body.push(Pg([Tx('Mức độ an toàn: ',{bold:true}),Tx(cs.safety||'?',{color:cs.safety==='An toàn'?'059669':'D97706',bold:true})]));
+      body.push(Pg([Tx('Wellbeing tổng thể: ',{bold:true}),Tx(cs.wellbeing||'?')]));
+      if (cs.family_situation) body.push(Pg([Tx('Tình trạng gia đình: ',{bold:true}),Tx(cs.family_situation)]));
+      if ((r.key_turning_points||[]).length) { body.push(SH('IV. ĐIỂM NGOẶT QUAN TRỌNG')); body.push(...BL(r.key_turning_points)); }
+      if ((r.lessons_learned||[]).length) { body.push(SH('V. BÀI HỌC KINH NGHIỆM')); body.push(...BL(r.lessons_learned)); }
+      body.push(SH('VI. KHUYẾN NGHỊ'));
+      if (rec.for_child?.length) { body.push(Pg([Tx('Cho trẻ:',{bold:true})])); body.push(...BL(rec.for_child)); }
+      if (rec.for_family?.length) { body.push(Pg([Tx('Cho gia đình:',{bold:true})])); body.push(...BL(rec.for_family)); }
+      if (rec.for_organization?.length) { body.push(Pg([Tx('Cho tổ chức:',{bold:true})])); body.push(...BL(rec.for_organization)); }
+      if (r.follow_up_needed) {
+        body.push(SH('VII. KẾ HOẠCH THEO DÕI SAU CA'));
+        body.push(Pg([Tx(r.follow_up_plan||'Cần xác định kế hoạch theo dõi',{color:'1E293B'})]));
+      }
+    }
+
+    // ── Ghi chú giám sát (mọi giai đoạn) ──
+    if ((r.supervision_notes||[]).length) {
+      body.push(SH('GHI CHÚ GIÁM SÁT VIÊN'));
+      body.push(...BL(r.supervision_notes));
+    }
+    body.push(HR());
+    body.push(Pg([Tx('Cơ sở Thảo Đàn — Trung tâm Dịch vụ Xã hội TP.HCM',{size:20,color:'888888',italics:true})],{alignment:AlignmentType.CENTER}));
+
+    // Footer image
+    let footerSection={};
+    if (imgs[1]) {
+      try {
+        const {Footer:FC}=lib;
+        footerSection={default:new FC({children:[new Paragraph({children:[new ImageRun({data:imgs[1],transformation:{width:794,height:79},type:'png'})],alignment:AlignmentType.CENTER})]})};
+      } catch(e){}
+    }
+    const doc=new Document({sections:[{properties:{page:{size:{width:PW,height:16838},margin:{top:MG,right:MG,bottom:720,left:MG,footer:0}}},footers:footerSection,children:body}]});
+    const blob=await lib.Packer.toBlob(doc);
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    const cn=(cb.ho_ten||'Ca').replace(/\s+/g,'_');
+    a.href=url; a.download='ThaoDan_BaoCao_GD'+stage+'_'+cn+'.docx'; a.click();
+    URL.revokeObjectURL(url);
+    showNotif('✅ Đã xuất báo cáo GĐ '+stage);
+  } catch(e) { showNotif('❌ '+e.message,'err'); console.error(e); }
+}
+
+// ════════════════════════════════════════════════════════════
 const FF=["Form0_Ho_so_xa_hoi","Form1_Phieu_tiep_can","Form2_Phuc_trinh_vang_gia","Form3a_Danh_gia_khan_cap","Form3b_Danh_gia_nhu_cau","Form4_Ke_hoach_can_thiep","Form5_Tien_do_thuc_hien","Form6_Cap_nhat_tien_trinh","Form7_Phieu_chuyen_gui","Form8_Phieu_ket_thuc_ca","BaoCao_QLTH"];
 
 async function loadDocxLib(){
@@ -2504,7 +2787,7 @@ async function dlDocx(fi){
   }catch(e){showNotif('❌ '+e.message,'err');}
 }
 
-async function buildDocx(fi,logoData,footerData){
+async function buildDocx(fi,logoData,footerData,_collector){
   const lib=docxLib;
   const{Document,Paragraph,TextRun,Table,TableRow,TableCell,AlignmentType,BorderStyle,WidthType,ShadingType,VerticalAlign,ImageRun}=lib;
   const PW=11906,PH2=16838,MG=1134,CW=11906-2*1134;
@@ -3236,7 +3519,47 @@ async function buildDocx(fi,logoData,footerData){
     }catch(e){}
   }
 
+  // _collector: nếu truyền vào array, ghi body+footer vào đó thay vì trả Document (dùng cho exportAllDocx)
+  if (_collector) { _collector.push({ body, footerSection }); return null; }
   return new Document({sections:[{properties:{page:{size:{width:PW,height:PH2},margin:{top:MG,right:MG,bottom:720,left:MG,footer:0}}},footers:footerSection,children:body}]});
+}
+
+// ════════════════════════════════════════════════════════════
+// EXPORT BỘ HỒ SƠ ĐẦY ĐỦ — 1 file .docx chứa tất cả biểu mẫu
+// ════════════════════════════════════════════════════════════
+async function exportAllDocx() {
+  if (!D) { showNotif('⚠️ Chưa có dữ liệu — mở ca trước', 'warn'); return; }
+  const btn = document.getElementById('btn-export-all-docx');
+  const origTxt = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Đang tạo...'; }
+  let lib;
+  try { lib = await loadDocxLib(); } catch(e) {
+    showNotif('❌ ' + e.message, 'err');
+    if (btn) { btn.disabled = false; btn.innerHTML = origTxt; }
+    return;
+  }
+  showNotif('📄 Đang tạo bộ hồ sơ đầy đủ...');
+  const imgs = await Promise.all([fetchImg(LOGO_URL), fetchImg(FOOTER_URL)]);
+  try {
+    const pageProps = { size:{width:11906,height:16838}, margin:{top:1134,right:1134,bottom:720,left:1134,footer:0} };
+    const sections = [];
+    // Forms 0–9 (10 = báo cáo tổng hợp cuối danh sách)
+    for (const fi of [0,1,2,3,4,5,6,7,8,9]) {
+      const col = [];
+      await buildDocx(fi, imgs[0], imgs[1], col);
+      if (col[0]) sections.push({ properties:{ page: pageProps }, footers: col[0].footerSection, children: col[0].body });
+    }
+    if (!sections.length) throw new Error('Không có biểu mẫu nào để xuất');
+    const doc = new lib.Document({ sections });
+    const blob = await lib.Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const childName = (D.co_ban?.ho_ten || 'BoDayDu').replace(/\s+/g,'_');
+    a.href = url; a.download = 'ThaoDan_' + childName + '_BoDayDu.docx'; a.click();
+    URL.revokeObjectURL(url);
+    showNotif('✅ Đã xuất bộ hồ sơ đầy đủ (10 biểu mẫu)');
+  } catch(e) { showNotif('❌ ' + e.message, 'err'); console.error(e); }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = origTxt; } }
 }
 // ════════════════════════════════════════════════════════════
 // FEATURE 4.1 — Export ca ra file JSON (backup)
@@ -3868,6 +4191,220 @@ document.addEventListener('DOMContentLoaded', () => {
   })();
 
 // ════════════════════════════════════════════════════════════
+// DASS-42/21 — Thang đo Trầm cảm, Lo âu, Căng thẳng
+// Items 1-21 of DASS-42 are identical to DASS-21 (standard)
+// For DASS-21: raw score × 2 to normalize to DASS-42 scale
+// ════════════════════════════════════════════════════════════
+
+const DASS_Q = [
+  // [question_text, subscale]  subscale: D=trầm cảm, A=lo âu, S=căng thẳng
+  // Items 1-21 = DASS-21 subset; Items 1-42 = DASS-42
+  ['Tôi thấy khó mà thoải mái được.','S'],
+  ['Tôi bị khô miệng.','A'],
+  ['Tôi dường như không có cảm giác tích cực nào cả.','D'],
+  ['Tôi bị rối loạn hơi thở (thở gấp, khó thở kể cả khi không gắng sức).','A'],
+  ['Tôi thấy thật khó bắt tay vào công việc.','D'],
+  ['Tôi có xu hướng phản ứng thái quá với các tình huống.','S'],
+  ['Tôi bị run tay chân.','A'],
+  ['Tôi cảm thấy mình tiêu tốn rất nhiều sức lực.','S'],
+  ['Tôi lo lắng về những tình huống có thể khiến tôi hoảng sợ hoặc tự làm mình ngốc nghếch.','A'],
+  ['Tôi cảm thấy không có gì để mong đợi cả.','D'],
+  ['Tôi thấy bản thân dễ bị kích động.','S'],
+  ['Tôi thấy khó mà thư giãn được.','S'],
+  ['Tôi cảm thấy chán nản và thất vọng.','D'],
+  ['Tôi không thể chịu được việc có điều gì đó cản trở công việc tôi đang làm.','S'],
+  ['Tôi cảm thấy sắp hoảng loạn.','A'],
+  ['Tôi không thấy hào hứng với bất kỳ điều gì cả.','D'],
+  ['Tôi cảm thấy bản thân chẳng đáng là bao.','D'],
+  ['Tôi cảm thấy mình khá dễ tự ái, dễ phật ý.','S'],
+  ['Tôi nhận thức được nhịp tim dù không gắng sức (tim đập nhanh, loạn nhịp).','A'],
+  ['Tôi cảm thấy sợ hãi vô cớ.','A'],
+  ['Tôi cảm thấy cuộc sống chẳng có ý nghĩa gì.','D'],
+  // Items 22-42 (DASS-42 only)
+  ['Tôi thấy bản thân khó mà bình tĩnh lại được.','S'],
+  ['Tôi thấy khó nuốt.','A'],
+  ['Tôi không cảm nhận được niềm vui từ những điều tốt đẹp đang diễn ra.','D'],
+  ['Tôi nhận thấy sự gián đoạn trong nhịp thở của mình (đôi khi thở hổn hển).','A'],
+  ['Tôi cảm thấy xuống tinh thần và buồn bã.','D'],
+  ['Tôi thấy khó bình tâm trước bất kỳ gián đoạn nào.','S'],
+  ['Tôi cảm thấy sắp bị "vỡ tim" (tim đập dữ dội).','A'],
+  ['Tôi thấy bản thân thiếu kiên nhẫn khi bị điều gì trì hoãn.','S'],
+  ['Tôi cảm thấy yếu ớt (gần ngất xỉu).','A'],
+  ['Tôi thấy khó có thể tìm thấy điều gì tốt đẹp trong cuộc sống.','D'],
+  ['Tôi thấy thật khó chấp nhận việc bị gián đoạn khi đang làm gì đó.','S'],
+  ['Tôi cảm thấy căng thẳng.','S'],
+  ['Tôi cảm thấy mình vô dụng.','D'],
+  ['Tôi không thể chịu đựng những điều cản trở tôi tiếp tục công việc đang làm.','S'],
+  ['Tôi cảm thấy sợ hãi.','A'],
+  ['Tôi không thấy bất kỳ điều gì trong tương lai để hy vọng.','D'],
+  ['Tôi cảm thấy cuộc sống không có ý nghĩa.','D'],
+  ['Tôi thấy mình đang bị kích động.','S'],
+  ['Tôi lo lắng về những tình huống có thể khiến tôi hoảng sợ hoặc bị chế nhạo.','A'],
+  ['Tôi cảm thấy run rẩy (tay chân run).','A'],
+  ['Tôi thấy khó mà tận hưởng những điều tôi đang làm.','D'],
+];
+
+// Severity cutoffs (DASS-42 normalized scale)
+const DASS_LEVELS = {
+  D:[{max:9,lv:'Bình thường',c:'#16a34a',bg:'#f0fdf4'},{max:13,lv:'Nhẹ',c:'#ca8a04',bg:'#fefce8'},{max:20,lv:'Trung bình',c:'#ea580c',bg:'#fff7ed'},{max:27,lv:'Nặng',c:'#dc2626',bg:'#fef2f2'},{max:99,lv:'Rất nặng',c:'#7f1d1d',bg:'#fee2e2'}],
+  A:[{max:7,lv:'Bình thường',c:'#16a34a',bg:'#f0fdf4'},{max:9,lv:'Nhẹ',c:'#ca8a04',bg:'#fefce8'},{max:14,lv:'Trung bình',c:'#ea580c',bg:'#fff7ed'},{max:19,lv:'Nặng',c:'#dc2626',bg:'#fef2f2'},{max:99,lv:'Rất nặng',c:'#7f1d1d',bg:'#fee2e2'}],
+  S:[{max:14,lv:'Bình thường',c:'#16a34a',bg:'#f0fdf4'},{max:18,lv:'Nhẹ',c:'#ca8a04',bg:'#fefce8'},{max:25,lv:'Trung bình',c:'#ea580c',bg:'#fff7ed'},{max:33,lv:'Nặng',c:'#dc2626',bg:'#fef2f2'},{max:99,lv:'Rất nặng',c:'#7f1d1d',bg:'#fee2e2'}],
+};
+
+let _dass = { version:21, cur:-1, answers:[] };
+let _dassResult = null;
+
+function openDASS() {
+  _dass = { version:21, cur:-1, answers:[] };
+  _dassResult = null;
+  document.getElementById('dass-overlay').style.display = 'flex';
+  _renderDASS();
+}
+function closeDASS() {
+  document.getElementById('dass-overlay').style.display = 'none';
+}
+function _startDASS(v) {
+  _dass.version = v;
+  _dass.answers = new Array(v === 42 ? 42 : 21).fill(null);
+  _dass.cur = 0;
+  _renderDASS();
+}
+function _prevDASS() {
+  if (_dass.cur > 0) { _dass.cur--; _renderDASS(); }
+}
+function _answerDASS(val) {
+  _dass.answers[_dass.cur] = val;
+  const total = _dass.version === 42 ? 42 : 21;
+  if (_dass.cur < total - 1) { _dass.cur++; _renderDASS(); }
+  else _renderDASSResults();
+}
+function _getDASSSeverity(sub, score) {
+  for (const lvl of DASS_LEVELS[sub]) { if (score <= lvl.max) return lvl; }
+  return DASS_LEVELS[sub][4];
+}
+function _calcDASS() {
+  const total = _dass.version === 42 ? 42 : 21;
+  let D=0, A=0, S=0;
+  for (let i=0; i<total; i++) {
+    const v = _dass.answers[i] || 0;
+    const sub = DASS_Q[i][1];
+    if (sub==='D') D+=v; else if (sub==='A') A+=v; else S+=v;
+  }
+  if (_dass.version === 21) { D*=2; A*=2; S*=2; }
+  return {D, A, S};
+}
+function _renderDASS() {
+  const el = document.getElementById('dass-body');
+  if (_dass.cur === -1) {
+    el.innerHTML = `<div class="dass-sel">
+      <div class="dass-sel-title">Đánh giá Sức khỏe Tâm thần</div>
+      <div class="dass-sel-sub">Mô tả những gì bạn đã cảm nhận <strong>trong 1 tuần qua</strong>.<br>Không có câu trả lời đúng hay sai.</div>
+      <div class="dass-ver-cards">
+        <div class="dass-ver-card" onclick="_startDASS(21)">
+          <div class="dvc-num">21</div>
+          <div class="dvc-title">DASS-21</div>
+          <div class="dvc-sub">Phiên bản ngắn · ~5 phút</div>
+          <div class="dvc-badge">Khuyên dùng</div>
+        </div>
+        <div class="dass-ver-card" onclick="_startDASS(42)">
+          <div class="dvc-num">42</div>
+          <div class="dvc-title">DASS-42</div>
+          <div class="dvc-sub">Phiên bản đầy đủ · ~10 phút</div>
+        </div>
+      </div>
+    </div>`;
+    return;
+  }
+  const total = _dass.version === 42 ? 42 : 21;
+  const i = _dass.cur;
+  const q = DASS_Q[i];
+  const pct = Math.round((i / total) * 100);
+  const subName = {D:'Cảm xúc / Trầm cảm', A:'Lo âu', S:'Căng thẳng'}[q[1]];
+  el.innerHTML = `
+    <div class="dass-prog-wrap">
+      <div class="dass-prog-bar"><div class="dass-prog-fill" style="width:${pct}%"></div></div>
+      <div class="dass-prog-txt">${i+1} / ${total}</div>
+    </div>
+    <div class="dass-q-num">Câu ${i+1} &nbsp;·&nbsp; ${subName}</div>
+    <div class="dass-q-text">${q[0]}</div>
+    <div class="dass-q-hint">Trong <strong>1 tuần vừa qua</strong>, điều này xảy ra với bạn ở mức nào?</div>
+    <div class="dass-ans-grid">
+      ${[0,1,2,3].map(v => `<button class="dass-ans-btn${_dass.answers[i]===v?' selected':''}" onclick="_answerDASS(${v})">
+        <div class="dab-score">${v}</div>
+        <div class="dab-label">${['Không đúng','Đôi khi','Thường xuyên','Hầu như luôn'][v]}</div>
+      </button>`).join('')}
+    </div>
+    ${i > 0 ? '<button class="dass-back-btn" onclick="_prevDASS()">← Câu trước</button>' : ''}`;
+}
+function _renderDASSResults() {
+  const el = document.getElementById('dass-body');
+  const s = _calcDASS();
+  _dassResult = s;
+  const dL = _getDASSSeverity('D', s.D);
+  const aL = _getDASSSeverity('A', s.A);
+  const sL = _getDASSSeverity('S', s.S);
+  const bar = (score, sub) => {
+    const maxMap = {D:42, A:42, S:42};
+    const pct = Math.min(100, Math.round(score / maxMap[sub] * 100));
+    const c = _getDASSSeverity(sub, score).c;
+    return `<div class="dass-res-bar"><div class="dass-res-fill" style="width:${pct}%;background:${c}"></div></div>`;
+  };
+  el.innerHTML = `<div class="dass-results">
+    <div class="dass-res-title">Kết quả DASS-${_dass.version}</div>
+    <div class="dass-res-note">Điểm chuẩn hóa theo thang DASS-42 (điểm tối đa 42)</div>
+    <div class="dass-res-cards">
+      <div class="dass-res-card" style="border-color:${dL.c}20;background:${dL.bg}">
+        <div class="drc-icon">😔</div>
+        <div class="drc-label">Trầm cảm</div>
+        <div class="drc-score" style="color:${dL.c}">${s.D}</div>
+        <div class="drc-level" style="color:${dL.c}">${dL.lv}</div>
+        ${bar(s.D,'D')}
+      </div>
+      <div class="dass-res-card" style="border-color:${aL.c}20;background:${aL.bg}">
+        <div class="drc-icon">😰</div>
+        <div class="drc-label">Lo âu</div>
+        <div class="drc-score" style="color:${aL.c}">${s.A}</div>
+        <div class="drc-level" style="color:${aL.c}">${aL.lv}</div>
+        ${bar(s.A,'A')}
+      </div>
+      <div class="dass-res-card" style="border-color:${sL.c}20;background:${sL.bg}">
+        <div class="drc-icon">😤</div>
+        <div class="drc-label">Căng thẳng</div>
+        <div class="drc-score" style="color:${sL.c}">${s.S}</div>
+        <div class="drc-level" style="color:${sL.c}">${sL.lv}</div>
+        ${bar(s.S,'S')}
+      </div>
+    </div>
+    <div class="dass-res-footer">
+      <div class="dass-res-date">📅 ${new Date().toLocaleDateString('vi-VN')}</div>
+      <div class="dass-res-btns">
+        <button class="btn-dass-redo" onclick="_dass.cur=-1;_dass.answers=[];_renderDASS()">🔄 Làm lại</button>
+        <button class="btn-dass-save" onclick="_saveDASS()">💾 Lưu vào hồ sơ</button>
+      </div>
+    </div>
+  </div>`;
+}
+function _saveDASS() {
+  if (!D) { showNotif('⚠️ Chưa mở ca nào', 'warn'); return; }
+  if (!_dassResult) return;
+  if (!D.tinh_trang) D.tinh_trang = {};
+  const s = _dassResult;
+  const dL = _getDASSSeverity('D', s.D);
+  const aL = _getDASSSeverity('A', s.A);
+  const sL = _getDASSSeverity('S', s.S);
+  D.tinh_trang.dass = {
+    version: _dass.version,
+    date: new Date().toLocaleDateString('vi-VN'),
+    D: s.D, D_level: dL.lv,
+    A: s.A, A_level: aL.lv,
+    S: s.S, S_level: sL.lv,
+  };
+  if (window._markUnsaved) window._markUnsaved();
+  closeDASS();
+  showNotif('✅ Đã lưu kết quả DASS vào hồ sơ — nhớ nhấn Lưu');
+}
+
+// ════════════════════════════════════════════════════════════
 // WINDOW EXPORTS — ES modules are scoped; expose onclick handlers globally
 // ════════════════════════════════════════════════════════════
 Object.assign(window, {
@@ -3894,14 +4431,16 @@ Object.assign(window, {
   selectCase, loadCaseIntoApp, deleteCase,
   _reopenCaseFromList, _closeCaseFromList,
   // Export / Import
-  exportCaseJSON, importCaseJSON, exportSelected, dlDocx,
+  exportCaseJSON, importCaseJSON, exportSelected, dlDocx, exportAllDocx, dlReportDocx,
   // Misc
   printFullCase, closePov, generateComprehensiveEval,
-  showNotifications,
   // Confirm dialog
   _doConfirm, _cancelConfirm,
   // Files
   deleteCaseFile, refreshFileList,
   // Notifications
   markNotifRead,
+  // DASS
+  openDASS, closeDASS, _startDASS, _prevDASS, _answerDASS, _saveDASS,
+  _renderDASS, _renderDASSResults,
 });

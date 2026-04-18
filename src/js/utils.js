@@ -2,23 +2,23 @@
 // UTILS — Các hàm tiện ích dùng chung (không có side effects)
 // ════════════════════════════════════════════════════════════
 
-export const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-export const formatMd = t => esc(t).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const formatMd = t => esc(t).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
 
-export function clean(v) {
+function clean(v) {
   if (!v) return '';
   let r = String(v).replace(/\[Cần thu thập thêm\]/gi, '').replace(/\/\//g, '').replace(/\s*[—\-\/|]\s*[—\-\/|]?\s*/g, ' ').replace(/^[\s—\-\/|]+|[\s—\-\/|]+$/g, '').trim();
   if (/^(Lớp|Năm|Trường|Tại)\s*$/i.test(r)) return '';
   return r;
 }
 
-export function cf(v) {
+function cf(v) {
   const s = String(v || '');
   if (!s || s.includes('[Cần thu thập thêm]') || s === '//') return '';
   return s.trim();
 }
 
-export function robustJSON(raw) {
+function robustJSON(raw) {
   let t = (raw || '').trim()
     .replace(/^```json\s*/im, '').replace(/\s*```\s*$/im, '')
     .replace(/^```\s*/im, '').replace(/\s*```\s*$/im, '').trim();
@@ -40,7 +40,7 @@ export function robustJSON(raw) {
   throw new Error('Incomplete JSON');
 }
 
-export function fmtDate(v) {
+function fmtDate(v) {
   if (!v || typeof v !== 'string') return String(v || '');
   v = v.trim();
   if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v)) return v;
@@ -69,13 +69,13 @@ export function fmtDate(v) {
   return v;
 }
 
-export function fmtVN(iso) {
+function fmtVN(iso) {
   const d = new Date(iso || Date.now());
   return isNaN(d.getTime()) ? '' : d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 let notifTimer;
-export function showNotif(msg, type = 'ok') {
+function showNotif(msg, type = 'ok') {
   const el = document.getElementById('notif');
   el.textContent = msg;
   el.className = 'notif notif-' + type;
@@ -88,9 +88,9 @@ export function showNotif(msg, type = 'ok') {
 // DEEP MERGE — Sống còn: không ghi đè dữ liệu cũ bằng rỗng
 // ════════════════════════════════════════════════════════════
 
-export const FIELD_MERGE_KEYS = new Set(['danh_gia', 'vang_gia', 'ket_thuc', 'chuyen_gui', 'tien_trinh']);
+const FIELD_MERGE_KEYS = new Set(['danh_gia', 'vang_gia', 'ket_thuc', 'chuyen_gui', 'tien_trinh']);
 
-export function deepMergeFields(target, source) {
+function deepMergeFields(target, source) {
   if (!source || typeof source !== 'object') return target;
   const result = Object.assign({}, target);
   for (const key of Object.keys(source)) {
@@ -102,7 +102,7 @@ export function deepMergeFields(target, source) {
   return result;
 }
 
-export function deepMerge(target, source) {
+function deepMerge(target, source) {
   if (source === null || source === undefined) return target;
   if (target === null || target === undefined) {
     return typeof source === 'object' && !Array.isArray(source) ? deepMerge({}, source) : source;

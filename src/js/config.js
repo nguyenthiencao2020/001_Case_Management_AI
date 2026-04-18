@@ -2,21 +2,21 @@
 // CONFIG — Hằng số, cấu hình ứng dụng và STAGE_CONFIG
 // ════════════════════════════════════════════════════════════
 
-export const GURL = '/api/chat';
+const GURL = '/api/chat';
 
-export const PRIVACY_PREFIX = `\n\n⚠️ BẢO MẬT DỮ LIỆU TRẺ EM (Luật ATTTM 2015 & NĐ 13/2023): Dữ liệu đã được ẩn danh hóa trước khi gửi. KHÔNG suy đoán danh tính thật. KHÔNG lưu trữ, tái tạo hoặc phổ biến thông tin định danh cá nhân. Chỉ phân tích nội dung chuyên môn bảo vệ trẻ em.`;
+const PRIVACY_PREFIX = `\n\n⚠️ BẢO MẬT DỮ LIỆU TRẺ EM (Luật ATTTM 2015 & NĐ 13/2023): Dữ liệu đã được ẩn danh hóa trước khi gửi. KHÔNG suy đoán danh tính thật. KHÔNG lưu trữ, tái tạo hoặc phổ biến thông tin định danh cá nhân. Chỉ phân tích nội dung chuyên môn bảo vệ trẻ em.`;
 
-export const LOGO_URL = 'https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/main/ThaoDanSSC_Digital-01.png';
-export const FOOTER_URL = 'https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/3e05cff6b6a5f80355e7a378f7f82ffd790f81cc/Footer.png';
+const LOGO_URL = 'https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/main/ThaoDanSSC_Digital-01.png';
+const FOOTER_URL = 'https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/3e05cff6b6a5f80355e7a378f7f82ffd790f81cc/Footer.png';
 
-export const FORM_NAMES = [
+const FORM_NAMES = [
   'HỒ SƠ THÔNG TIN TRẺ', 'PHIẾU TIẾP CẬN', 'PHÚC TRÌNH VÃNG GIA',
   'PHIẾU ĐÁNH GIÁ KHẨN CẤP', 'ĐÁNH GIÁ NHU CẦU', 'KẾ HOẠCH CAN THIỆP',
   'TIẾN ĐỘ THỰC HIỆN', 'CẬP NHẬT TIẾN TRÌNH', 'PHIẾU CHUYỂN GỬI',
   'PHIẾU KẾT THÚC CA', 'BÁO CÁO QLTH',
 ];
 
-export const STAGE_CONFIG = {
+const STAGE_CONFIG = {
   1: {
     label: 'Giai đoạn 1 — Tiếp cận',
     btnText: '🔬 Phân tích Tiếp cận',
@@ -69,7 +69,7 @@ export const STAGE_CONFIG = {
   },
 };
 
-export const STAGE_TEMPLATES = {
+const STAGE_TEMPLATES = {
   1: { title: 'Gợi ý — Tiếp cận ban đầu', items: [
     'Nguồn tiếp cận: ai / tổ chức nào giới thiệu ca này đến?',
     'Hoàn cảnh gia đình: trẻ đang sống cùng ai, quan hệ như thế nào?',
