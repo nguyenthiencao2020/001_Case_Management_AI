@@ -618,26 +618,26 @@ function updateStageUI() {
   // Progress steps
   const _closedCase = curCaseId ? loadCases()[curCaseId] : null;
   const _caseIsClosed = _closedCase?.status === 'closed';
-  for (let s = 1; s <= 5; s++) {
-    const sp = document.getElementById('sp-' + s);
-    if (!sp) continue;
-    sp.className = 'sp-step';
-    const isDone = _caseIsClosed || s < currentStage;
-    if (isDone) {
-      sp.classList.add('done');
-      sp.style.cursor = 'pointer';
-      sp.title = `Xem lại GĐ ${s}`;
-      sp.onclick = () => previewStage(s);
-    } else if (s === currentStage) {
-      sp.classList.add('active');
-      sp.style.cursor = 'default';
-      sp.onclick = null;
-      sp.title = '';
-    } else {
-      sp.classList.add('locked');
-      sp.style.cursor = 'default';
-      sp.onclick = null;
-      sp.title = '';
+  const spRow = document.querySelector('.stage-progress-row');
+  if (spRow) {
+    const _shortNames = ['','Tiếp cận','Vãng gia','Kế hoạch','Tiến trình','Kết thúc'];
+    spRow.innerHTML = '';
+    for (let s = 1; s <= 5; s++) {
+      const isDone = _caseIsClosed || s < currentStage;
+      const isActive = s === currentStage && !_caseIsClosed;
+      const div = document.createElement('div');
+      div.className = `sp-step ${isDone ? 'done' : isActive ? 'active' : 'locked'}`;
+      div.id = `sp-${s}`;
+      div.innerHTML = `<div class="sp-step-num">${isDone ? '✓' : s}</div><div class="sp-step-lbl">${_shortNames[s]}</div>`;
+      if (isDone && curCaseId) {
+        div.title = `↩ Quay lại GĐ ${s}: ${_shortNames[s]}`;
+        div.onclick = () => gotoStage(s);
+      } else if (isActive) {
+        div.title = `GĐ ${s} — đang hoạt động`;
+      } else {
+        div.title = `GĐ ${s} — chưa bắt đầu`;
+      }
+      spRow.appendChild(div);
     }
   }
 
@@ -844,21 +844,27 @@ function completeStage() {
     }
   });
 
-  // ★ Lưu entry cho giai đoạn HIỆN TẠI trước khi chuyển sang giai đoạn mới
+  // ★ Lưu entry + stageData cho giai đoạn HIỆN TẠI trước khi chuyển sang giai đoạn mới
   const _completeNotes = document.getElementById('dash-notes').value.trim();
-  if (_completeNotes && curCaseId) {
+  if (curCaseId) {
     const _cc = loadCases();
     const _ce = _cc[curCaseId];
     if (_ce) {
-      _ce.entries = _ce.entries || [];
-      const _today = new Date().toDateString();
-      const _last = _ce.entries[_ce.entries.length-1];
-      const _sameDS = _last && _last.stage === currentStage && new Date(_last.date).toDateString() === _today;
       const _snap = D ? JSON.parse(JSON.stringify(D)) : null;
-      if (_sameDS) {
-        _ce.entries[_ce.entries.length-1] = {..._last, notes:_completeNotes, analysis:_snap, date:new Date().toISOString()};
-      } else {
-        _ce.entries.push({ date:new Date().toISOString(), notes:_completeNotes, analysis:_snap, stage:currentStage });
+      // Save to stageData
+      _ce.stageData = _ce.stageData || {};
+      _ce.stageData[currentStage] = { notes: _completeNotes, analysis: _snap, savedAt: new Date().toISOString() };
+      // Save to entries
+      if (_completeNotes) {
+        _ce.entries = _ce.entries || [];
+        const _today = new Date().toDateString();
+        const _last = _ce.entries[_ce.entries.length-1];
+        const _sameDS = _last && _last.stage === currentStage && new Date(_last.date).toDateString() === _today;
+        if (_sameDS) {
+          _ce.entries[_ce.entries.length-1] = {..._last, notes:_completeNotes, analysis:_snap, date:new Date().toISOString()};
+        } else {
+          _ce.entries.push({ date:new Date().toISOString(), notes:_completeNotes, analysis:_snap, stage:currentStage });
+        }
       }
       _cc[curCaseId] = _ce;
       _cases = _cc;
@@ -879,45 +885,69 @@ function completeStage() {
 }
 
 function rollbackStage() {
-  if (!D) { showNotif('⚠️ Chưa có dữ liệu', 'warn'); return; }
   if (currentStage <= 1) { showNotif('ℹ️ Đang ở giai đoạn đầu tiên', 'warn'); return; }
   if (!confirm(`Lùi về GĐ ${currentStage - 1}?\nCác form giai đoạn trước sẽ được mở khóa lại.`)) return;
+  gotoStage(currentStage - 1);
+}
 
-  const prevStage = currentStage - 1;
-  
-  // Mở khóa forms của giai đoạn trước
-  const prevCfg = STAGE_CONFIG[prevStage];
-  if (prevCfg) {
-    prevCfg.lockedForms.forEach(fi => {
+function gotoStage(targetStage) {
+  if (targetStage === currentStage) return;
+  if (targetStage > currentStage) { showNotif('ℹ️ Hãy hoàn thành giai đoạn hiện tại để tiến lên', 'warn'); return; }
+  if (!curCaseId) { showNotif('⚠️ Không tìm thấy ca', 'warn'); return; }
+
+  const cases = loadCases();
+  const c = cases[curCaseId];
+  if (!c) { showNotif('⚠️ Không tìm thấy ca', 'warn'); return; }
+
+  // Save current stage snapshot before switching
+  c.stageData = c.stageData || {};
+  c.stageData[currentStage] = {
+    notes: document.getElementById('dash-notes').value,
+    analysis: D ? JSON.parse(JSON.stringify(D)) : null,
+    savedAt: new Date().toISOString()
+  };
+  c.updatedAt = new Date().toISOString();
+  cases[curCaseId] = c;
+  saveCases(cases);
+
+  // Unlock all forms then re-lock appropriate ones
+  [1,2,3,4,5].forEach(s => {
+    const cfg = STAGE_CONFIG[s];
+    if (cfg) cfg.lockedForms.forEach(fi => {
       const item = document.querySelector(`.form-item[data-fi="${fi}"]`);
-      if (item) {
-        item.classList.remove('form-locked');
-        item.style.opacity = '';
-        item.title = '';
-      }
+      if (item) { item.classList.remove('form-locked'); item.style.opacity = ''; item.title = ''; }
+    });
+  });
+  for (let s = 1; s < targetStage; s++) {
+    const cfg = STAGE_CONFIG[s];
+    if (cfg) cfg.lockedForms.forEach(fi => {
+      const item = document.querySelector(`.form-item[data-fi="${fi}"]`);
+      if (item) { item.style.opacity = '0.6'; item.title = '🔒 Đã hoàn thành giai đoạn trước'; }
     });
   }
 
-  currentStage = prevStage;
-  D._currentStage = prevStage;
-
-  // ★ Khôi phục notes + analysis của giai đoạn trước vào textarea
-  const _rbCases = curCaseId ? loadCases() : null;
-  const _rbC = _rbCases?.[curCaseId];
-  const _rbEntries = (_rbC?.entries || []).filter(e => (e.stage||1) === prevStage);
-  const _rbLast = _rbEntries.length ? _rbEntries[_rbEntries.length-1] : null;
-  if (_rbLast) {
-    const ta = document.getElementById('dash-notes');
-    if (ta) { ta.value = _rbLast.notes || ''; document.getElementById('dash-cc').textContent = (_rbLast.notes||'').length + ' ký tự'; }
-    if (_rbLast.analysis) { D = JSON.parse(JSON.stringify(_rbLast.analysis)); D._currentStage = prevStage; if (D._report) renderReport(D._report); }
+  // Load target stage data: prefer stageData snapshot, fall back to entries
+  const snap = c.stageData[targetStage];
+  const ta = document.getElementById('dash-notes');
+  if (snap) {
+    if (ta) { ta.value = snap.notes || ''; document.getElementById('dash-cc').textContent = (snap.notes||'').length + ' ký tự'; }
+    if (snap.analysis) { D = JSON.parse(JSON.stringify(snap.analysis)); D._currentStage = targetStage; if (D._report) renderReport(D._report); }
   } else {
-    document.getElementById('dash-notes').value = '';
-    document.getElementById('dash-cc').textContent = '0 ký tự';
+    const entries = (c.entries || []).filter(e => (e.stage||1) === targetStage);
+    const last = entries.length ? entries[entries.length-1] : null;
+    if (last) {
+      if (ta) { ta.value = last.notes || ''; document.getElementById('dash-cc').textContent = (last.notes||'').length + ' ký tự'; }
+      if (last.analysis) { D = JSON.parse(JSON.stringify(last.analysis)); D._currentStage = targetStage; if (D._report) renderReport(D._report); }
+    } else {
+      if (ta) { ta.value = ''; document.getElementById('dash-cc').textContent = '0 ký tự'; }
+    }
   }
 
+  currentStage = targetStage;
+  if (D) D._currentStage = targetStage;
+
   updateStageUI();
-  saveCaseNow();
-  showNotif(`↩ Đã lùi về GĐ ${prevStage}: ${STAGE_CONFIG[prevStage].label}`);
+  showNotif(`↩ Đã chuyển sang GĐ ${targetStage}: ${STAGE_CONFIG[targetStage]?.label}`);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2349,6 +2379,9 @@ function saveCaseNow() {
   c.updatedAt = new Date().toISOString();
   c.currentStage = currentStage;
   if (D) c.lastAnalysis = D;
+  // Always update stageData snapshot for current stage
+  c.stageData = c.stageData || {};
+  c.stageData[currentStage] = { notes: notes || document.getElementById('dash-notes').value, analysis: D ? JSON.parse(JSON.stringify(D)) : null, savedAt: new Date().toISOString() };
   if (notes) {
     c.entries = c.entries || [];
     const today = new Date().toDateString();
@@ -2598,8 +2631,19 @@ function loadCaseIntoApp(id) {
   curCaseId = id;
   // ★ Khôi phục giai đoạn đã lưu
   currentStage = c.currentStage || (c.lastAnalysis?._currentStage) || 1;
-  // ★ FIX: load D nếu có bất kỳ lastAnalysis nào (không chỉ khi co_ban tồn tại)
-  if (c.lastAnalysis) {
+  // ★ Prefer stageData snapshot for current stage; fall back to entries then lastAnalysis
+  const _snap = c.stageData?.[currentStage];
+  if (_snap?.analysis) {
+    D = JSON.parse(JSON.stringify(_snap.analysis));
+    D._currentStage = currentStage;
+    if (!Array.isArray(D.cap_nhat)) D.cap_nhat = [];
+    if (D.co_ban && Object.keys(D.co_ban).length) {
+      document.getElementById('btn-fill').disabled = false;
+      document.getElementById('chat-input').disabled = false;
+      document.getElementById('btn-send').disabled = false;
+    }
+    if (D._report) renderReport(D._report);
+  } else if (c.lastAnalysis) {
     D = c.lastAnalysis;
     if (!Array.isArray(D.cap_nhat)) D.cap_nhat = [];
     if (D.co_ban && Object.keys(D.co_ban).length) {
@@ -2613,15 +2657,20 @@ function loadCaseIntoApp(id) {
     document.getElementById('btn-fill').disabled = true;
   }
   // ★ Hiển thị ghi chép mới nhất của giai đoạn HIỆN TẠI vào textarea
-  const entries = c.entries || [];
-  const stageEntries = entries.filter(e => (e.stage||1) === currentStage);
-  const latestForStage = stageEntries.length ? stageEntries[stageEntries.length-1] : (entries.length ? entries[entries.length-1] : null);
-  if (latestForStage) {
-    document.getElementById('dash-notes').value = latestForStage.notes || '';
-    document.getElementById('dash-cc').textContent = (latestForStage.notes || '').length + ' ký tự';
+  if (_snap) {
+    document.getElementById('dash-notes').value = _snap.notes || '';
+    document.getElementById('dash-cc').textContent = (_snap.notes || '').length + ' ký tự';
   } else {
-    document.getElementById('dash-notes').value = '';
-    document.getElementById('dash-cc').textContent = '0 ký tự';
+    const entries = c.entries || [];
+    const stageEntries = entries.filter(e => (e.stage||1) === currentStage);
+    const latestForStage = stageEntries.length ? stageEntries[stageEntries.length-1] : (entries.length ? entries[entries.length-1] : null);
+    if (latestForStage) {
+      document.getElementById('dash-notes').value = latestForStage.notes || '';
+      document.getElementById('dash-cc').textContent = (latestForStage.notes || '').length + ' ký tự';
+    } else {
+      document.getElementById('dash-notes').value = '';
+      document.getElementById('dash-cc').textContent = '0 ký tự';
+    }
   }
   chatHistory = [];
   updateHeader();
