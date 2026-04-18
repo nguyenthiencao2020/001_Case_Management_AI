@@ -1950,6 +1950,8 @@ function restoreFormChecks() {
 
 function showForm(idx) {
   curForm = idx;
+  // Reset edit mode on form switch
+  document.getElementById('form-preview')?.classList.remove('fv-edit-mode');
   document.querySelectorAll('.form-item').forEach(el => el.classList.toggle('active', parseInt(el.dataset.fi)===idx));
   const fv = document.getElementById('fv');
   if (!D) {
@@ -1972,8 +1974,22 @@ function F(lbl, val, ic='-', path='') {
   return `<div class="fl"><div class="fl-ico">${ic}</div><div class="fl-bd"><div class="fl-lb">${lbl}</div><div class="fl-vl ${s?'ok':'no'}${extra}>${s||'—'}</div></div></div>`;
 }
 
+function toggleFvEditMode(idx) {
+  const fp = document.getElementById('form-preview');
+  if (!fp) return;
+  const active = fp.classList.toggle('fv-edit-mode');
+  const btn = document.getElementById('btn-fv-edit-'+idx);
+  if (btn) {
+    btn.textContent = active ? '✓ Xong' : '✏️ Chỉnh sửa';
+    btn.classList.toggle('btn-fv-edit-active', active);
+  }
+  if (active) showNotif('✏️ Chế độ chỉnh sửa — bấm trực tiếp vào trường bất kỳ để sửa', 'ok', 2500);
+}
+
 function inlineEdit(el, path) {
   if (!D || !path) return;
+  // Only allow editing when edit mode is active
+  if (!document.getElementById('form-preview')?.classList.contains('fv-edit-mode')) return;
   if (el.querySelector('input,textarea')) return;
   const cur = el.textContent.trim() === '—' ? '' : el.textContent.trim();
   el.classList.add('fl-editing');
@@ -2039,7 +2055,7 @@ function renderFormTab(idx) {
       </div>
     </div>
     <div class="fv-acts">
-      <button class="btn-fv-edit" onclick="(()=>{const fi=document.getElementById('fec-input');if(fi){fi.focus();fi.placeholder='Hỏi về ca này hoặc gõ lệnh sửa form...';}})()">✏️ Chỉnh sửa</button>
+      <button class="btn-fv-edit" id="btn-fv-edit-${idx}" onclick="toggleFvEditMode(${idx})">✏️ Chỉnh sửa</button>
       <button class="btn-fv-save" onclick="saveCaseNow()">💾 Lưu ca</button>
       <button class="btn-dl-docx" onclick="dlDocx(${idx})">⬇ .docx</button>
     </div>
