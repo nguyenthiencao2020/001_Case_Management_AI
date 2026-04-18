@@ -363,9 +363,7 @@ body {
   padding:20px 24px;
 }
 
-/* FEC compact */
-.fec { flex-shrink:0; background:#fff; border-top:1px solid var(--bd); max-height:130px; }
-.fec.collapsed { max-height:38px; overflow:hidden; }
+/* FEC — defined below in Form Edit Chat section */
 
 /* Entry history cards */
 .entry-card {
@@ -498,35 +496,32 @@ body {
 .tbl tr:nth-child(even) td { background:#fafbfc; }
 
 /* ══ FORM EDIT CHAT (FEC) ══ */
-.fec { flex-shrink:0; background:#fff; border-top:1px solid var(--bd); }
-.fec.collapsed { max-height:40px; overflow:hidden; }
+.fec { flex-shrink:0; background:#fff; border-top:2px solid var(--bd); display:flex; flex-direction:column; }
 .fec-hd {
-  padding:8px 14px; background:#fff;
-  border-bottom:1px solid #f0f5ff; color:var(--navy);
-  font-size:11px; font-weight:700; display:flex; align-items:center;
-  gap:6px; cursor:pointer; user-select:none;
+  padding:8px 14px; background:var(--navy); color:#fff;
+  font-size:11px; font-weight:700; display:flex; align-items:center; gap:6px;
+  flex-shrink:0;
 }
-.fec-hd:hover { background:#fafbff; }
+.fec-ctx-lbl { font-size:10px; color:rgba(255,255,255,.55); font-weight:400; margin-left:2px; }
 .fec-badge {
   background:var(--org); color:#fff; font-size:9px;
-  padding:1px 7px; border-radius:8px; font-weight:700;
+  padding:1px 7px; border-radius:8px; font-weight:700; margin-left:auto;
 }
-.fec-toggle { margin-left:auto; font-size:9px; color:var(--t3); }
-.fec-body { overflow-y:auto; padding:8px 12px; display:flex; flex-direction:column; gap:4px; max-height:100px; }
-.fec-hint { font-size:11px; color:var(--t3); text-align:center; padding:8px 0; font-style:italic; }
+.fec-body { overflow-y:auto; padding:8px 12px; display:flex; flex-direction:column; gap:4px; max-height:120px; flex-shrink:0; }
+.fec-hint { font-size:11px; color:var(--t3); text-align:center; padding:6px 0; font-style:italic; line-height:1.5; }
 .fec-input-row {
   padding:7px 10px; border-top:1px solid #f0f5ff;
-  display:flex; gap:6px; align-items:center; background:#fff;
+  display:flex; gap:6px; align-items:center; background:#fff; flex-shrink:0;
 }
 .fec-input {
   flex:1; border:1.5px solid var(--bd); border-radius:20px;
-  padding:6px 14px; font-size:12px; font-family:inherit; height:32px; background:#f8fafc;
+  padding:6px 14px; font-size:12px; font-family:inherit; height:34px; background:#f8fafc;
   transition:all .2s;
 }
 .fec-input:focus { outline:none; border-color:var(--org); background:#fff; }
 .btn-fec-send {
   background:var(--org); color:#fff; border:none;
-  width:30px; height:30px; border-radius:50%; font-size:13px; cursor:pointer;
+  width:32px; height:32px; border-radius:50%; font-size:14px; cursor:pointer;
   display:flex; align-items:center; justify-content:center; flex-shrink:0;
   transition:all .15s;
 }
@@ -539,6 +534,20 @@ body {
 .fec-msg-user {
   background:var(--navy); color:#fff; border-radius:8px;
   padding:5px 11px; font-size:11.5px; max-width:85%; align-self:flex-end;
+}
+/* ── Inline field edit ── */
+.fl-vl.fl-editable { cursor:pointer; transition:background .15s; }
+.fl-vl.fl-editable:hover { background:#fffbeb !important; border-left-color:#fbbf24 !important; }
+.fl-vl.fl-editing { background:#fff !important; border:1.5px solid var(--sc) !important; padding:2px 6px !important; }
+.fl-inline-input {
+  width:100%; border:none; outline:none; background:transparent;
+  font-size:12.5px; font-family:inherit; color:var(--text); line-height:1.5;
+  padding:0; margin:0;
+}
+.fl-inline-ta {
+  width:100%; border:none; outline:none; background:transparent;
+  font-size:12.5px; font-family:inherit; color:var(--text); line-height:1.5;
+  padding:0; margin:0; resize:none;
 }
 
 /* ══ CASES TAB ══ */
@@ -762,10 +771,9 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
   .tbl th, .tbl td { padding:5px 7px; white-space:nowrap; }
 
   /* FEC panel — more space on mobile */
-  .fec { max-height:220px !important; }
-  .fec.collapsed { max-height:38px !important; }
-  .fec-input { font-size:15px !important; min-height:42px; }
-  .fec-hd { padding:10px 12px; min-height:40px; }
+  .fec-body { max-height:80px !important; }
+  .fec-input { font-size:15px !important; height:42px; }
+  .fec-hd { padding:8px 12px; }
 
   /* ── CASES TAB: stacked ── */
   .cases-tab { flex-direction:column !important; }
