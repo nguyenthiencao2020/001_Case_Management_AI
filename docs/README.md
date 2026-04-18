@@ -16,6 +16,7 @@ docs/
 │   ├── luat-tre-em-2016.md
 │   └── nghi-dinh-bao-ve-tre-em.md
 ├── quy-trinh-nvxh/
+│   ├── sop-quan-ly-ca-ctxh-v1.md
 │   ├── quy-trinh-tiep-can.md
 │   ├── quy-trinh-vang-gia.md
 │   └── quy-trinh-ket-thuc-ca.md
@@ -34,7 +35,10 @@ Mỗi file nên có header rõ ràng:
 # Tên tài liệu
 
 **Nguồn:** ...
-**Cập nhật:** dd/mm/yyyy
+**Phiên bản:** vX.Y
+**Ngày hiệu lực:** dd/mm/yyyy
+**Người phê duyệt:** ...
+**Ngày rà soát kế tiếp:** dd/mm/yyyy
 **Tags:** luat, quy-trinh, danh-gia, ...
 
 ## Nội dung
@@ -46,3 +50,12 @@ Mỗi file nên có header rõ ràng:
 - KHÔNG đưa thông tin cá nhân của trẻ em vào đây
 - Chỉ đưa tài liệu nghiệp vụ, quy trình, luật pháp
 - Tài liệu được ẩn danh hóa trước khi gửi AI
+
+
+## Quy tắc phiên bản tài liệu
+
+- Major (`v2.0`): thay đổi nội dung nghiệp vụ cốt lõi hoặc quy trình.
+- Minor (`v1.1`): bổ sung nội dung vận hành (checklist/KPI/playbook) không đổi khung lớn.
+- Patch (`v1.0.1`): sửa lỗi trình bày/chính tả hoặc làm rõ câu chữ.
+
+Mỗi lần cập nhật tài liệu nên thêm bảng `Lịch sử thay đổi` ở cuối tài liệu để phục vụ audit.
