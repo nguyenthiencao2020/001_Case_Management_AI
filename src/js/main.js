@@ -746,6 +746,8 @@ function completeStage() {
           cases[curCaseId].closedAt = new Date().toISOString();
           cases[curCaseId].updatedAt = new Date().toISOString();
           if (D) D._status = 'closed';
+          if (!cases[curCaseId].followUpSchedule)
+            cases[curCaseId].followUpSchedule = _genFollowUpSchedule(cases[curCaseId].closedAt);
           saveCases(cases);
         }
         // Reset dashboard về trạng thái sạch
@@ -2256,10 +2258,27 @@ function renderCaseList() {
     ).join('');
     
     const isDraft = c.id === _draftCaseId;
+    // Follow-up badge for closed cases
+    let fupBadge = '';
+    if (c.status === 'closed' && c.closedAt) {
+      const sched = c.followUpSchedule || _genFollowUpSchedule(c.closedAt);
+      const flog  = c.followUpLog || [];
+      const next  = sched.find(s => !flog.some(e => e.moc === s.moc));
+      if (next) {
+        const dl = Math.floor((new Date(next.due) - now) / 86400000);
+        if (dl < 0)
+          fupBadge = `<span class="fup-ci-badge fup-ci-over">TD quá ${-dl}n</span>`;
+        else if (dl <= 14)
+          fupBadge = `<span class="fup-ci-badge fup-ci-due">TD ${dl}n</span>`;
+      }
+    }
     return `<div class="case-item${c.id===curCaseId?' active':''}${isStale?' stale':''}${isDraft?' draft':''}" onclick="selectCase('${c.id}')">
       <div class="ci-top">
         <div class="ci-name">${esc(c.name||'?')}</div>
-        <span class="ci-badge ${isDraft?'ci-draft':c.status==='open'?'ci-open':'ci-closed'}">${isDraft?'✏️ Chưa lưu':c.status==='open'?'Mở':'Đóng'}</span>
+        <div style="display:flex;gap:4px;align-items:center;">
+          ${fupBadge}
+          <span class="ci-badge ${isDraft?'ci-draft':c.status==='open'?'ci-open':'ci-closed'}">${isDraft?'✏️ Chưa lưu':c.status==='open'?'Mở':'Đóng'}</span>
+        </div>
       </div>
       ${childName ? `<div class="ci-child">👤 <b>${esc(childName)}</b>${childDob ? ' · '+childDob : ''}</div>` : ''}
       <div class="ci-meta">
@@ -2369,6 +2388,8 @@ function _closeCaseFromList(id) {
         cases[id].status = 'closed';
         cases[id].closedAt = new Date().toISOString();
         cases[id].updatedAt = new Date().toISOString();
+        if (!cases[id].followUpSchedule)
+          cases[id].followUpSchedule = _genFollowUpSchedule(cases[id].closedAt);
       }
       saveCases(cases);
       if (curCaseId === id) {
@@ -4547,20 +4568,68 @@ function closeGenogram() {
 }
 
 // ════════════════════════════════════════════════════════════
-// FOLLOW-UP TRACKING — Theo dõi sau đóng ca
+// FOLLOW-UP TRACKING — Theo dõi sau đóng ca (cấu trúc đầy đủ)
 // ════════════════════════════════════════════════════════════
+
+let _fupDraft = {};
+
+function _fupSet(caseId, field, val) {
+  if (!_fupDraft[caseId]) _fupDraft[caseId] = {};
+  _fupDraft[caseId][field] = val;
+  document.querySelectorAll(`[data-fc="${caseId}"][data-ff="${field}"]`).forEach(b => {
+    const isActive = b.dataset.fv === val;
+    const isWarn = ['Lo ngại','Mất kết nối','Cần mở lại ca'].includes(b.dataset.fv);
+    const isOk   = ['Tốt','Duy trì','Ổn định'].includes(b.dataset.fv);
+    const c = isWarn ? '#dc2626' : isOk ? '#16a34a' : '#d97706';
+    b.style.background = isActive ? c : 'transparent';
+    b.style.color = isActive ? '#fff' : c;
+    b.style.borderColor = isActive ? c : c+'40';
+  });
+}
+
+function _genFollowUpSchedule(closedAt) {
+  const base = new Date(closedAt);
+  return [1, 3, 6].map(m => {
+    const d = new Date(base);
+    d.setMonth(d.getMonth() + m);
+    return { moc: m, label: `${m} tháng`, due: d.toISOString().split('T')[0] };
+  });
+}
+
+function _initFollowUpSchedule(id) {
+  const cases = loadCases();
+  const c = cases[id];
+  if (!c || !c.closedAt || c.followUpSchedule) return;
+  c.followUpSchedule = _genFollowUpSchedule(c.closedAt);
+  saveCases(cases);
+}
 
 function saveFollowUp(caseId) {
   const ngay = document.getElementById('fup-date-'+caseId)?.value || new Date().toISOString().split('T')[0];
+  const mocRaw = document.getElementById('fup-moc-'+caseId)?.value;
+  const moc = mocRaw ? parseInt(mocRaw) : null;
   const hinh_thuc = document.getElementById('fup-type-'+caseId)?.value || '';
   const ghi_chu = (document.getElementById('fup-note-'+caseId)?.value||'').trim();
-  if (!ghi_chu) { showNotif('⚠️ Nhập nội dung liên lạc', 'warn'); return; }
+  const dr = _fupDraft[caseId] || {};
+  if (!ghi_chu && !dr.ket_luan) { showNotif('⚠️ Nhập ghi chú hoặc chọn kết luận', 'warn'); return; }
   const cases = loadCases();
   if (!cases[caseId]) return;
   if (!cases[caseId].followUpLog) cases[caseId].followUpLog = [];
-  cases[caseId].followUpLog.push({ id:Date.now().toString(36), ngay, hinh_thuc, ghi_chu, ts:new Date().toISOString() });
+  cases[caseId].followUpLog.push({
+    id: Date.now().toString(36), ts: new Date().toISOString(),
+    ngay, moc, hinh_thuc, ghi_chu,
+    chi_so: {
+      an_toan_the_chat: dr.an_toan_the_chat||'',
+      an_toan_tam_ly:   dr.an_toan_tam_ly||'',
+      hoc_tap:          dr.hoc_tap||'',
+      dieu_kien_song:   dr.dieu_kien_song||'',
+      ket_noi_dich_vu:  dr.ket_noi_dich_vu||'',
+    },
+    ket_luan: dr.ket_luan||'',
+  });
   cases[caseId].updatedAt = new Date().toISOString();
   saveCases(cases);
+  delete _fupDraft[caseId];
   showCaseDetail(caseId);
   showNotif('✅ Đã ghi nhận theo dõi');
 }
@@ -4576,35 +4645,110 @@ function deleteFollowUp(caseId, entryId) {
 
 function _renderFollowUpSection(id, c) {
   const log = c.followUpLog||[];
+  const schedule = c.followUpSchedule || (c.closedAt ? _genFollowUpSchedule(c.closedAt) : []);
   const plan = c.lastAnalysis?.ket_thuc?.ke_hoach_theo_doi || c.lastAnalysis?._report?.follow_up_plan || '';
-  const closedAt = c.closedAt ? new Date(c.closedAt) : null;
-  const daysClosed = closedAt ? Math.floor((Date.now()-closedAt)/86400000) : null;
   const today = new Date().toISOString().split('T')[0];
-  const inp = 'height:32px;padding:0 8px;border:1px solid var(--bd);border-radius:6px;font-size:12px;font-family:inherit;background:var(--bg);color:var(--t1);';
+  const dr = _fupDraft[id] || {};
+  const inp = 'height:30px;padding:0 8px;border:1px solid var(--bd);border-radius:6px;font-size:12px;font-family:inherit;background:var(--bg);color:var(--t1);';
 
-  const logRows = log.slice().reverse().map(e=>`
-    <div style="display:flex;gap:7px;padding:5px 0;border-bottom:1px solid #f1f5f9;align-items:flex-start;font-size:12px;">
-      <span style="color:var(--t3);white-space:nowrap;min-width:76px;">${esc(e.ngay||'?')}</span>
-      <span style="background:#eff6ff;color:#1e40af;border-radius:4px;padding:1px 7px;font-size:10px;font-weight:600;white-space:nowrap;">${esc(e.hinh_thuc||'Liên lạc')}</span>
-      <span style="flex:1;color:var(--t1);">${esc(e.ghi_chu)}</span>
-      <button onclick="deleteFollowUp('${id}','${e.id}')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:16px;padding:0 2px;line-height:1;">×</button>
-    </div>`).join('');
+  // --- Lịch hẹn ---
+  const mocDone = m => log.some(e => e.moc === m);
+  const schedHtml = schedule.map(s => {
+    const done = mocDone(s.moc);
+    const dl = Math.floor((new Date(s.due) - Date.now()) / 86400000);
+    const badge = done
+      ? `<span class="fup-moc-badge fup-moc-done">✅ Đã TH</span>`
+      : dl < 0
+        ? `<span class="fup-moc-badge fup-moc-over">⚠️ Quá ${-dl}n</span>`
+        : dl <= 14
+          ? `<span class="fup-moc-badge fup-moc-due">⏰ Còn ${dl}n</span>`
+          : `<span class="fup-moc-badge fup-moc-up">📅 Còn ${dl}n</span>`;
+    return `<div class="fup-sched-row"><span class="fup-sched-label">Mốc ${s.label}</span><span class="fup-sched-date">${s.due}</span><span style="flex:1"></span>${badge}</div>`;
+  }).join('');
+
+  // --- Lịch sử ---
+  const cs2Color = v => v==='Tốt'||v==='Duy trì'?'#16a34a':v==='Lo ngại'||v==='Mất kết nối'?'#dc2626':'#d97706';
+  const logHtml = log.slice().reverse().map(e => {
+    const cs = e.chi_so||{};
+    const csChips = [
+      ['Thể chất',cs.an_toan_the_chat],['Tâm lý',cs.an_toan_tam_ly],
+      ['Học tập',cs.hoc_tap],['ĐK sống',cs.dieu_kien_song],['Dịch vụ',cs.ket_noi_dich_vu],
+    ].filter(([,v])=>v).map(([k,v])=>{
+      const c=cs2Color(v);
+      return `<span style="font-size:10px;padding:1px 6px;border-radius:10px;border:1px solid ${c}40;color:${c};background:${c}0d;">${k}: ${v}</span>`;
+    }).join('');
+    const klC = e.ket_luan==='Ổn định'?'#16a34a':e.ket_luan==='Cần mở lại ca'?'#dc2626':e.ket_luan==='Không liên lạc được'?'#94a3b8':'#d97706';
+    const mocBadge = e.moc ? `<span style="background:#eff6ff;color:#1e40af;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:600;">Mốc ${e.moc}T</span>` : '';
+    return `<div style="padding:7px 0;border-bottom:1px solid #f1f5f9;">
+      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:3px;">
+        <span style="font-size:11px;color:var(--t3);font-weight:600;">${esc(e.ngay||'?')}</span>
+        ${mocBadge}
+        <span style="font-size:11px;color:var(--t2);">${esc(e.hinh_thuc||'')}</span>
+        <span style="flex:1"></span>
+        ${e.ket_luan?`<span style="font-size:10px;font-weight:700;color:${klC};">${esc(e.ket_luan)}</span>`:''}
+        <button onclick="deleteFollowUp('${id}','${e.id}')" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:15px;padding:0;line-height:1;">×</button>
+      </div>
+      ${csChips?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:3px;">${csChips}</div>`:''}
+      ${e.ghi_chu?`<div style="font-size:12px;color:var(--t1);">${esc(e.ghi_chu)}</div>`:''}
+    </div>`;
+  }).join('');
+
+  // --- Form ghi nhận ---
+  const CHI_SO = [
+    {key:'an_toan_the_chat', label:'An toàn thể chất', opts:['Tốt','Cần theo dõi','Lo ngại']},
+    {key:'an_toan_tam_ly',   label:'An toàn tâm lý',   opts:['Tốt','Cần theo dõi','Lo ngại']},
+    {key:'hoc_tap',          label:'Học tập/sinh hoạt', opts:['Tốt','Cần theo dõi','Lo ngại']},
+    {key:'dieu_kien_song',   label:'Điều kiện sống',    opts:['Tốt','Cần theo dõi','Lo ngại']},
+    {key:'ket_noi_dich_vu',  label:'Kết nối dịch vụ',   opts:['Duy trì','Cần kết nối lại','Mất kết nối']},
+  ];
+  const KET_LUAN = ['Ổn định','Tiếp tục theo dõi','Cần mở lại ca','Không liên lạc được'];
+
+  const optBtn = (key, val) => {
+    const act = dr[key]===val;
+    const isWarn=['Lo ngại','Mất kết nối'].includes(val), isOk=['Tốt','Duy trì'].includes(val);
+    const c=isWarn?'#dc2626':isOk?'#16a34a':'#d97706';
+    return `<button class="fup-opt" data-fc="${id}" data-ff="${key}" data-fv="${val}" onclick="_fupSet('${id}','${key}','${val}')"
+      style="padding:3px 8px;border:1.5px solid ${act?c:c+'40'};border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;background:${act?c:'transparent'};color:${act?'#fff':c};transition:all .12s;">${val}</button>`;
+  };
+  const klBtn = val => {
+    const act = dr.ket_luan===val;
+    const c=val==='Ổn định'?'#16a34a':val==='Cần mở lại ca'?'#dc2626':val==='Không liên lạc được'?'#94a3b8':'#d97706';
+    return `<button class="fup-opt" data-fc="${id}" data-ff="ket_luan" data-fv="${val}" onclick="_fupSet('${id}','ket_luan','${val}')"
+      style="padding:4px 11px;border:1.5px solid ${act?c:c+'40'};border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;background:${act?c:'transparent'};color:${act?'#fff':c};transition:all .12s;">${val}</button>`;
+  };
 
   return `<div class="followup-section">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <div style="font-weight:700;font-size:13px;color:var(--t1);">📋 Theo dõi sau đóng ca</div>
-      ${daysClosed!==null?`<div style="font-size:11px;color:var(--t3);">${daysClosed>0?'Đóng '+daysClosed+' ngày':'Đóng hôm nay'}</div>`:''}
-    </div>
-    ${plan?`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 10px;font-size:11.5px;color:#166534;margin-bottom:8px;">📌 ${esc(plan)}</div>`:''}
-    <div style="margin-bottom:8px;">${log.length?logRows:'<div style="color:var(--t3);font-size:12px;padding:4px 0;">Chưa có lần liên lạc nào</div>'}</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-      <input type="date" id="fup-date-${id}" value="${today}" style="${inp}">
-      <select id="fup-type-${id}" style="${inp}">
-        <option>Gọi điện</option><option>Gặp trực tiếp</option><option>Vãng gia</option><option>Tin nhắn</option><option>Email</option>
-      </select>
-      <input type="text" id="fup-note-${id}" placeholder="Ghi chú kết quả liên lạc..." style="${inp}flex:1;min-width:140px;">
-      <button onclick="saveFollowUp('${id}')" style="height:32px;padding:0 14px;background:var(--org);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">+ Thêm</button>
+    <div style="font-weight:700;font-size:13px;color:var(--t1);margin-bottom:10px;">📋 Theo dõi sau đóng ca</div>
+    ${plan?`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 10px;font-size:11.5px;color:#166534;margin-bottom:10px;">📌 KH: ${esc(plan)}</div>`:''}
+    ${schedule.length?`<div class="fup-schedule-box"><div class="fup-box-title">Lịch hẹn tự động</div>${schedHtml}</div>`:''}
+    ${log.length?`<div style="margin:8px 0;"><div class="fup-box-title" style="margin-bottom:6px;">Lịch sử theo dõi (${log.length})</div>${logHtml}</div>`:''}
+    <div class="fup-form-box">
+      <div class="fup-box-title">Ghi nhận lần theo dõi mới</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+        <input type="date" id="fup-date-${id}" value="${today}" style="${inp}">
+        <select id="fup-moc-${id}" style="${inp}">
+          <option value="">Ngoài lịch</option>
+          ${schedule.map(s=>`<option value="${s.moc}">Mốc ${s.label}</option>`).join('')}
+        </select>
+        <select id="fup-type-${id}" style="${inp}">
+          <option>Gọi điện</option><option>Vãng gia</option><option>Gặp văn phòng</option><option>Qua bên thứ 3</option><option>Tin nhắn</option>
+        </select>
+      </div>
+      <div style="background:#f8fafc;border-radius:6px;padding:8px;margin-bottom:8px;">
+        <div class="fup-box-title" style="margin-bottom:6px;">Đánh giá 5 chỉ số</div>
+        ${CHI_SO.map(cs=>`<div style="display:flex;align-items:center;gap:6px;padding:3px 0;">
+          <span style="min-width:128px;font-size:11.5px;color:var(--t2);">${cs.label}</span>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;">${cs.opts.map(o=>optBtn(cs.key,o)).join('')}</div>
+        </div>`).join('')}
+      </div>
+      <textarea id="fup-note-${id}" rows="2" placeholder="Ghi chú: quan sát, thông tin từ gia đình/nhà trường..." style="width:100%;padding:7px 9px;border:1px solid var(--bd);border-radius:6px;font-size:12px;font-family:inherit;resize:vertical;background:var(--bg);color:var(--t1);box-sizing:border-box;margin-bottom:8px;"></textarea>
+      <div style="margin-bottom:10px;">
+        <div class="fup-box-title" style="margin-bottom:6px;">Kết luận</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">${KET_LUAN.map(klBtn).join('')}</div>
+      </div>
+      <button onclick="saveFollowUp('${id}')" style="height:34px;padding:0 18px;background:var(--org);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">💾 Lưu theo dõi</button>
     </div>
   </div>`;
 }
+
 
