@@ -744,51 +744,128 @@ function updateStageUI() {
 function previewStage(s) {
   const panel = document.getElementById('stage-preview-panel');
   if (!panel) return;
-  // Sync UI context to the clicked stage so analysis/report always reflects user intent
-  if (Number.isFinite(s) && s >= 1 && s <= 5 && s !== currentStage) {
-    currentStage = s;
-    if (D) D._currentStage = s;
-    _editingEntryIdx = null;
-    updateStageUI();
-    renderAnalysisPanel();
+
+  // Nếu chọn cùng stage hiện tại thì chỉ toggle panel
+  if (s === currentStage) {
+    if (panel.style.display === 'block' && panel.dataset.stage === String(s)) {
+      closeStagePreview();
+    } else {
+      _renderStagePreviewPanel(s);
+    }
+    return;
   }
-  // Toggle off if same stage clicked again
-  if (panel.style.display === 'block' && panel.dataset.stage === String(s)) {
-    closeStagePreview(); return;
+
+  // ─── LƯU DỮ LIỆU CỦA STAGE HIỆN TẠI VÀO ENTRY TRƯỚC KHI RỜI ĐI ───
+  const currentNotes = document.getElementById('dash-notes').value.trim();
+  if (currentNotes && curCaseId) {
+    const cases = loadCases();
+    const c = cases[curCaseId];
+    if (c) {
+      c.entries = c.entries || [];
+      const nowIso = new Date().toISOString();
+      if (_editingEntryIdx !== null && c.entries[_editingEntryIdx] && (c.entries[_editingEntryIdx].stage || 1) === currentStage) {
+        c.entries[_editingEntryIdx] = {
+          ...c.entries[_editingEntryIdx],
+          notes: currentNotes,
+          analysis: D ? JSON.parse(JSON.stringify(D)) : null,
+          date: nowIso,
+          stage: currentStage
+        };
+      } else {
+        c.entries.push({
+          id: 'en_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          date: nowIso,
+          notes: currentNotes,
+          analysis: D ? JSON.parse(JSON.stringify(D)) : null,
+          stage: currentStage
+        });
+      }
+      c.updatedAt = nowIso;
+      cases[curCaseId] = c;
+      saveCases(cases);
+    }
   }
+
+  // ─── CHUYỂN SANG STAGE MỚI ───
+  currentStage = s;
+  if (D) D._currentStage = s;
+
+  // ─── KHÔI PHỤC DỮ LIỆU TỪ ENTRY CUỐI CÙNG CỦA STAGE NÀY ───
   const cases = loadCases();
   const c = curCaseId ? cases[curCaseId] : null;
-  const entries = (c?.entries || []).map((e, i) => ({...e, _idx: i})).filter(e => (e.stage||1) === s);
-  const stageNames = ['','Tiếp cận ban đầu','Vãng gia & Đánh giá','Kế hoạch can thiệp','Tiến trình','Kết thúc ca'];
+  const entriesOfStage = (c?.entries || []).filter(e => (e.stage || 1) === s);
+  const lastEntry = entriesOfStage.length ? entriesOfStage[entriesOfStage.length - 1] : null;
+
+  if (lastEntry && lastEntry.analysis) {
+    D = JSON.parse(JSON.stringify(lastEntry.analysis));
+    D._currentStage = s;
+    if (D._report) renderReport(D._report);
+    document.getElementById('btn-fill').disabled = false;
+    document.getElementById('chat-input').disabled = false;
+    document.getElementById('btn-send').disabled = false;
+    const ta = document.getElementById('dash-notes');
+    if (ta) {
+      ta.value = lastEntry.notes || '';
+      document.getElementById('dash-cc').textContent = (lastEntry.notes || '').length + ' ký tự';
+    }
+    _editingEntryIdx = entriesOfStage.length - 1;
+  } else {
+    D = null;
+    document.getElementById('dash-notes').value = '';
+    document.getElementById('dash-cc').textContent = '0 ký tự';
+    document.getElementById('btn-fill').disabled = true;
+    _editingEntryIdx = null;
+    const chatMsgs = document.getElementById('chat-msgs');
+    if (chatMsgs && !chatMsgs.querySelector('.chat-empty')) {
+      chatMsgs.innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">📋</div><div style="font-weight:600;">Chưa có dữ liệu cho giai đoạn này</div><div>Hãy nhập ghi chép và bấm "Phân tích"</div></div>';
+    }
+  }
+
+  updateStageUI();
+  renderAnalysisPanel();
+  renderEntriesPanel();
+  _renderStagePreviewPanel(s);
+}
+
+function _renderStagePreviewPanel(s) {
+  const panel = document.getElementById('stage-preview-panel');
+  if (!panel) return;
+  const cases = loadCases();
+  const c = curCaseId ? cases[curCaseId] : null;
+  const entries = (c?.entries || []).filter(e => (e.stage || 1) === s);
+  const stageNames = ['', 'Tiếp cận ban đầu', 'Vãng gia & Đánh giá', 'Kế hoạch can thiệp', 'Tiến trình', 'Kết thúc ca'];
 
   if (!entries.length) {
     panel.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <span style="font-weight:700;font-size:13px;">GĐ ${s} — ${stageNames[s]||''}</span>
+      <span style="font-weight:700;font-size:13px;">GĐ ${s} — ${stageNames[s] || ''}</span>
       <button onclick="closeStagePreview()" style="background:none;border:none;font-size:18px;color:var(--t3);cursor:pointer;padding:0;">✕</button>
     </div>
     <div style="color:var(--t3);font-size:13px;padding:12px 0;">Chưa có ghi chép nào cho giai đoạn này.</div>`;
-    panel.dataset.stage = s; panel.style.display = 'block'; return;
+    panel.dataset.stage = s;
+    panel.style.display = 'block';
+    return;
   }
 
   const rows = [...entries].reverse().map(e => {
-    const preview = (e.notes||'').substring(0, 280);
-    const hasMore = (e.notes||'').length > 280;
+    const preview = (e.notes || '').substring(0, 280);
+    const hasMore = (e.notes || '').length > 280;
     return `<div style="padding:10px 0;border-bottom:1px solid var(--bd);">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
         <span style="font-size:11px;color:var(--t3);">📅 ${fmtVN(e.date)}</span>
         <span style="flex:1"></span>
-        <button onclick="loadEntryToEditor(${e._idx});closeStagePreview()"
+        <button onclick="loadEntryToEditor(${e._realIdx});closeStagePreview()"
           style="padding:4px 12px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">✏️ Sửa nội dung</button>
       </div>
-      <div style="font-size:12px;color:var(--t1);white-space:pre-wrap;line-height:1.6;max-height:140px;overflow:hidden;">${esc(preview)}${hasMore?'<span style="color:var(--t3);">…</span>':''}</div>
+      <div style="font-size:12px;color:var(--t1);white-space:pre-wrap;line-height:1.6;max-height:140px;overflow:hidden;">${esc(preview)}${hasMore ? '<span style="color:var(--t3);">…</span>' : ''}</div>
     </div>`;
   }).join('');
 
   panel.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-    <span style="font-weight:700;font-size:13px;">GĐ ${s} — ${stageNames[s]||''} <span style="font-size:11px;color:var(--t3);font-weight:400;">(${entries.length} lần ghi chép)</span></span>
+    <span style="font-weight:700;font-size:13px;">GĐ ${s} — ${stageNames[s] || ''} <span style="font-size:11px;color:var(--t3);font-weight:400;">(${entries.length} lần ghi chép)</span></span>
     <button onclick="closeStagePreview()" style="background:none;border:none;font-size:18px;color:var(--t3);cursor:pointer;padding:0;line-height:1;">✕</button>
   </div>${rows}`;
-  panel.dataset.stage = s; panel.style.display = 'block';
+  panel.dataset.stage = s;
+  panel.style.display = 'block';
 }
 
 function closeStagePreview() {
@@ -1669,29 +1746,35 @@ function loadEntryToEditor(idx) {
   const entry = c.entries[idx];
   _editingEntryIdx = idx;
 
-  // Restore notes into textarea
+  // Khôi phục notes
   const ta = document.getElementById('dash-notes');
   if (ta) {
     ta.value = entry.notes || '';
     document.getElementById('dash-cc').textContent = (entry.notes || '').length + ' ký tự';
   }
 
-  // Restore stage if different
+  // Đồng bộ stage với entry
   if (entry.stage && entry.stage !== currentStage) {
     currentStage = entry.stage;
+    if (D) D._currentStage = currentStage;
     updateStageUI();
+    renderAnalysisPanel();
   }
 
-  // Restore analysis data if available
+  // Khôi phục D
   if (entry.analysis) {
-    D = entry.analysis;
+    D = JSON.parse(JSON.stringify(entry.analysis));
+    D._currentStage = currentStage;
     document.getElementById('btn-fill').disabled = false;
     document.getElementById('chat-input').disabled = false;
     document.getElementById('btn-send').disabled = false;
     if (D._report) renderReport(D._report);
+  } else {
+    D = null;
+    document.getElementById('btn-fill').disabled = true;
   }
 
-  // Highlight active entry
+  // Highlight entry
   document.querySelectorAll('.entry-card').forEach(el => el.classList.remove('active-entry'));
   const card = document.getElementById('ecard-' + idx);
   if (card) card.classList.add('active-entry');
