@@ -87,39 +87,27 @@
           <button class="btn-complete-stage" id="btn-complete-stage" onclick="completeStage()">✓ Hoàn thành</button>
           <button id="btn-rollback" onclick="rollbackStage()" style="display:none;align-items:center;gap:4px;background:transparent;color:var(--sc);border:1px solid var(--sc-bd);padding:5px 11px;border-radius:7px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;">↩ Lùi GĐ</button>
         </div>
-        <div class="stage-form-chips" id="stage-form-chips"><span class="stage-form-chip">Form 0</span><span class="stage-form-chip">Form 1</span></div>
       </div>
       <div id="stage-preview-panel" class="stage-preview-panel" style="display:none;"></div>
       <div class="input-section">
-        <div class="input-label" id="input-label-text">📝 Ghi chép Tiếp cận ban đầu</div>
-        <div class="stage-hint-box" id="stage-hint">Nhập ghi chép lần gặp đầu tiên. AI sẽ trích xuất Form 0 (Hồ sơ) và Form 1 (Phiếu tiếp cận).</div>
-        <div class="privacy-note"><span>🔒</span>Không ghi họ tên thật, địa chỉ cụ thể hoặc số điện thoại trong ô này.</div>
-        <div class="tpl-toggle-row"><button class="tpl-toggle-btn" id="tpl-toggle-btn" onclick="toggleTemplate()">💡 Gợi ý câu hỏi</button></div>
+        <div class="input-sec-hd">
+          <div class="input-label" id="input-label-text">📝 Ghi chép Tiếp cận ban đầu</div>
+          <button class="tpl-toggle-btn" id="tpl-toggle-btn" onclick="toggleTemplate()">💡 Gợi ý</button>
+        </div>
         <div id="tpl-panel" class="tpl-panel" style="display:none;"></div>
-        <textarea id="dash-notes" class="input-ta" placeholder="Paste ghi chép tiếp cận ban đầu...&#10;&#10;AI sẽ trích xuất Form 0 và Form 1."></textarea>
+        <textarea id="dash-notes" class="input-ta" placeholder="Paste ghi chép tiếp cận ban đầu...&#10;&#10;AI sẽ trích xuất Form 0 và Form 1. Không ghi họ tên thật hoặc địa chỉ cụ thể."></textarea>
         <div class="input-footer"><span class="char-count" id="dash-cc">0 ký tự</span><span class="case-label" id="dash-case-label"></span></div>
       </div>
       <div class="action-bar" id="action-bar">
         <button class="btn-analyze" id="btn-analyze" onclick="runAnalysis()">🔬 Phân tích Tiếp cận</button>
-        <button class="btn-secondary" onclick="fillForms()" id="btn-fill" disabled>📋 Xem form</button>
-        <button class="btn-secondary btn-dass" onclick="openDASS()" id="btn-dass" title="Đánh giá trầm cảm, lo âu, stress (DASS-21/42)">🧠 DASS</button>
-        <button class="btn-secondary" onclick="openGenogram()" id="btn-genogram" title="Sơ đồ gia đình (genogram)">🧬 Sơ đồ</button>
+        <button class="btn-action-icon" onclick="fillForms()" id="btn-fill" disabled title="Xem biểu mẫu">📋<span>Form</span></button>
+        <button class="btn-action-icon btn-dass" onclick="openDASS()" id="btn-dass" title="Đánh giá trầm cảm, lo âu, stress (DASS-21/42)">🧠<span>DASS</span></button>
+        <button class="btn-action-icon" onclick="openGenogram()" id="btn-genogram" title="Sơ đồ gia đình (genogram)">🧬<span>Sơ đồ</span></button>
       </div>
       <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
       <div class="closed-banner" id="closed-banner">
         <div class="closed-banner-info"><div class="closed-banner-icon">✅</div><div class="closed-banner-txt"><div class="t1">Ca đã đóng</div><div class="t2" id="closed-banner-date">—</div></div></div>
         <button class="btn-reopen" onclick="reopenCase()">🔓 Mở lại ca</button>
-      </div>
-      <div class="entries-toggle" id="entries-toggle" onclick="toggleEntriesPanel()">
-        <span class="entries-toggle-lbl">📋 <span id="entries-toggle-count">Lịch sử ghi chép</span></span>
-        <span class="entries-toggle-arrow">▼</span>
-      </div>
-      <div id="entries-panel">
-        <div id="entries-empty" style="text-align:center;padding:28px 16px;color:var(--t3);">
-          <div style="font-size:28px;margin-bottom:8px;opacity:.4">📋</div>
-          <div style="font-size:12.5px;font-weight:700;color:var(--t2);margin-bottom:4px">Chưa có ghi chép</div>
-          <div style="font-size:11.5px">Nhập ghi chép và nhấn <strong>Phân tích</strong></div>
-        </div>
       </div>
     </div>
     <div class="dash-right">
