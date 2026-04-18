@@ -23,6 +23,17 @@ let docxLib = null;
 let currentStage = 1;
 let _editingEntryIdx = null;
 
+// ── CACHE DỮ LIỆU THEO GIAI ĐỘ ──
+// Lưu dữ liệu hiện tại của từng giai đoạn để tránh mất dữ liệu khi chuyển giai đoạn
+let _stageDataCache = {
+  1: null, 2: null, 3: null, 4: null, 5: null
+};
+
+// Lưu lịch sử riêng cho từng giai đoạn
+let _stageHistoryCache = {
+  1: [], 2: [], 3: [], 4: [], 5: []
+};
+
 // ── AUTH ──
 async function loginEmail() {
   const email = document.getElementById('login-email').value.trim();
@@ -94,6 +105,9 @@ async function logoutUser() {
   document.getElementById('login-err').textContent = '';
   const lb = document.getElementById('login-btn'); if (lb) { lb.disabled = false; lb.textContent = 'Đăng nhập'; }
   document.getElementById('user-bar').style.display = 'none';
+  // Xóa cache
+	_stageDataCache = { 1: null, 2: null, 3: null, 4: null, 5: null };
+	_stageHistoryCache = { 1: [], 2: [], 3: [], 4: [], 5: [] };
 }
 
 function _onLogin(user) {
@@ -755,6 +769,10 @@ function previewStage(s) {
     return;
   }
 
+  // ✅ FIX: LƯU DỮ LIỆU CỦA STAGE HIỆN TẠI VÀO CACHE TRƯỚC KHI RỜI ĐI
+  // Điều này đảm bảo dữ liệu không bị mất khi chuyển stage
+  _stageDataCache[currentStage] = D ? JSON.parse(JSON.stringify(D)) : null;
+
   // ─── LƯU DỮ LIỆU CỦA STAGE HIỆN TẠI VÀO ENTRY TRƯỚC KHI RỜI ĐI ───
   const currentNotes = document.getElementById('dash-notes').value.trim();
   if (currentNotes && curCaseId) {
@@ -788,15 +806,32 @@ function previewStage(s) {
 
   // ─── CHUYỂN SANG STAGE MỚI ───
   currentStage = s;
-  if (D) D._currentStage = s;
 
-  // ─── KHÔI PHỤC DỮ LIỆU TỪ ENTRY CUỐI CÙNG CỦA STAGE NÀY ───
+  // ─── KHÔI PHỤC DỮ LIỆU TỪ CACHE HOẶC ENTRY CUỐI CÙNG CỦA STAGE NÀY ───
   const cases = loadCases();
   const c = curCaseId ? cases[curCaseId] : null;
   const entriesOfStage = (c?.entries || []).filter(e => (e.stage || 1) === s);
   const lastEntry = entriesOfStage.length ? entriesOfStage[entriesOfStage.length - 1] : null;
 
-  if (lastEntry && lastEntry.analysis) {
+  // ✅ FIX: Ưu tiên khôi phục từ cache (dữ liệu hiện tại chưa lưu)
+  // Nếu cache có dữ liệu, dùng cache. Nếu không, dùng entry cuối cùng
+  if (_stageDataCache[s]) {
+    D = JSON.parse(JSON.stringify(_stageDataCache[s]));
+    D._currentStage = s;
+    if (D._report) renderReport(D._report);
+    document.getElementById('btn-fill').disabled = false;
+    document.getElementById('chat-input').disabled = false;
+    document.getElementById('btn-send').disabled = false;
+    const ta = document.getElementById('dash-notes');
+    if (ta) {
+      // Nếu cache có dữ liệu nhưng không có notes, lấy từ entry cuối cùng
+      if (lastEntry && !ta.value) {
+        ta.value = lastEntry.notes || '';
+      }
+      document.getElementById('dash-cc').textContent = (ta.value || '').length + ' ký tự';
+    }
+    _editingEntryIdx = null;
+  } else if (lastEntry && lastEntry.analysis) {
     D = JSON.parse(JSON.stringify(lastEntry.analysis));
     D._currentStage = s;
     if (D._report) renderReport(D._report);
@@ -849,11 +884,12 @@ function _renderStagePreviewPanel(s) {
   const rows = [...entries].reverse().map(e => {
     const preview = (e.notes || '').substring(0, 280);
     const hasMore = (e.notes || '').length > 280;
+    const realIdx = c.entries.findIndex(ent => ent.id === e.id);
     return `<div style="padding:10px 0;border-bottom:1px solid var(--bd);">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
         <span style="font-size:11px;color:var(--t3);">📅 ${fmtVN(e.date)}</span>
         <span style="flex:1"></span>
-        <button onclick="loadEntryToEditor(${e._realIdx});closeStagePreview()"
+        <button onclick="loadEntryToEditor(${realIdx});closeStagePreview()"
           style="padding:4px 12px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">✏️ Sửa nội dung</button>
       </div>
       <div style="font-size:12px;color:var(--t1);white-space:pre-wrap;line-height:1.6;max-height:140px;overflow:hidden;">${esc(preview)}${hasMore ? '<span style="color:var(--t3);">…</span>' : ''}</div>
@@ -911,6 +947,9 @@ function completeStage() {
         if (fp) fp.innerHTML = '<div id="fv" class="fv"><div style="padding:60px 40px;text-align:center;color:var(--t3);"><div style="font-size:48px;margin-bottom:14px;opacity:.3;">✅</div><div style="font-weight:800;font-size:15px;margin-bottom:6px;color:var(--t2)">Ca đã đóng</div><div style="font-size:12.5px;">Chọn ca khác từ <strong>Danh sách ca</strong></div></div></div>';
         renderCaseList(); updateCasesCount(); updateStageUI(); renderEntriesPanel();
         showNotif('✅ Đã đóng ca thành công!');
+		// Xóa cache khi đóng ca
+		_stageDataCache = { 1: null, 2: null, 3: null, 4: null, 5: null };
+		_stageHistoryCache = { 1: [], 2: [], 3: [], 4: [], 5: [] };
       }
     });
     return;
@@ -1744,6 +1783,11 @@ function loadEntryToEditor(idx) {
   const c = curCaseId ? cases[curCaseId] : null;
   if (!c?.entries?.[idx]) return;
   const entry = c.entries[idx];
+  const entryStage = entry.stage || 1;
+
+  // ✅ FIX: Lưu dữ liệu giai đoạn hiện tại vào cache TRƯỚC khi chuyển
+  _stageDataCache[currentStage] = D ? JSON.parse(JSON.stringify(D)) : null;
+
   _editingEntryIdx = idx;
 
   // Khôi phục notes
@@ -1753,10 +1797,10 @@ function loadEntryToEditor(idx) {
     document.getElementById('dash-cc').textContent = (entry.notes || '').length + ' ký tự';
   }
 
-  // Đồng bộ stage với entry
-  if (entry.stage && entry.stage !== currentStage) {
-    currentStage = entry.stage;
-    if (D) D._currentStage = currentStage;
+  // ✅ FIX: Chỉ thay đổi stage nếu entry thuộc stage khác
+  // Nếu entry cùng stage hiện tại, không cần thay đổi stage
+  if (entryStage !== currentStage) {
+    currentStage = entryStage;
     updateStageUI();
     renderAnalysisPanel();
   }
@@ -1780,8 +1824,9 @@ function loadEntryToEditor(idx) {
   if (card) card.classList.add('active-entry');
 
   switchMain('dash');
-  showNotif(`📂 Đã tải ghi chép GĐ ${entry.stage || 1} — ${fmtVN(entry.date)}`);
+  showNotif(`📂 Đã tải ghi chép GĐ ${entryStage} — ${fmtVN(entry.date)}`);
 }
+
 
 function deleteEntry(idx) {
   if (!confirm('Xóa ghi chép này?')) return;
