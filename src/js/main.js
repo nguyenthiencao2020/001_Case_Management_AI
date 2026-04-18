@@ -844,6 +844,27 @@ function completeStage() {
     }
   });
 
+  // ★ Lưu entry cho giai đoạn HIỆN TẠI trước khi chuyển sang giai đoạn mới
+  const _completeNotes = document.getElementById('dash-notes').value.trim();
+  if (_completeNotes && curCaseId) {
+    const _cc = loadCases();
+    const _ce = _cc[curCaseId];
+    if (_ce) {
+      _ce.entries = _ce.entries || [];
+      const _today = new Date().toDateString();
+      const _last = _ce.entries[_ce.entries.length-1];
+      const _sameDS = _last && _last.stage === currentStage && new Date(_last.date).toDateString() === _today;
+      const _snap = D ? JSON.parse(JSON.stringify(D)) : null;
+      if (_sameDS) {
+        _ce.entries[_ce.entries.length-1] = {..._last, notes:_completeNotes, analysis:_snap, date:new Date().toISOString()};
+      } else {
+        _ce.entries.push({ date:new Date().toISOString(), notes:_completeNotes, analysis:_snap, stage:currentStage });
+      }
+      _cc[curCaseId] = _ce;
+      _cases = _cc;
+    }
+  }
+
   // Lưu stage vào D
   D._currentStage = nextStage;
   currentStage = nextStage;
@@ -879,6 +900,21 @@ function rollbackStage() {
 
   currentStage = prevStage;
   D._currentStage = prevStage;
+
+  // ★ Khôi phục notes + analysis của giai đoạn trước vào textarea
+  const _rbCases = curCaseId ? loadCases() : null;
+  const _rbC = _rbCases?.[curCaseId];
+  const _rbEntries = (_rbC?.entries || []).filter(e => (e.stage||1) === prevStage);
+  const _rbLast = _rbEntries.length ? _rbEntries[_rbEntries.length-1] : null;
+  if (_rbLast) {
+    const ta = document.getElementById('dash-notes');
+    if (ta) { ta.value = _rbLast.notes || ''; document.getElementById('dash-cc').textContent = (_rbLast.notes||'').length + ' ký tự'; }
+    if (_rbLast.analysis) { D = JSON.parse(JSON.stringify(_rbLast.analysis)); D._currentStage = prevStage; if (D._report) renderReport(D._report); }
+  } else {
+    document.getElementById('dash-notes').value = '';
+    document.getElementById('dash-cc').textContent = '0 ký tự';
+  }
+
   updateStageUI();
   saveCaseNow();
   showNotif(`↩ Đã lùi về GĐ ${prevStage}: ${STAGE_CONFIG[prevStage].label}`);
@@ -2546,12 +2582,16 @@ function loadCaseIntoApp(id) {
     D = null;
     document.getElementById('btn-fill').disabled = true;
   }
-  // ★ Luôn hiển thị ghi chép mới nhất vào textarea để NVXH có thể xem và sửa
+  // ★ Hiển thị ghi chép mới nhất của giai đoạn HIỆN TẠI vào textarea
   const entries = c.entries || [];
-  if (entries.length) {
-    const latest = entries[entries.length - 1];
-    document.getElementById('dash-notes').value = latest.notes || '';
-    document.getElementById('dash-cc').textContent = (latest.notes || '').length + ' ký tự';
+  const stageEntries = entries.filter(e => (e.stage||1) === currentStage);
+  const latestForStage = stageEntries.length ? stageEntries[stageEntries.length-1] : (entries.length ? entries[entries.length-1] : null);
+  if (latestForStage) {
+    document.getElementById('dash-notes').value = latestForStage.notes || '';
+    document.getElementById('dash-cc').textContent = (latestForStage.notes || '').length + ' ký tự';
+  } else {
+    document.getElementById('dash-notes').value = '';
+    document.getElementById('dash-cc').textContent = '0 ký tự';
   }
   chatHistory = [];
   updateHeader();
