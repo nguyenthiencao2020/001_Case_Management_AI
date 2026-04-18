@@ -22,7 +22,6 @@ let chatHistory = [];
 let docxLib = null;
 let currentStage = 1;
 let _editingEntryIdx = null;
-let _allowStageDowngradePersist = false;
 
 // ── AUTH ──
 async function loginEmail() {
@@ -954,9 +953,7 @@ function rollbackStage() {
   }
 
   updateStageUI();
-  _allowStageDowngradePersist = true;
-  saveCaseNow();
-  _allowStageDowngradePersist = false;
+  saveCaseNow({ allowStageDowngrade: true });
   showNotif(`↩ Đã lùi về GĐ ${prevStage}: ${STAGE_CONFIG[prevStage].label}`);
 }
 
@@ -2386,7 +2383,7 @@ function _logEdit(source, stage) {
   _cases = cases;
 }
 
-function saveCaseNow() {
+function saveCaseNow({ allowStageDowngrade = false } = {}) {
   if (!D && !document.getElementById('dash-notes').value.trim()) { showNotif('⚠️ Chưa có dữ liệu','warn'); return; }
   _commitDraft(); // lưu ca draft thành thật nếu chưa lưu
   const cases = loadCases();
@@ -2396,7 +2393,7 @@ function saveCaseNow() {
   if (D?.co_ban?.ho_ten) c.name = D.co_ban.ho_ten;
   c.updatedAt = new Date().toISOString();
   const prevStage = c.currentStage || 1;
-  c.currentStage = _allowStageDowngradePersist ? currentStage : Math.max(prevStage, currentStage);
+  c.currentStage = allowStageDowngrade ? currentStage : Math.max(prevStage, currentStage);
   if (D) c.lastAnalysis = D;
   if (notes) {
     c.entries = c.entries || [];
