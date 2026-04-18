@@ -2012,7 +2012,7 @@ function inlineEdit(el, path) {
 
 function Sec(ttl, id, body, ic='📌') {
   const safeTtl = ttl.replace(/'/g, '&apos;').replace(/"/g, '&quot;');
-  return `<div class="sec"><div class="sec-hd"><div class="sec-hl"><span class="sec-ico">${ic}</span>${ttl}</div><div class="sec-acts"><button class="btn-cp" onclick="navigator.clipboard.writeText(document.getElementById('${id}').innerText).then(()=>{this.textContent='✓ Copied';setTimeout(()=>this.textContent='Copy',1400)}).catch(()=>{})">Copy</button><button class="btn-edit-sec" onclick="(function(){var fi=document.getElementById('fec-input');if(fi){fi.value='Sửa mục ${safeTtl}: ';fi.focus();fi.setSelectionRange(9999,9999);}})()">✏️ Sửa mục</button></div></div><div class="sec-bd" id="${id}">${body}</div></div>`;
+  return `<div class="sec"><div class="sec-hd"><div class="sec-hl"><span class="sec-ico">${ic}</span>${ttl}</div><div class="sec-acts"><button class="btn-cp" onclick="navigator.clipboard.writeText(document.getElementById('${id}').innerText).then(()=>{this.textContent='✓';setTimeout(()=>this.textContent='Copy',1400)}).catch(()=>{})">Copy</button></div></div><div class="sec-bd" id="${id}">${body}</div></div>`;
 }
 
 function Dv(t) { return `<div class="dv">${t}</div>`; }
@@ -2039,6 +2039,8 @@ function renderFormTab(idx) {
       </div>
     </div>
     <div class="fv-acts">
+      <button class="btn-fv-edit" onclick="(()=>{const fi=document.getElementById('fec-input');if(fi){fi.focus();fi.placeholder='Hỏi về ca này hoặc gõ lệnh sửa form...';}})()">✏️ Chỉnh sửa</button>
+      <button class="btn-fv-save" onclick="saveCaseNow()">💾 Lưu ca</button>
       <button class="btn-dl-docx" onclick="dlDocx(${idx})">⬇ .docx</button>
     </div>
   </div>`;
@@ -2181,7 +2183,6 @@ function _getFecContext(fi) {
 }
 
 async function sendFEC() {
-  if (!D) { showNotif('⚠️ Chưa có dữ liệu','warn'); return; }
   const input = document.getElementById('fec-input');
   const msg = input.value.trim();
   if (!msg) return;
@@ -2190,45 +2191,58 @@ async function sendFEC() {
   msgs.innerHTML += `<div class="fec-msg-user">${esc(msg)}</div>`;
   msgs.scrollTop = msgs.scrollHeight;
 
+  const sendBtn = document.querySelector('.btn-fec-send');
+  if (sendBtn) sendBtn.disabled = true;
+
   const fctx = _getFecContext(curForm);
   const formName = FORM_NAMES[curForm] || 'Form '+curForm;
+  const caseSnip = D ? fctx.snippet : '[Chưa có dữ liệu ca]';
+
+  const SYS_FEC = `Bạn là TRỢ LÝ AI đa năng hỗ trợ Nhân viên Công tác Xã hội (NVXH) tại Thảo Đàn SSC, TP.HCM.
+
+Bạn có thể làm 2 việc:
+① TƯ VẤN & HỖ TRỢ: Trả lời câu hỏi về CTXH, kỹ năng can thiệp, quy trình bảo vệ trẻ, tâm lý, pháp lý
+② CHỈNH SỬA FORM: Cập nhật thông tin trong ${formName} đang mở
+
+Form hiện tại (${formName}): ${caseSnip}
+
+PHÂN TÍCH yêu cầu và trả về JSON:
+• Câu hỏi / tư vấn / hỏi đáp → {"type":"chat","reply":"<câu trả lời, dùng **bold** cho từ quan trọng, dùng \\n cho xuống dòng>"}
+• Lệnh sửa thông tin → {"type":"edit","edits":[{"path":"co_ban.ho_ten","old_val":"cũ","new_val":"mới","label":"Họ tên trẻ"}],"reply":"<xác nhận ngắn>"}
+• Vừa hỏi vừa sửa → {"type":"both","edits":[...],"reply":"<trả lời + xác nhận>"}
+
+Paths field: co_ban.ho_ten/gioi_tinh/ngay_sinh/tuoi/song_voi/dia_chi_hien_tai/sdt_tre/sdt_nguoi_than, gia_dinh.hoan_canh/loai_hinh/nguoi_cham_soc.ho_ten, tinh_trang.cong_viec/suc_khoe.tinh_trang/tam_ly.mo_ta, danh_gia.nguy_co/muc_khan_cap/van_de_the_chat/nhu_cau_the_chat/nhan_xet_nvxh, vang_gia.quan_sat_mt/danh_gia_chung
+
+Luôn trả JSON hợp lệ. Ngắn gọn, thực tế, đồng nghiệp với NVXH.`;
 
   try {
-    const raw = await callAI(
-      `Bạn là trợ lý chỉnh sửa form CTXH Thảo Đàn. ĐANG SỬA: ${formName} (form index ${curForm}).
-Data roots: ${fctx.rootKeys}.
-
-QUAN TRỌNG: User có thể yêu cầu sửa NHIỀU field cùng lúc. Hãy phân tích kỹ và tạo NHIỀU edit entries trong mảng "edits".
-VD: "sửa tên thành Nguyễn Văn A, sinh ngày 1/1/2010, giới tính Nam" → 3 edits.
-VD: "địa chỉ là 123 Nguyễn Huệ Q1, SĐT 0901234567" → 2 edits.
-
-Trả về JSON DUY NHẤT:
-{"understood":true,"edits":[{"path":"<root>.<field>","old_val":"giá trị cũ","new_val":"giá trị mới","label":"Tên field hiển thị"}],"message":""}
-Nếu không hiểu: {"understood":false,"edits":[],"message":"giải thích"}
-
-VD path: co_ban.ho_ten, co_ban.ngay_sinh, co_ban.gioi_tinh, co_ban.dia_chi_hien_tai, co_ban.sdt, 
-vang_gia.quan_sat_mt, vang_gia.bau_khong_khi, danh_gia.van_de_the_chat, danh_gia.van_de_tam_ly, 
-ke_hoach.thoi_gian_kh, ke_hoach.bat_dau_case, chuyen_gui.don_vi_nhan, ket_thuc.ket_qua_dat
-Với cap_nhat (mảng): "cap_nhat[0].ket_qua", "cap_nhat[-1].ket_qua"
-Với gia_dinh: gia_dinh.cha.ho_ten, gia_dinh.me.ho_ten, gia_dinh.hoan_canh
-
-Dữ liệu hiện tại: ${fctx.snippet}`,
-      msg, 0, 1500);
+    const raw = await callAI(SYS_FEC, msg, 0.3, 2000);
     const result = robustJSON(raw);
-    if (!result.understood || !result.edits?.length) {
-      msgs.innerHTML += `<div class="fec-msg-ai">🤔 ${esc(result.message||'Không hiểu. VD: "sửa tên thành Nguyễn Văn A, SN 1/1/2010, giới tính Nam"')}</div>`;
-    } else {
-      result.edits.forEach(edit => {
-        setNested(D, edit.path, edit.new_val);
-        msgs.innerHTML += `<div class="fec-msg-ai" style="color:#16a34a;">✅ ${esc(edit.label||edit.path)}: "${esc(edit.old_val||'')}" → "${esc(edit.new_val)}"</div>`;
-      });
-      msgs.innerHTML += `<div class="fec-msg-ai" style="color:#1d4ed8;font-size:11px;">📝 Đã sửa ${result.edits.length} trường — nhớ Lưu ca</div>`;
-      showForm(curForm);
-      if(window._markUnsaved) window._markUnsaved();
-      showNotif(`✅ Đã cập nhật ${result.edits.length} trường — nhớ Lưu ca`);
+    const type = result.type || 'chat';
+
+    if (type === 'edit' || type === 'both') {
+      const edits = result.edits || [];
+      if (edits.length && D) {
+        edits.forEach(e => setNested(D, e.path, e.new_val));
+        showForm(curForm);
+        if (window._markUnsaved) window._markUnsaved();
+        msgs.innerHTML += `<div class="fec-msg-ai fec-msg-edit">✅ Đã sửa ${edits.length} trường: ${edits.map(e=>esc(e.label||e.path)).join(', ')} — nhớ bấm <strong>Lưu ca</strong></div>`;
+      }
+    }
+
+    if (type === 'chat' || type === 'both') {
+      const reply = result.reply || result.message || '';
+      msgs.innerHTML += `<div class="fec-msg-ai">${formatMd(reply)}</div>`;
+    }
+
+    if (type !== 'chat' && type !== 'edit' && type !== 'both') {
+      const fb = result.reply || result.message || '';
+      msgs.innerHTML += `<div class="fec-msg-ai">${fb ? formatMd(fb) : '🤔 Thử lại: hỏi về ca này hoặc gõ lệnh sửa, VD: "sửa họ tên thành Nguyễn Văn A"'}</div>`;
     }
   } catch(e) {
-    msgs.innerHTML += `<div class="fec-msg-ai">❌ ${esc(e.message)}</div>`;
+    msgs.innerHTML += `<div class="fec-msg-ai" style="color:#dc2626;">❌ ${esc(e.message)}</div>`;
+  } finally {
+    if (sendBtn) sendBtn.disabled = false;
   }
   msgs.scrollTop = msgs.scrollHeight;
 }
