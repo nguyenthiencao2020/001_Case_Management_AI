@@ -4610,6 +4610,7 @@ function saveFollowUp(caseId) {
   const moc = mocRaw ? parseInt(mocRaw) : null;
   const hinh_thuc = document.getElementById('fup-type-'+caseId)?.value || '';
   const ghi_chu = (document.getElementById('fup-note-'+caseId)?.value||'').trim();
+  const ai_phan_tich = (document.getElementById('fup-ai-result-'+caseId)?.value||'').trim();
   const dr = _fupDraft[caseId] || {};
   if (!ghi_chu && !dr.ket_luan) { showNotif('⚠️ Nhập ghi chú hoặc chọn kết luận', 'warn'); return; }
   const cases = loadCases();
@@ -4617,7 +4618,7 @@ function saveFollowUp(caseId) {
   if (!cases[caseId].followUpLog) cases[caseId].followUpLog = [];
   cases[caseId].followUpLog.push({
     id: Date.now().toString(36), ts: new Date().toISOString(),
-    ngay, moc, hinh_thuc, ghi_chu,
+    ngay, moc, hinh_thuc, ghi_chu, ai_phan_tich,
     chi_so: {
       an_toan_the_chat: dr.an_toan_the_chat||'',
       an_toan_tam_ly:   dr.an_toan_tam_ly||'',
@@ -4632,6 +4633,52 @@ function saveFollowUp(caseId) {
   delete _fupDraft[caseId];
   showCaseDetail(caseId);
   showNotif('✅ Đã ghi nhận theo dõi');
+}
+
+async function analyzeFollowUp(caseId) {
+  const btn = document.getElementById('fup-ai-btn-'+caseId);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang phân tích...'; }
+  const ngay      = document.getElementById('fup-date-'+caseId)?.value || '';
+  const hinh_thuc = document.getElementById('fup-type-'+caseId)?.value || '';
+  const ghi_chu   = document.getElementById('fup-note-'+caseId)?.value || '';
+  const dr = _fupDraft[caseId] || {};
+  const cases = loadCases();
+  const c = cases[caseId];
+  const childName = c?.lastAnalysis?.co_ban?.ho_ten || '(Chưa rõ)';
+  const daysClosed = c?.closedAt ? Math.floor((Date.now()-new Date(c.closedAt))/86400000) : null;
+  const prevLog = (c?.followUpLog||[]).slice(-2).map(e =>
+    `Ngày ${e.ngay}: KL=${e.ket_luan||'?'}, TH=${e.hinh_thuc||'?'}, ` +
+    `TC=${e.chi_so?.an_toan_the_chat||'?'}, TL=${e.chi_so?.an_toan_tam_ly||'?'}, ` +
+    `HT=${e.chi_so?.hoc_tap||'?'}, DK=${e.chi_so?.dieu_kien_song||'?'}, DV=${e.chi_so?.ket_noi_dich_vu||'?'}` +
+    (e.ghi_chu?` · Ghi chú: ${e.ghi_chu.substring(0,80)}`:'')
+  ).join('\n') || 'Đây là lần theo dõi đầu tiên.';
+
+  const userMsg = `TRẺ: ${childName}
+NGÀY THEO DÕI: ${ngay} — HÌNH THỨC: ${hinh_thuc}
+KỂ TỪ ĐÓNG CA: ${daysClosed !== null ? daysClosed+' ngày' : 'Chưa rõ'}
+
+ĐÁNH GIÁ 5 CHỈ SỐ:
+· An toàn thể chất: ${dr.an_toan_the_chat||'Chưa đánh giá'}
+· An toàn tâm lý:   ${dr.an_toan_tam_ly||'Chưa đánh giá'}
+· Học tập/sinh hoạt: ${dr.hoc_tap||'Chưa đánh giá'}
+· Điều kiện sống:   ${dr.dieu_kien_song||'Chưa đánh giá'}
+· Kết nối dịch vụ:  ${dr.ket_noi_dich_vu||'Chưa đánh giá'}
+
+GHI CHÚ NVXH: ${ghi_chu||'(Chưa nhập)'}
+KẾT LUẬN NVXH: ${dr.ket_luan||'Chưa chọn'}
+
+LỊCH SỬ THEO DÕI TRƯỚC:
+${prevLog}`;
+
+  try {
+    const result = await callAI(SYS_FOLLOWUP_ANALYSIS, userMsg, 0.35, 1200);
+    const area = document.getElementById('fup-ai-result-'+caseId);
+    if (area) { area.value = result; area.style.display = 'block'; area.rows = 8; }
+    if (btn) { btn.disabled = false; btn.textContent = '🤖 Phân tích lại'; }
+  } catch {
+    if (btn) { btn.disabled = false; btn.textContent = '🤖 Phân tích AI'; }
+    showNotif('⚠️ Lỗi AI', 'warn');
+  }
 }
 
 function deleteFollowUp(caseId, entryId) {
@@ -4689,7 +4736,8 @@ function _renderFollowUpSection(id, c) {
         <button onclick="deleteFollowUp('${id}','${e.id}')" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:15px;padding:0;line-height:1;">×</button>
       </div>
       ${csChips?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:3px;">${csChips}</div>`:''}
-      ${e.ghi_chu?`<div style="font-size:12px;color:var(--t1);">${esc(e.ghi_chu)}</div>`:''}
+      ${e.ghi_chu?`<div style="font-size:12px;color:var(--t1);margin-bottom:3px;">${esc(e.ghi_chu)}</div>`:''}
+      ${e.ai_phan_tich?`<details style="margin-top:4px;"><summary style="font-size:10px;font-weight:700;color:#6d28d9;cursor:pointer;list-style:none;">🤖 Nhận xét AI ▸</summary><div style="font-size:11.5px;color:#4c1d95;background:#faf5ff;border:1px solid #e9d5ff;border-radius:6px;padding:8px;margin-top:4px;white-space:pre-wrap;line-height:1.6;">${esc(e.ai_phan_tich)}</div></details>`:''}
     </div>`;
   }).join('');
 
@@ -4746,7 +4794,11 @@ function _renderFollowUpSection(id, c) {
         <div class="fup-box-title" style="margin-bottom:6px;">Kết luận</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">${KET_LUAN.map(klBtn).join('')}</div>
       </div>
-      <button onclick="saveFollowUp('${id}')" style="height:34px;padding:0 18px;background:var(--org);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">💾 Lưu theo dõi</button>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button id="fup-ai-btn-${id}" onclick="analyzeFollowUp('${id}')" style="height:34px;padding:0 16px;background:linear-gradient(135deg,#6d28d9,#5b21b6);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">🤖 Phân tích AI</button>
+        <button onclick="saveFollowUp('${id}')" style="height:34px;padding:0 18px;background:var(--org);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">💾 Lưu theo dõi</button>
+      </div>
+      <textarea id="fup-ai-result-${id}" rows="1" placeholder="Nhận xét AI sẽ hiện ở đây (có thể chỉnh sửa trước khi lưu)..." style="display:none;width:100%;margin-top:10px;padding:9px 11px;border:1.5px solid #7c3aed;border-radius:8px;font-size:12px;font-family:inherit;resize:vertical;background:#faf5ff;color:#4c1d95;box-sizing:border-box;line-height:1.6;"></textarea>
     </div>
   </div>`;
 }
