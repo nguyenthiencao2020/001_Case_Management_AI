@@ -1081,7 +1081,8 @@ function _header(stageName,stageNum,color) {
       <div><div style="font-size:14px;font-weight:900">Báo cáo GĐ ${stageNum} — ${stageName}</div>
       <div style="font-size:10px;opacity:.6;margin-top:2px">${esc(cb.ho_ten||'—')} · ${now}</div></div>
     </div>
-    <div style="font-size:10px;opacity:.6">v22</div></div>`;
+    <button onclick="dlReportDocx()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:5px 12px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">⬇ .docx</button>
+  </div>`;
 }
 function _urgentBanner(report) {
   if (!report.urgent||!report.urgent_reason) return '';
@@ -2549,6 +2550,190 @@ function importCasesJSON() {
 
 // DOCX EXPORT ENGINE v14.1 — FULL FIELDS + PRO FORMATTING
 // Chuẩn văn phong hành chính Việt Nam
+// ════════════════════════════════════════════════════════════
+// EXPORT BÁO CÁO PHÂN TÍCH AI → .docx
+// ════════════════════════════════════════════════════════════
+async function dlReportDocx() {
+  if (!D || !D._report) { showNotif('⚠️ Chưa có báo cáo phân tích', 'warn'); return; }
+  let lib;
+  try { lib = await loadDocxLib(); } catch(e) { showNotif('❌ ' + e.message, 'err'); return; }
+  showNotif('📄 Đang tạo báo cáo Word...');
+  const imgs = await Promise.all([fetchImg(LOGO_URL), fetchImg(FOOTER_URL)]);
+  try {
+    const r = D._report, stage = currentStage, cb = D.co_ban||{};
+    const { Document, Paragraph, TextRun, ImageRun, AlignmentType, BorderStyle, WidthType } = lib;
+    const PW=11906, MG=1134, CW=PW-2*MG, TNR='Times New Roman', NAVY='0F2D6B';
+    const LS = { value:276, rule:'auto' };
+    const Tx = (t,o) => new TextRun(Object.assign({text:t||'',font:TNR,size:24},o||{}));
+    const Pg = (ch,o) => new Paragraph(Object.assign({children:Array.isArray(ch)?ch:[ch],spacing:{before:60,after:50,line:LS.value}},o||{}));
+    const SH = (t) => new Paragraph({children:[Tx(t,{bold:true,color:NAVY,size:26})],spacing:{before:300,after:100,line:LS.value},border:{bottom:{style:BorderStyle.SINGLE,size:3,color:NAVY}}});
+    const BL = (items) => (items||[]).map(i=>new Paragraph({children:[Tx('• '+String(i||''),{color:'1E293B'})],spacing:{before:30,after:30,line:LS.value}}));
+    const HR = () => new Paragraph({border:{bottom:{style:BorderStyle.SINGLE,size:1,color:'CCCCCC'}},spacing:{before:160,after:80}});
+    const SN = {1:'TIẾP CẬN BAN ĐẦU',2:'VÃNG GIA & ĐÁNH GIÁ',3:'KẾ HOẠCH CAN THIỆP',4:'TIẾN TRÌNH CẬP NHẬT',5:'KẾT THÚC CA'};
+
+    const body = [];
+
+    // ── Logo header ──
+    if (imgs[0]) {
+      try {
+        body.push(new Paragraph({children:[new ImageRun({data:imgs[0],transformation:{width:50,height:50},type:'png'})],alignment:AlignmentType.LEFT,spacing:{before:0,after:60}}));
+      } catch(e) {}
+    }
+    body.push(Pg([Tx('BÁO CÁO PHÂN TÍCH GĐ '+stage+' — '+(SN[stage]||''),{bold:true,color:NAVY,size:32})],{alignment:AlignmentType.CENTER}));
+    body.push(Pg([Tx((cb.ho_ten||'—')+'   |   Ngày: '+new Date().toLocaleDateString('vi-VN'),{size:20,color:'666666',italics:true})],{alignment:AlignmentType.CENTER}));
+    body.push(new Paragraph({border:{bottom:{style:BorderStyle.SINGLE,size:4,color:NAVY}},spacing:{before:80,after:120}}));
+
+    // ── Stage 1 ──
+    if (stage===1) {
+      const rm=r.risk_matrix||{}, nw=r.needs_vs_wants||{}, pf=r.parentification||{};
+      body.push(SH('I. MA TRẬN RỦI RO ĐA CHIỀU'));
+      body.push(Pg([Tx('Mức rủi ro tổng thể: ',{bold:true}),Tx(r.risk||'?',{bold:true,color:r.risk==='Cao'?'DC2626':r.risk==='Trung bình'?'D97706':'059669'})]));
+      if (r.risk_reason) body.push(Pg([Tx(r.risk_reason,{italics:true,color:'555555',size:22})]));
+      [['an_toan_the_chat','An toàn Thể chất'],['an_toan_tam_ly','An toàn Tâm lý'],['moi_truong','Môi trường Sống'],['giao_duc','Giáo dục'],['he_thong_bao_ve','Hệ thống Bảo vệ']].forEach(([k,v])=>{
+        const o=rm[k]||{}; body.push(Pg([Tx('• '+v+': ',{bold:true}),Tx('['+( o.level||'?')+']  '),Tx(o.detail||'',{color:'555555',size:22})]));
+      });
+      body.push(SH('II. DẤU HIỆU NGUY HIỂM (RED FLAGS)'));
+      body.push(...BL(r.red_flags));
+      if (pf.detected) {
+        body.push(SH('III. PHỤ MẪU HÓA'));
+        body.push(Pg([Tx('Loại: ',{bold:true}),Tx(pf.type||'')]));
+        body.push(Pg([Tx(pf.description||'',{color:'333333'})]));
+      }
+      body.push(SH(pf.detected?'IV. NHU CẦU & YÊU CẦU':'III. NHU CẦU & YÊU CẦU'));
+      if (nw.needs?.length) { body.push(Pg([Tx('Nhu cầu khách quan:',{bold:true})])); body.push(...BL(nw.needs)); }
+      if (nw.wants?.length) { body.push(Pg([Tx('Yêu cầu chủ quan:',{bold:true})])); body.push(...BL(nw.wants)); }
+      body.push(SH(pf.detected?'V. ƯU THẾ':'IV. ƯU THẾ'));
+      body.push(...BL(r.strengths));
+      body.push(SH(pf.detected?'VI. ĐỀ XUẤT':'V. ĐỀ XUẤT CAN THIỆP'));
+      (r.suggestions||[]).forEach((s,i)=>{
+        body.push(Pg([Tx((i+1)+'. [Ưu tiên '+s.priority+'] '+( s.action||''),{bold:true})]));
+        if (s.reason) body.push(Pg([Tx('   Lý do: '+s.reason,{color:'555555',size:22})]));
+        if (s.who||s.timeline) body.push(Pg([Tx('   Người thực hiện: '+(s.who||'—')+'  ·  Thời hạn: '+(s.timeline||'—'),{color:'555555',size:22})]));
+      });
+      body.push(SH(pf.detected?'VII. CÂU HỎI TIẾP THEO':'VI. CÂU HỎI TIẾP THEO'));
+      body.push(...BL(r.next_questions));
+    }
+
+    // ── Stage 2 ──
+    else if (stage===2) {
+      const he=r.home_environment||{}, fd=r.family_dynamics||{}, vs=r.vs_stage1||{}, nw=r.needs_updated||{};
+      body.push(SH('I. CẬP NHẬT MỨC RỦI RO'));
+      body.push(Pg([Tx('Hiện tại: ',{bold:true}),Tx(r.risk_current||'?',{bold:true,color:'DC2626'}),Tx('  ('+( r.risk_update||'Không đổi')+')',{color:'888888'})]));
+      if (r.risk_change_reason) body.push(Pg([Tx(r.risk_change_reason,{color:'555555',italics:true,size:22})]));
+      body.push(SH('II. MÔI TRƯỜNG NHÀ Ở'));
+      body.push(Pg([Tx('Mức an toàn: ',{bold:true}),Tx(he.safety_level||'?')]));
+      if (he.key_observations?.length) { body.push(Pg([Tx('Quan sát:',{bold:true})])); body.push(...BL(he.key_observations)); }
+      if (he.concerns?.length) { body.push(Pg([Tx('Mối lo ngại:',{bold:true})])); body.push(...BL(he.concerns)); }
+      body.push(SH('III. ĐÁNH GIÁ GIA ĐÌNH'));
+      body.push(Pg([Tx('Năng lực chăm sóc: ',{bold:true}),Tx(fd.caregiver_capacity||'?')]));
+      body.push(Pg([Tx('Chất lượng quan hệ: ',{bold:true}),Tx(fd.relationship_quality||'?')]));
+      if (fd.protective_factors?.length) { body.push(Pg([Tx('Yếu tố bảo vệ:',{bold:true})])); body.push(...BL(fd.protective_factors)); }
+      if (fd.risk_factors?.length) { body.push(Pg([Tx('Yếu tố nguy cơ:',{bold:true})])); body.push(...BL(fd.risk_factors)); }
+      body.push(SH('IV. SO VỚI GĐ 1'));
+      if (vs.confirmed?.length) { body.push(Pg([Tx('✓ Xác nhận:',{bold:true})])); body.push(...BL(vs.confirmed)); }
+      if (vs.new_findings?.length) { body.push(Pg([Tx('+ Phát hiện mới:',{bold:true})])); body.push(...BL(vs.new_findings)); }
+      if (vs.contradictions?.length) { body.push(Pg([Tx('≠ Mâu thuẫn:',{bold:true})])); body.push(...BL(vs.contradictions)); }
+      body.push(SH('V. CÂU HỎI TIẾP THEO'));
+      body.push(...BL(r.next_questions));
+    }
+
+    // ── Stage 3 ──
+    else if (stage===3) {
+      const pa=r.plan_assessment||{}, rr=r.resources_review||{};
+      body.push(SH('I. ĐÁNH GIÁ KẾ HOẠCH'));
+      body.push(Pg([Tx('Tính khả thi: ',{bold:true}),Tx(pa.feasibility||'?')]));
+      body.push(Pg([Tx('Mức độ tham gia của GĐ: ',{bold:true}),Tx(r.family_engagement||'?')]));
+      body.push(Pg([Tx('Đánh giá thời gian: ',{bold:true}),Tx(r.timeline_assessment||'?')]));
+      if (pa.strengths?.length) { body.push(Pg([Tx('Điểm mạnh:',{bold:true})])); body.push(...BL(pa.strengths)); }
+      if (pa.gaps?.length) { body.push(Pg([Tx('Thiếu sót:',{bold:true})])); body.push(...BL(pa.gaps)); }
+      if (pa.risks?.length) { body.push(Pg([Tx('Rủi ro:',{bold:true})])); body.push(...BL(pa.risks)); }
+      body.push(SH('II. NHẬN XÉT TỪNG MỤC TIÊU'));
+      (r.goals_review||[]).forEach(g=>{
+        body.push(Pg([Tx('• '+(g.goal||''),{bold:true}),Tx('  →  Khả thi: '+(g.realistic?'Có':'Không'),{color:g.realistic?'059669':'DC2626'})]));
+        if (g.comment) body.push(Pg([Tx('   '+g.comment,{color:'555555',size:22})]));
+      });
+      body.push(SH('III. NGUỒN LỰC'));
+      if (rr.available?.length) { body.push(Pg([Tx('Sẵn có:',{bold:true})])); body.push(...BL(rr.available)); }
+      if (rr.missing?.length) { body.push(Pg([Tx('Còn thiếu:',{bold:true})])); body.push(...BL(rr.missing)); }
+      if (rr.suggestions?.length) { body.push(Pg([Tx('Đề xuất:',{bold:true})])); body.push(...BL(rr.suggestions)); }
+      if ((r.priority_order||[]).length) { body.push(SH('IV. THỨ TỰ ƯU TIÊN')); body.push(...BL(r.priority_order)); }
+    }
+
+    // ── Stage 4 ──
+    else if (stage===4) {
+      const wb=r.child_wellbeing||{}, ns=r.next_session||{}, pa=r.plan_adjustment||{};
+      body.push(SH('I. WELLBEING TRẺ'));
+      [['Thể chất',wb.physical],['Tâm lý',wb.psychological],['Giáo dục',wb.education]].forEach(([lbl,val])=>{
+        body.push(Pg([Tx(lbl+': ',{bold:true}),Tx(val||'Chưa đánh giá')]));
+      });
+      body.push(SH('II. TIẾN ĐỘ MỤC TIÊU'));
+      (r.goals_progress||[]).forEach(g=>{
+        const c={'Đạt':'059669','Đang tiến hành':'D97706','Chưa đạt':'DC2626','Bỏ qua':'888888'}[g.status]||'333333';
+        body.push(Pg([Tx('• ['+( g.status||'?')+'] ',{bold:true,color:c}),Tx(g.goal||'',{bold:true})]));
+        if (g.evidence) body.push(Pg([Tx('   📌 Bằng chứng: '+g.evidence,{color:'059669',size:22})]));
+        if (g.comment) body.push(Pg([Tx('   '+g.comment,{color:'555555',size:22})]));
+      });
+      if ((r.positive_changes||[]).length) { body.push(SH('III. THAY ĐỔI TÍCH CỰC')); body.push(...BL(r.positive_changes)); }
+      if ((r.barriers||[]).length) { body.push(SH('IV. RÀO CẢN')); body.push(...BL(r.barriers)); }
+      if (pa.needed && pa.suggestions?.length) { body.push(SH('V. ĐIỀU CHỈNH KẾ HOẠCH')); body.push(...BL(pa.suggestions)); }
+      body.push(SH('VI. ĐỊNH HƯỚNG BUỔI TIẾP THEO'));
+      if (ns.focus) body.push(Pg([Tx(ns.focus,{bold:true})]));
+      body.push(...BL(ns.actions));
+    }
+
+    // ── Stage 5 ──
+    else if (stage===5) {
+      const oc=r.outcomes||{}, cs=r.child_status_final||{}, rec=r.recommendations||{};
+      body.push(SH('I. TÓM TẮT TOÀN CA'));
+      if (r.case_summary) body.push(Pg([Tx(r.case_summary,{color:'1E293B'})]));
+      body.push(SH('II. KẾT QUẢ ĐẠT ĐƯỢC'));
+      body.push(Pg([Tx('Tỉ lệ đạt mục tiêu: ',{bold:true}),Tx(oc.achievement_rate||'?',{bold:true,color:oc.achievement_rate==='Cao'?'059669':oc.achievement_rate==='Thấp'?'DC2626':'D97706'})]));
+      if (oc.achieved?.length) { body.push(Pg([Tx('✅ Đạt được:',{bold:true,color:'059669'})])); body.push(...BL(oc.achieved)); }
+      if (oc.partial?.length) { body.push(Pg([Tx('⚡ Đạt một phần:',{bold:true,color:'D97706'})])); body.push(...BL(oc.partial)); }
+      if (oc.not_achieved?.length) { body.push(Pg([Tx('❌ Chưa đạt:',{bold:true,color:'DC2626'})])); body.push(...BL(oc.not_achieved)); }
+      body.push(SH('III. TÌNH TRẠNG TRẺ KHI ĐÓNG CA'));
+      body.push(Pg([Tx('Mức độ an toàn: ',{bold:true}),Tx(cs.safety||'?',{color:cs.safety==='An toàn'?'059669':'D97706',bold:true})]));
+      body.push(Pg([Tx('Wellbeing tổng thể: ',{bold:true}),Tx(cs.wellbeing||'?')]));
+      if (cs.family_situation) body.push(Pg([Tx('Tình trạng gia đình: ',{bold:true}),Tx(cs.family_situation)]));
+      if ((r.key_turning_points||[]).length) { body.push(SH('IV. ĐIỂM NGOẶT QUAN TRỌNG')); body.push(...BL(r.key_turning_points)); }
+      if ((r.lessons_learned||[]).length) { body.push(SH('V. BÀI HỌC KINH NGHIỆM')); body.push(...BL(r.lessons_learned)); }
+      body.push(SH('VI. KHUYẾN NGHỊ'));
+      if (rec.for_child?.length) { body.push(Pg([Tx('Cho trẻ:',{bold:true})])); body.push(...BL(rec.for_child)); }
+      if (rec.for_family?.length) { body.push(Pg([Tx('Cho gia đình:',{bold:true})])); body.push(...BL(rec.for_family)); }
+      if (rec.for_organization?.length) { body.push(Pg([Tx('Cho tổ chức:',{bold:true})])); body.push(...BL(rec.for_organization)); }
+      if (r.follow_up_needed) {
+        body.push(SH('VII. KẾ HOẠCH THEO DÕI SAU CA'));
+        body.push(Pg([Tx(r.follow_up_plan||'Cần xác định kế hoạch theo dõi',{color:'1E293B'})]));
+      }
+    }
+
+    // ── Ghi chú giám sát (mọi giai đoạn) ──
+    if ((r.supervision_notes||[]).length) {
+      body.push(SH('GHI CHÚ GIÁM SÁT VIÊN'));
+      body.push(...BL(r.supervision_notes));
+    }
+    body.push(HR());
+    body.push(Pg([Tx('Cơ sở Thảo Đàn — Trung tâm Dịch vụ Xã hội TP.HCM',{size:20,color:'888888',italics:true})],{alignment:AlignmentType.CENTER}));
+
+    // Footer image
+    let footerSection={};
+    if (imgs[1]) {
+      try {
+        const {Footer:FC}=lib;
+        footerSection={default:new FC({children:[new Paragraph({children:[new ImageRun({data:imgs[1],transformation:{width:794,height:79},type:'png'})],alignment:AlignmentType.CENTER})]})};
+      } catch(e){}
+    }
+    const doc=new Document({sections:[{properties:{page:{size:{width:PW,height:16838},margin:{top:MG,right:MG,bottom:720,left:MG,footer:0}}},footers:footerSection,children:body}]});
+    const blob=await lib.Packer.toBlob(doc);
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    const cn=(cb.ho_ten||'Ca').replace(/\s+/g,'_');
+    a.href=url; a.download='ThaoDan_BaoCao_GD'+stage+'_'+cn+'.docx'; a.click();
+    URL.revokeObjectURL(url);
+    showNotif('✅ Đã xuất báo cáo GĐ '+stage);
+  } catch(e) { showNotif('❌ '+e.message,'err'); console.error(e); }
+}
+
 // ════════════════════════════════════════════════════════════
 const FF=["Form0_Ho_so_xa_hoi","Form1_Phieu_tiep_can","Form2_Phuc_trinh_vang_gia","Form3a_Danh_gia_khan_cap","Form3b_Danh_gia_nhu_cau","Form4_Ke_hoach_can_thiep","Form5_Tien_do_thuc_hien","Form6_Cap_nhat_tien_trinh","Form7_Phieu_chuyen_gui","Form8_Phieu_ket_thuc_ca","BaoCao_QLTH"];
 
