@@ -1654,21 +1654,34 @@ function clearNotes() {
 }
 
 // toggleFormSidebar — toggle class on .forms-tab for CSS grid collapse
-let sidebarVisible = true;
+let sidebarVisible = window.innerWidth > 768;
 function toggleFormSidebar() {
   sidebarVisible = !sidebarVisible;
   const tab = document.querySelector('.forms-tab');
   const btn = document.getElementById('sidebar-toggle');
   const isMobile = window.innerWidth <= 768;
   if (isMobile) {
-    // Mobile: dùng sidebar-shown (mặc định ẩn)
+    // Mobile: overlay sidebar, hidden by default
     if (tab) tab.classList.toggle('sidebar-shown', sidebarVisible);
   } else {
-    // Desktop: dùng sidebar-hidden (mặc định hiện)
+    // Desktop: sidebar visible by default
     if (tab) tab.classList.toggle('sidebar-hidden', !sidebarVisible);
   }
   if (btn) btn.textContent = sidebarVisible ? '☰' : '▶';
 }
+// Reset sidebar state on resize
+window.addEventListener('resize', () => {
+  const isMobile = window.innerWidth <= 768;
+  const tab = document.querySelector('.forms-tab');
+  if (!tab) return;
+  if (!isMobile) {
+    tab.classList.remove('sidebar-shown');
+    if (!sidebarVisible) tab.classList.add('sidebar-hidden');
+  } else {
+    tab.classList.remove('sidebar-hidden');
+    if (!sidebarVisible) tab.classList.remove('sidebar-shown');
+  }
+});
 
 // ════════════════════════════════════════════════════════════
 // CHAT
