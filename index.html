@@ -158,11 +158,13 @@
         <div id="fv" class="fv"><div style="padding:60px 40px;text-align:center;color:var(--t3);"><div style="font-size:48px;margin-bottom:14px;opacity:.3;">📋</div><div style="font-weight:800;font-size:15px;margin-bottom:6px;color:var(--t2)">Chưa có dữ liệu</div><div style="font-size:12.5px;">Phân tích ghi chép trong tab <strong>Dashboard</strong> để điền form</div></div></div>
       </div>
       <div class="fec" id="fec">
-        <div class="fec-hd" onclick="toggleFEC()"><span>✏️</span> Chỉnh sửa thông tin<span id="fec-ctx" style="font-size:10px;color:#94a3b8;"></span><span class="fec-badge">AI</span><span class="fec-toggle" id="fec-tog">▾</span></div>
-        <div id="fec-collapse">
-          <div class="fec-body" id="fec-msgs"><div class="fec-hint">VD: "sửa họ tên thành Nguyễn Văn A" · "bổ sung địa chỉ 123 Q.1"</div></div>
-          <div class="fec-input-row"><input id="fec-input" class="fec-input" type="text" placeholder="Sửa thông tin form này..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendFEC()}"><button class="btn-fec-send" onclick="sendFEC()">➤</button></div>
+        <div class="fec-hd">
+          <span>💬</span> Trợ lý chỉnh sửa form
+          <span id="fec-ctx" class="fec-ctx-lbl"></span>
+          <span class="fec-badge">AI</span>
         </div>
+        <div class="fec-body" id="fec-msgs"><div class="fec-hint">💡 Bấm vào bất kỳ trường nào để sửa trực tiếp · hoặc gõ lệnh bên dưới để AI hỗ trợ</div></div>
+        <div class="fec-input-row"><input id="fec-input" class="fec-input" type="text" placeholder="VD: sửa họ tên thành Nguyễn Văn A, bổ sung địa chỉ..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendFEC()}"><button class="btn-fec-send" onclick="sendFEC()">➤</button></div>
       </div>
     </div>
   </div>

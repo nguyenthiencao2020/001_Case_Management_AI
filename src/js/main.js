@@ -1930,14 +1930,53 @@ function showForm(idx) {
   if (ctx) ctx.textContent = '— '+FORM_NAMES[idx];
 }
 
-function F(lbl, val, ic='-') {
+function F(lbl, val, ic='-', path='') {
   const s = fmtDate(clean(val));
-  return `<div class="fl"><div class="fl-ico">${ic}</div><div class="fl-bd"><div class="fl-lb">${lbl}</div><div class="fl-vl ${s?'ok':'no'}">${s||'—'}</div></div></div>`;
+  const extra = path ? ` fl-editable" onclick="inlineEdit(this,'${path}')" title="Bấm để chỉnh sửa"` : '"';
+  return `<div class="fl"><div class="fl-ico">${ic}</div><div class="fl-bd"><div class="fl-lb">${lbl}</div><div class="fl-vl ${s?'ok':'no'}${extra}>${s||'—'}</div></div></div>`;
+}
+
+function inlineEdit(el, path) {
+  if (!D || !path) return;
+  if (el.querySelector('input,textarea')) return;
+  const cur = el.textContent.trim() === '—' ? '' : el.textContent.trim();
+  el.classList.add('fl-editing');
+  const long = cur.length > 80 || path.includes('mo_ta') || path.includes('ghi_chu') || path.includes('nhan_xet') || path.includes('hoan_canh') || path.includes('van_de') || path.includes('nhu_cau') || path.includes('uu_the') || path.includes('nguon_luc') || path.includes('cam_ket') || path.includes('yeu_cau');
+  const inp = document.createElement(long ? 'textarea' : 'input');
+  if (!long) inp.type = 'text'; else { inp.rows = 3; inp.className += ' fl-inline-ta'; }
+  inp.value = cur;
+  inp.className = (long ? 'fl-inline-ta' : 'fl-inline-input');
+  el.textContent = '';
+  el.appendChild(inp);
+  inp.focus();
+  if (!long) inp.select();
+
+  const restore = () => {
+    el.classList.remove('fl-editing');
+    const v = clean(inp.value);
+    setNested(D, path, v);
+    el.classList.toggle('ok', !!v);
+    el.classList.toggle('no', !v);
+    el.textContent = v || '—';
+    if (curCaseId) {
+      const cases = loadCases();
+      const c = cases[curCaseId];
+      if (c) { c.lastAnalysis = JSON.parse(JSON.stringify(D)); c.updatedAt = new Date().toISOString(); cases[curCaseId] = c; _cases = cases; }
+      if (window._markUnsaved) window._markUnsaved();
+      showNotif('✅ Đã cập nhật — nhớ bấm Lưu', 'ok', 2000);
+    }
+  };
+
+  inp.addEventListener('blur', restore);
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); restore(); }
+    if (e.key === 'Escape') { el.classList.remove('fl-editing'); el.textContent = cur || '—'; }
+  });
 }
 
 function Sec(ttl, id, body, ic='📌') {
   const safeTtl = ttl.replace(/'/g, '&apos;').replace(/"/g, '&quot;');
-  return `<div class="sec"><div class="sec-hd"><div class="sec-hl"><span class="sec-ico">${ic}</span>${ttl}</div><div class="sec-acts"><button class="btn-cp" onclick="navigator.clipboard.writeText(document.getElementById('${id}').innerText).then(()=>{this.textContent='✓ Copied';setTimeout(()=>this.textContent='Copy',1400)}).catch(()=>{})">Copy</button><button class="btn-edit-sec" onclick="(function(){var fc=document.getElementById('fec-collapse');if(fc)fc.style.display='block';var fi=document.getElementById('fec-input');if(fi){fi.value='Sửa mục ${safeTtl}: ';fi.focus();fi.setSelectionRange(9999,9999);}})()">✏️ Sửa</button></div></div><div class="sec-bd" id="${id}">${body}</div></div>`;
+  return `<div class="sec"><div class="sec-hd"><div class="sec-hl"><span class="sec-ico">${ic}</span>${ttl}</div><div class="sec-acts"><button class="btn-cp" onclick="navigator.clipboard.writeText(document.getElementById('${id}').innerText).then(()=>{this.textContent='✓ Copied';setTimeout(()=>this.textContent='Copy',1400)}).catch(()=>{})">Copy</button><button class="btn-edit-sec" onclick="(function(){var fi=document.getElementById('fec-input');if(fi){fi.value='Sửa mục ${safeTtl}: ';fi.focus();fi.setSelectionRange(9999,9999);}})()">✏️ Sửa mục</button></div></div><div class="sec-bd" id="${id}">${body}</div></div>`;
 }
 
 function Dv(t) { return `<div class="dv">${t}</div>`; }
@@ -1970,46 +2009,46 @@ function renderFormTab(idx) {
 
   if (idx===0) {
     h+=Sec("A. Thông tin trẻ","s0a",
-      F("Ngày tiếp cận",cb.ngay_tiep_can)+F("Nơi tiếp cận",cb.noi_tiep_can)+F("Người tiếp cận",cb.nguoi_tiep_can)+
-      F("Họ tên trẻ",cb.ho_ten)+F("Giới tính",cb.gioi_tinh)+F("Năm sinh",cb.ngay_sinh)+F("Tuổi",cb.tuoi)+
-      F("SĐT trẻ",cb.sdt_tre)+F("SĐT người thân",cb.sdt_nguoi_than)+F("Địa chỉ thường trú",cb.dia_chi_thuong_tru)+F("Địa chỉ hiện tại",cb.dia_chi_hien_tai)+
-      F("Sống với",cb.song_voi)+F("Nhóm trẻ",cb.nhom_tre));
+      F("Ngày tiếp cận",cb.ngay_tiep_can,'-','co_ban.ngay_tiep_can')+F("Nơi tiếp cận",cb.noi_tiep_can,'-','co_ban.noi_tiep_can')+F("Người tiếp cận",cb.nguoi_tiep_can,'-','co_ban.nguoi_tiep_can')+
+      F("Họ tên trẻ",cb.ho_ten,'-','co_ban.ho_ten')+F("Giới tính",cb.gioi_tinh,'-','co_ban.gioi_tinh')+F("Năm sinh",cb.ngay_sinh,'-','co_ban.ngay_sinh')+F("Tuổi",cb.tuoi,'-','co_ban.tuoi')+
+      F("SĐT trẻ",cb.sdt_tre,'-','co_ban.sdt_tre')+F("SĐT người thân",cb.sdt_nguoi_than,'-','co_ban.sdt_nguoi_than')+F("Địa chỉ thường trú",cb.dia_chi_thuong_tru,'-','co_ban.dia_chi_thuong_tru')+F("Địa chỉ hiện tại",cb.dia_chi_hien_tai,'-','co_ban.dia_chi_hien_tai')+
+      F("Sống với",cb.song_voi,'-','co_ban.song_voi')+F("Nhóm trẻ",cb.nhom_tre,'-','co_ban.nhom_tre'));
     const tvR=(gd.thanh_vien||[]).map(tv=>[tv.ho_ten,tv.quan_he,tv.nam_sinh,tv.suc_khoe,tv.nghe_nghiep,tv.ghi_chu]);
     h+=Sec("B. Thông tin gia đình","s0b",
-      Dv("Người chăm sóc chính")+F("Họ tên",ncs.ho_ten)+F("Quan hệ",ncs.quan_he)+F("Năm sinh",ncs.ngay_sinh)+F("SĐT",ncs.sdt)+F("Nghề nghiệp",ncs.nghe_nghiep)+F("Sức khỏe",ncs.suc_khoe)+
+      Dv("Người chăm sóc chính")+F("Họ tên",ncs.ho_ten,'-','gia_dinh.nguoi_cham_soc.ho_ten')+F("Quan hệ",ncs.quan_he,'-','gia_dinh.nguoi_cham_soc.quan_he')+F("Năm sinh",ncs.ngay_sinh,'-','gia_dinh.nguoi_cham_soc.ngay_sinh')+F("SĐT",ncs.sdt,'-','gia_dinh.nguoi_cham_soc.sdt')+F("Nghề nghiệp",ncs.nghe_nghiep,'-','gia_dinh.nguoi_cham_soc.nghe_nghiep')+F("Sức khỏe",ncs.suc_khoe,'-','gia_dinh.nguoi_cham_soc.suc_khoe')+
       Dv("Thành viên gia đình")+TBL(["Họ tên","Quan hệ","Năm sinh","SK","Nghề nghiệp","Ghi chú"],tvR)+
-      Dv("Hoàn cảnh gia đình")+F("Loại hình gia đình",gd.loai_hinh)+F("Tình trạng hôn nhân",gd.tinh_trang_hon_nhan)+F("Bầu khí gia đình",gd.bau_khi)+F("Mối quan hệ với trẻ",gd.moi_quan_he_voi_tre)+
-      F("Kinh tế/Nhà ở",[cf(gd.kinh_te),cf(gd.nha_o)].filter(Boolean).join(' | '))+F("Cộng đồng",gd.cong_dong)+F("Quá trình rời gia đình",gd.qua_trinh_roi_gd)+F("Hoàn cảnh",gd.hoan_canh));
+      Dv("Hoàn cảnh gia đình")+F("Loại hình gia đình",gd.loai_hinh,'-','gia_dinh.loai_hinh')+F("Tình trạng hôn nhân",gd.tinh_trang_hon_nhan,'-','gia_dinh.tinh_trang_hon_nhan')+F("Bầu khí gia đình",gd.bau_khi,'-','gia_dinh.bau_khi')+F("Mối quan hệ với trẻ",gd.moi_quan_he_voi_tre,'-','gia_dinh.moi_quan_he_voi_tre')+
+      F("Kinh tế/Nhà ở",[cf(gd.kinh_te),cf(gd.nha_o)].filter(Boolean).join(' | '))+F("Cộng đồng",gd.cong_dong,'-','gia_dinh.cong_dong')+F("Quá trình rời gia đình",gd.qua_trinh_roi_gd,'-','gia_dinh.qua_trinh_roi_gd')+F("Hoàn cảnh",gd.hoan_canh,'-','gia_dinh.hoan_canh'));
     h+=Sec("C. Tình trạng trẻ","s0c",
-      Dv("Lao động")+F("Công việc",tt.cong_viec)+F("Thời gian (h/ngày)",tt.thoi_gian_lam_viec)+F("Bắt đầu làm từ",tt.bat_dau_lam_tu)+
+      Dv("Lao động")+F("Công việc",tt.cong_viec,'-','tinh_trang.cong_viec')+F("Thời gian (h/ngày)",tt.thoi_gian_lam_viec,'-','tinh_trang.thoi_gian_lam_viec')+F("Bắt đầu làm từ",tt.bat_dau_lam_tu,'-','tinh_trang.bat_dau_lam_tu')+
       Dv("Giấy tờ")+F("Khai sinh",[cf(gks.co),cf(gks.ly_do)].filter(Boolean).join(' — '))+F("Thường trú",[cf(tr.co),cf(tr.ly_do)].filter(Boolean).join(' — '))+F("CCCD",[cf(cc.co),cf(cc.ly_do)].filter(Boolean).join(' — '))+
-      Dv("Giáo dục")+F("Đang học",cf(hv.lop)?'Lớp '+cf(hv.lop)+(cf(hv.truong)?' — '+cf(hv.truong):''):'')+F("Kết quả học tập",hv.ket_qua)+F("Bỏ học",cf(hv.bo_hoc)?'Lớp '+cf(hv.bo_hoc)+(cf(hv.nam_bo_hoc)?' ('+cf(hv.nam_bo_hoc)+')':''):'')+F("Lý do bỏ học",hv.ly_do_bo_hoc)+F("Học nghề",cf(hv.hoc_nghe)?(cf(hv.nghe_da_hoc)||'Có'):'Không')+F("Sở thích",hv.so_thich)+F("Ước mơ",hv.uoc_mo)+
-      Dv("Sức khỏe")+F("Tình trạng",sk.tinh_trang)+F("Cân nặng (kg)",sk.can_nang)+F("Chiều cao (cm)",sk.chieu_cao)+F("Bệnh trong 6 tháng",sk.benh_trong_6t)+F("Được khám",sk.duoc_kham)+F("BHYT",sk.bhyt)+
-      Dv("Tâm lý")+F("Tăng động",tl.tang_dong)+F("Bi quan",tl.bi_quan)+F("Tự tổn thương",tl.tu_ton_thuong)+F("Mô tả",tl.mo_ta)+
+      Dv("Giáo dục")+F("Đang học",cf(hv.lop)?'Lớp '+cf(hv.lop)+(cf(hv.truong)?' — '+cf(hv.truong):''):'')+F("Kết quả học tập",hv.ket_qua,'-','tinh_trang.hoc_van.ket_qua')+F("Bỏ học",cf(hv.bo_hoc)?'Lớp '+cf(hv.bo_hoc)+(cf(hv.nam_bo_hoc)?' ('+cf(hv.nam_bo_hoc)+')':''):'')+F("Lý do bỏ học",hv.ly_do_bo_hoc,'-','tinh_trang.hoc_van.ly_do_bo_hoc')+F("Học nghề",cf(hv.hoc_nghe)?(cf(hv.nghe_da_hoc)||'Có'):'Không')+F("Sở thích",hv.so_thich,'-','tinh_trang.hoc_van.so_thich')+F("Ước mơ",hv.uoc_mo,'-','tinh_trang.hoc_van.uoc_mo')+
+      Dv("Sức khỏe")+F("Tình trạng",sk.tinh_trang,'-','tinh_trang.suc_khoe.tinh_trang')+F("Cân nặng (kg)",sk.can_nang,'-','tinh_trang.suc_khoe.can_nang')+F("Chiều cao (cm)",sk.chieu_cao,'-','tinh_trang.suc_khoe.chieu_cao')+F("Bệnh trong 6 tháng",sk.benh_trong_6t,'-','tinh_trang.suc_khoe.benh_trong_6t')+F("Được khám",sk.duoc_kham,'-','tinh_trang.suc_khoe.duoc_kham')+F("BHYT",sk.bhyt,'-','tinh_trang.suc_khoe.bhyt')+
+      Dv("Tâm lý")+F("Tăng động",tl.tang_dong,'-','tinh_trang.tam_ly.tang_dong')+F("Bi quan",tl.bi_quan,'-','tinh_trang.tam_ly.bi_quan')+F("Tự tổn thương",tl.tu_ton_thuong,'-','tinh_trang.tam_ly.tu_ton_thuong')+F("Mô tả",tl.mo_ta,'-','tinh_trang.tam_ly.mo_ta')+
       (()=>{ const dass=(tt.dass||null); if(!dass) return ''; const dL=_getDASSSeverity('D',dass.D||0),aL=_getDASSSeverity('A',dass.A||0),sL=_getDASSSeverity('S',dass.S||0); return Dv('DASS-'+dass.version+' ('+dass.date+')')+`<div class="dass-form-result"><span class="dass-fb" style="color:${dL.c};border-color:${dL.c};background:${dL.c}15">😔 TC: ${dass.D} — ${dL.lv}</span><span class="dass-fb" style="color:${aL.c};border-color:${aL.c};background:${aL.c}15">😰 LA: ${dass.A} — ${aL.lv}</span><span class="dass-fb" style="color:${sL.c};border-color:${sL.c};background:${sL.c}15">😤 CT: ${dass.S} — ${sL.lv}</span></div>`; })());
     h+=Sec("D. Đánh giá ban đầu","s0d",
-      F("Vấn đề thể chất",dg.van_de_the_chat)+F("Vấn đề tâm lý",dg.van_de_tam_ly)+F("Vấn đề nhận thức",dg.van_de_nhan_thuc)+
-      F("Nhu cầu thể chất",dg.nhu_cau_the_chat)+F("Nhu cầu tâm lý",dg.nhu_cau_tam_ly)+F("Nhu cầu nhận thức",dg.nhu_cau_nhan_thuc)+
-      F("Yêu cầu của trẻ",dg.yeu_cau_tre)+F("Yêu cầu gia đình",dg.yeu_cau_gia_dinh)+
-      F("Ưu thế trẻ",dg.uu_the_tre)+F("Ưu thế gia đình",dg.uu_the_gia_dinh)+F("Nguồn lực trẻ",dg.nguon_luc_tre)+
-      F("Nguy cơ",dg.nguy_co)+F("Mức khẩn cấp",dg.muc_khan_cap)+F("Yếu tố bảo vệ",dg.yeu_to_bao_ve)+F("Nhận xét NVXH",dg.nhan_xet_nvxh));
+      F("Vấn đề thể chất",dg.van_de_the_chat,'-','danh_gia.van_de_the_chat')+F("Vấn đề tâm lý",dg.van_de_tam_ly,'-','danh_gia.van_de_tam_ly')+F("Vấn đề nhận thức",dg.van_de_nhan_thuc,'-','danh_gia.van_de_nhan_thuc')+
+      F("Nhu cầu thể chất",dg.nhu_cau_the_chat,'-','danh_gia.nhu_cau_the_chat')+F("Nhu cầu tâm lý",dg.nhu_cau_tam_ly,'-','danh_gia.nhu_cau_tam_ly')+F("Nhu cầu nhận thức",dg.nhu_cau_nhan_thuc,'-','danh_gia.nhu_cau_nhan_thuc')+
+      F("Yêu cầu của trẻ",dg.yeu_cau_tre,'-','danh_gia.yeu_cau_tre')+F("Yêu cầu gia đình",dg.yeu_cau_gia_dinh,'-','danh_gia.yeu_cau_gia_dinh')+
+      F("Ưu thế trẻ",dg.uu_the_tre,'-','danh_gia.uu_the_tre')+F("Ưu thế gia đình",dg.uu_the_gia_dinh,'-','danh_gia.uu_the_gia_dinh')+F("Nguồn lực trẻ",dg.nguon_luc_tre,'-','danh_gia.nguon_luc_tre')+
+      F("Nguy cơ",dg.nguy_co,'-','danh_gia.nguy_co')+F("Mức khẩn cấp",dg.muc_khan_cap,'-','danh_gia.muc_khan_cap')+F("Yếu tố bảo vệ",dg.yeu_to_bao_ve,'-','danh_gia.yeu_to_bao_ve')+F("Nhận xét NVXH",dg.nhan_xet_nvxh,'-','danh_gia.nhan_xet_nvxh'));
     h+=Sec("E. Nguồn lực xã hội","s0e",
-      F("Quan phường/Chính quyền",nlxh.quan_phuong)+F("Tôn giáo/Chùa",nlxh.ton_giao)+F("Tổ chức/Hội đoàn",nlxh.to_chuc)+F("Đường đi kết nối",nlxh.duong_di),'🤝');
+      F("Quan phường/Chính quyền",nlxh.quan_phuong,'-','nguon_luc_xa_hoi.quan_phuong')+F("Tôn giáo/Chùa",nlxh.ton_giao,'-','nguon_luc_xa_hoi.ton_giao')+F("Tổ chức/Hội đoàn",nlxh.to_chuc,'-','nguon_luc_xa_hoi.to_chuc')+F("Đường đi kết nối",nlxh.duong_di,'-','nguon_luc_xa_hoi.duong_di'),'🤝');
   } else if (idx===1) {
-    h+=Sec("A. Thông tin trẻ","s1a",F("Họ tên",cb.ho_ten)+F("Giới tính",cb.gioi_tinh)+F("Năm sinh",cb.ngay_sinh)+F("Tuổi",cb.tuoi)+F("Sống với",cb.song_voi)+F("Nhóm trẻ",cb.nhom_tre));
-    h+=Sec("B. Hoàn cảnh gia đình","s1b",F("Hoàn cảnh",gd.hoan_canh));
-    h+=Sec("C. Tình trạng hiện tại","s1c",F("Công việc",tt.cong_viec)+F("Sức khỏe",sk.tinh_trang)+F("Tinh thần",tl.mo_ta)+F("Nguy cơ",dg.nguy_co)+F("Mong muốn",dg.yeu_cau_tre));
-    h+=Sec("D. Người tiếp cận","s1d",F("Họ tên",cb.nguoi_tiep_can)+F("Ngày",cb.ngay_tiep_can)+F("Nơi",cb.noi_tiep_can));
+    h+=Sec("A. Thông tin trẻ","s1a",F("Họ tên",cb.ho_ten,'-','co_ban.ho_ten')+F("Giới tính",cb.gioi_tinh,'-','co_ban.gioi_tinh')+F("Năm sinh",cb.ngay_sinh,'-','co_ban.ngay_sinh')+F("Tuổi",cb.tuoi,'-','co_ban.tuoi')+F("Sống với",cb.song_voi,'-','co_ban.song_voi')+F("Nhóm trẻ",cb.nhom_tre,'-','co_ban.nhom_tre'));
+    h+=Sec("B. Hoàn cảnh gia đình","s1b",F("Hoàn cảnh",gd.hoan_canh,'-','gia_dinh.hoan_canh'));
+    h+=Sec("C. Tình trạng hiện tại","s1c",F("Công việc",tt.cong_viec,'-','tinh_trang.cong_viec')+F("Sức khỏe",sk.tinh_trang,'-','tinh_trang.suc_khoe.tinh_trang')+F("Tinh thần",tl.mo_ta,'-','tinh_trang.tam_ly.mo_ta')+F("Nguy cơ",dg.nguy_co,'-','danh_gia.nguy_co')+F("Mong muốn",dg.yeu_cau_tre,'-','danh_gia.yeu_cau_tre'));
+    h+=Sec("D. Người tiếp cận","s1d",F("Họ tên",cb.nguoi_tiep_can,'-','co_ban.nguoi_tiep_can')+F("Ngày",cb.ngay_tiep_can,'-','co_ban.ngay_tiep_can')+F("Nơi",cb.noi_tiep_can,'-','co_ban.noi_tiep_can'));
   } else if (idx===2) {
-    h+=Sec("Thông tin vãng gia","s2a",F("Ngày vãng gia",vg.ngay_vang_gia)+F("Người tiếp xúc",vg.nguoi_tiep_xuc)+F("Lần thứ",vg.lan_vang_gia)+F("Gặp TC",vg.co_gap_tc)+F("Mục đích",vg.muc_dich));
-    h+=Sec("Quan sát gia đình","s2b",F("Môi trường sống",vg.quan_sat_mt)+F("Loại hình GĐ",vg.loai_hinh_gd||gd.loai_hinh)+F("Bầu khí",vg.bau_khi_gd||gd.bau_khi)+F("Hôn nhân cha mẹ",vg.tinh_trang_hn)+F("Kinh tế",vg.van_de_kinh_te)+F("Đánh giá chung",vg.danh_gia_chung));
+    h+=Sec("Thông tin vãng gia","s2a",F("Ngày vãng gia",vg.ngay_vang_gia,'-','vang_gia.ngay_vang_gia')+F("Người tiếp xúc",vg.nguoi_tiep_xuc,'-','vang_gia.nguoi_tiep_xuc')+F("Lần thứ",vg.lan_vang_gia,'-','vang_gia.lan_vang_gia')+F("Gặp TC",vg.co_gap_tc,'-','vang_gia.co_gap_tc')+F("Mục đích",vg.muc_dich,'-','vang_gia.muc_dich'));
+    h+=Sec("Quan sát gia đình","s2b",F("Môi trường sống",vg.quan_sat_mt,'-','vang_gia.quan_sat_mt')+F("Loại hình GĐ",vg.loai_hinh_gd||gd.loai_hinh,'-','vang_gia.loai_hinh_gd')+F("Bầu khí",vg.bau_khi_gd||gd.bau_khi,'-','vang_gia.bau_khi_gd')+F("Hôn nhân cha mẹ",vg.tinh_trang_hn,'-','vang_gia.tinh_trang_hn')+F("Kinh tế",vg.van_de_kinh_te,'-','vang_gia.van_de_kinh_te')+F("Đánh giá chung",vg.danh_gia_chung,'-','vang_gia.danh_gia_chung'));
   } else if (idx===3) {
-    h+=Sec("Đánh giá khẩn cấp","s3a",F("Họ tên",cb.ho_ten)+F("Tuổi",cb.tuoi)+F("Hoàn cảnh GĐ",gd.hoan_canh)+F("Tổn thương",[cf(dg.van_de_the_chat),cf(dg.van_de_tam_ly)].filter(Boolean).join(' | '))+F("Nguy cơ",dg.nguy_co)+F("Mức khẩn cấp",dg.muc_khan_cap)+F("Yếu tố bảo vệ",dg.yeu_to_bao_ve)+F("Nhận xét",dg.nhan_xet_nvxh));
+    h+=Sec("Đánh giá khẩn cấp","s3a",F("Họ tên",cb.ho_ten,'-','co_ban.ho_ten')+F("Tuổi",cb.tuoi,'-','co_ban.tuoi')+F("Hoàn cảnh GĐ",gd.hoan_canh,'-','gia_dinh.hoan_canh')+F("Tổn thương",[cf(dg.van_de_the_chat),cf(dg.van_de_tam_ly)].filter(Boolean).join(' | '))+F("Nguy cơ",dg.nguy_co,'-','danh_gia.nguy_co')+F("Mức khẩn cấp",dg.muc_khan_cap,'-','danh_gia.muc_khan_cap')+F("Yếu tố bảo vệ",dg.yeu_to_bao_ve,'-','danh_gia.yeu_to_bao_ve')+F("Nhận xét",dg.nhan_xet_nvxh,'-','danh_gia.nhan_xet_nvxh'));
   } else if (idx===4) {
-    h+=Sec("Đánh giá vấn đề","s4a",Dv("Thể chất")+F("",dg.van_de_the_chat)+Dv("Tâm lý")+F("",dg.van_de_tam_ly)+Dv("Nhận thức")+F("",dg.van_de_nhan_thuc));
-    h+=Sec("Nhu cầu","s4b",Dv("Thể chất")+F("",dg.nhu_cau_the_chat)+Dv("Tâm lý")+F("",dg.nhu_cau_tam_ly)+Dv("Nhận thức")+F("",dg.nhu_cau_nhan_thuc));
-    h+=Sec("Mong đợi","s4c",F("Từ trẻ",dg.yeu_cau_tre)+F("Từ GĐ",dg.yeu_cau_gia_dinh));
-    h+=Sec("Nhận xét NVXH","s4d",F("",dg.nhan_xet_nvxh));
+    h+=Sec("Đánh giá vấn đề","s4a",Dv("Thể chất")+F("",dg.van_de_the_chat,'-','danh_gia.van_de_the_chat')+Dv("Tâm lý")+F("",dg.van_de_tam_ly,'-','danh_gia.van_de_tam_ly')+Dv("Nhận thức")+F("",dg.van_de_nhan_thuc,'-','danh_gia.van_de_nhan_thuc'));
+    h+=Sec("Nhu cầu","s4b",Dv("Thể chất")+F("",dg.nhu_cau_the_chat,'-','danh_gia.nhu_cau_the_chat')+Dv("Tâm lý")+F("",dg.nhu_cau_tam_ly,'-','danh_gia.nhu_cau_tam_ly')+Dv("Nhận thức")+F("",dg.nhu_cau_nhan_thuc,'-','danh_gia.nhu_cau_nhan_thuc'));
+    h+=Sec("Mong đợi","s4c",F("Từ trẻ",dg.yeu_cau_tre,'-','danh_gia.yeu_cau_tre')+F("Từ GĐ",dg.yeu_cau_gia_dinh,'-','danh_gia.yeu_cau_gia_dinh'));
+    h+=Sec("Nhận xét NVXH","s4d",F("",dg.nhan_xet_nvxh,'-','danh_gia.nhan_xet_nvxh'));
   } else if (idx===5) {
     const ncR=(kh.nhu_cau_ho_tro||[]).map((nc,i)=>[i+1,nc.loai,nc.uu_tien||'',nc.muc_tieu||'']);
     h+=Sec("Nhu cầu hỗ trợ","s5a",TBL(["TT","Nhu cầu","Ưu tiên","Mục tiêu"],ncR));
@@ -2054,12 +2093,7 @@ function renderFormTab(idx) {
 // ════════════════════════════════════════════════════════════
 // FORM EDIT CHAT
 // ════════════════════════════════════════════════════════════
-let fecOpen = true;
-function toggleFEC() {
-  fecOpen = !fecOpen;
-  document.getElementById('fec')?.classList.toggle('collapsed', !fecOpen);
-  document.getElementById('fec-tog').textContent = fecOpen ? '▾' : '▸';
-}
+function toggleFEC() {} // no-op — FEC is now a persistent chat panel
 
 function setNested(obj, path, val) {
   const keys = path.split('.');
