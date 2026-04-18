@@ -2342,6 +2342,7 @@ function showCaseDetail(id) {
             </div>`).join('')}
         </div>
       </div>` : ''}
+      ${_renderFollowUpSection(id, c)}
       <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);">
         <div style="font-weight:600;font-size:13px;margin-bottom:6px;">📎 Tài liệu đính kèm</div>
         ${renderFileUpload(id)}
@@ -3738,8 +3739,18 @@ function checkReminders() {
     alerts.push({type:'followup', msg:'⏰ Đã ' + Math.floor(daysSinceUpdate) + ' ngày chưa cập nhật — hẹn gặp trẻ/gia đình?', color:'#d97706'});
   }
 
-  // Kiểm tra ca GĐ5 cần theo dõi sau đóng
-  if (currentStage === 5 && D.ket_thuc?.ke_hoach_theo_doi) {
+  // Theo dõi sau đóng ca — kiểm tra log và nhắc nếu quá hạn
+  if (c.status === 'closed') {
+    const fupLog = c.followUpLog||[];
+    const lastFup = fupLog.length ? new Date(fupLog[fupLog.length-1].ts) : (c.closedAt ? new Date(c.closedAt) : null);
+    if (lastFup) {
+      const daysSince = Math.floor((now - lastFup) / 86400000);
+      if (daysSince > 30)
+        alerts.push({type:'fup-overdue', msg:`📋 Đã ${daysSince} ngày chưa theo dõi — kiểm tra tình trạng trẻ/gia đình`, color:'#dc2626'});
+      else if (daysSince > 14)
+        alerts.push({type:'fup-due', msg:`📋 ${daysSince} ngày kể từ lần theo dõi cuối — cân nhắc liên lạc`, color:'#d97706'});
+    }
+  } else if (currentStage === 5 && D.ket_thuc?.ke_hoach_theo_doi) {
     alerts.push({type:'postclose', msg:'📌 Nhớ theo dõi sau đóng ca: ' + D.ket_thuc.ke_hoach_theo_doi.substring(0, 80), color:'#059669'});
   }
 
@@ -4405,42 +4416,221 @@ function _saveDASS() {
 }
 
 // ════════════════════════════════════════════════════════════
+// GENOGRAM — Sơ đồ gia đình SVG
+// ════════════════════════════════════════════════════════════
+
+function _inferSex(quan_he) {
+  if (!quan_he) return '';
+  if (/^(cha|bố|ba|anh|ông|chú|dượng|cậu|trai)/i.test(quan_he)) return 'Nam';
+  if (/^(mẹ|má|chị|bà|dì|cô|mợ|thím|gái)/i.test(quan_he)) return 'Nữ';
+  return '';
+}
+
+function _gSym(sex, cx, cy, isChild, dead) {
+  const f = isChild ? '#dbeafe' : '#f8fafc';
+  const s = isChild ? '#2563eb' : '#64748b';
+  const sw = isChild ? 2.5 : 1.5;
+  const q = (sex||'').toLowerCase();
+  let g = '';
+  if (q.includes('nam')) {
+    g = `<rect x="${cx-13}" y="${cy-13}" width="26" height="26" rx="2" fill="${f}" stroke="${s}" stroke-width="${sw}"/>`;
+    if (isChild) g += `<rect x="${cx-18}" y="${cy-18}" width="36" height="36" rx="4" fill="none" stroke="${s}" stroke-width="1.2" stroke-dasharray="4,2"/>`;
+  } else if (q.includes('nữ') || q.includes('nu')) {
+    g = `<circle cx="${cx}" cy="${cy}" r="13" fill="${f}" stroke="${s}" stroke-width="${sw}"/>`;
+    if (isChild) g += `<circle cx="${cx}" cy="${cy}" r="18" fill="none" stroke="${s}" stroke-width="1.2" stroke-dasharray="4,2"/>`;
+  } else {
+    g = `<polygon points="${cx},${cy-12} ${cx+12},${cy} ${cx},${cy+12} ${cx-12},${cy}" fill="${f}" stroke="${s}" stroke-width="${sw}"/>`;
+    if (isChild) g += `<polygon points="${cx},${cy-17} ${cx+17},${cy} ${cx},${cy+17} ${cx-17},${cy}" fill="none" stroke="${s}" stroke-width="1.2" stroke-dasharray="4,2"/>`;
+  }
+  if (dead) {
+    g += `<line x1="${cx-11}" y1="${cy-11}" x2="${cx+11}" y2="${cy+11}" stroke="#dc2626" stroke-width="2"/>`;
+    g += `<line x1="${cx+11}" y1="${cy-11}" x2="${cx-11}" y2="${cy+11}" stroke="#dc2626" stroke-width="2"/>`;
+  }
+  return g;
+}
+
+function _gLabel(name, rel, cx, cy) {
+  const n = esc((name||'?').substring(0,11));
+  const r = esc((rel||'').substring(0,13));
+  return `<text x="${cx}" y="${cy+20}" text-anchor="middle" font-size="10" font-weight="700" fill="#1e293b" font-family="system-ui">${n}</text>`
+    + (r ? `<text x="${cx}" y="${cy+32}" text-anchor="middle" font-size="8.5" fill="#64748b" font-family="system-ui">${r}</text>` : '');
+}
+
+function _buildGenogram() {
+  if (!D) return '<div style="padding:60px;text-align:center;color:#94a3b8;">Chưa mở ca nào.</div>';
+  const cb = D.co_ban||{}, gd = D.gia_dinh||{};
+  const csc = gd.nguoi_cham_soc||{};
+  const mems = Array.isArray(gd.thanh_vien) ? gd.thanh_vien : [];
+
+  const isGP  = q => /^(ông|bà|cụ)/i.test(q||'');
+  const isPar = q => /^(cha|bố|ba|mẹ|má|mợ|dượng|nuôi|kế)/i.test(q||'');
+  const isSib = q => /^(anh|chị|em)/i.test(q||'');
+  const isDead = g => /mất|qua đời|chết/i.test(g||'');
+
+  const gps    = mems.filter(m => isGP(m.quan_he));
+  let parents  = mems.filter(m => isPar(m.quan_he) && !isGP(m.quan_he));
+  const sibs   = mems.filter(m => isSib(m.quan_he));
+  const others = mems.filter(m => !isGP(m.quan_he) && !isPar(m.quan_he) && !isSib(m.quan_he));
+
+  if (csc.ho_ten && !parents.find(m=>m.ho_ten===csc.ho_ten) && !gps.find(m=>m.ho_ten===csc.ho_ten))
+    parents.unshift({ho_ten:csc.ho_ten, quan_he:csc.quan_he||'NCS', ghi_chu:''});
+  if (!parents.length) parents = [{ho_ten:'?', quan_he:'Cha/Mẹ/NCS', ghi_chu:''}];
+
+  const W=640, ROWH=112;
+  const rows = [];
+  if (gps.length)   rows.push({people:gps,   label:'ÔNG BÀ', type:'gp'});
+  rows.push({people:parents, label:'CHA · MẸ · NGƯỜI CHĂM SÓC', type:'par'});
+  rows.push({people:[{...cb,_isChild:true,quan_he:cb.gioi_tinh||'Trẻ'}, ...sibs], label:'TRẺ · ANH CHỊ EM', type:'child'});
+  if (others.length) rows.push({people:others, label:'THÀNH VIÊN KHÁC', type:'other'});
+
+  const H = 30 + rows.length*ROWH + 30;
+  const rowY = i => 30 + 56 + i*ROWH;
+  const spc  = n => n>1 ? Math.min(115, (W-100)/(n-1)) : 0;
+  const sX   = (n,sp) => (W - sp*(n-1)) / 2;
+
+  const parts = [
+    `<defs><linearGradient id="gBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f8fafc"/><stop offset="100%" stop-color="#eef2f7"/></linearGradient></defs>`,
+    `<rect width="${W}" height="${H}" fill="url(#gBg)" rx="12" stroke="#e2e8f0" stroke-width="1"/>`,
+  ];
+
+  // Connecting lines: par → child
+  const parIdx   = rows.findIndex(r=>r.type==='par');
+  const childIdx = rows.findIndex(r=>r.type==='child');
+  if (parIdx>=0 && childIdx>=0) {
+    const pN=rows[parIdx].people.length, cN=rows[childIdx].people.length;
+    const pSp=spc(pN), cSp=spc(cN);
+    const pSX=sX(pN,pSp), cSX=sX(cN,cSp);
+    const pY=rowY(parIdx), cY=rowY(childIdx);
+    const pMX=pSX+pSp*(pN-1)/2, cEX=cSX+cSp*(cN-1);
+    const midY=pY+(cY-pY)*0.5;
+
+    if (pN>=2) parts.push(`<line x1="${pSX}" y1="${pY}" x2="${pSX+pSp*(pN-1)}" y2="${pY}" stroke="#94a3b8" stroke-width="1.5"/>`);
+    parts.push(`<line x1="${pMX}" y1="${pY+15}" x2="${pMX}" y2="${midY}" stroke="#94a3b8" stroke-width="1.5"/>`);
+    const hMin=Math.min(pMX,cSX), hMax=Math.max(pMX,cEX);
+    parts.push(`<line x1="${hMin}" y1="${midY}" x2="${hMax}" y2="${midY}" stroke="#94a3b8" stroke-width="1.5"/>`);
+    for (let i=0;i<cN;i++) {
+      const cx=cSX+i*cSp;
+      parts.push(`<line x1="${cx}" y1="${midY}" x2="${cx}" y2="${cY-20}" stroke="#94a3b8" stroke-width="1.5"/>`);
+    }
+  }
+
+  // Symbols + labels
+  rows.forEach((row,ri) => {
+    const cy=rowY(ri), n=row.people.length, sp=spc(n), sx=sX(n,sp);
+    parts.push(`<text x="${W/2}" y="${cy-34}" text-anchor="middle" font-size="8.5" fill="#94a3b8" font-family="system-ui" font-weight="700" letter-spacing="1.2">${esc(row.label)}</text>`);
+    row.people.forEach((p,pi) => {
+      const cx=sx+pi*sp;
+      const sex=p.gioi_tinh||_inferSex(p.quan_he);
+      parts.push(_gSym(sex,cx,cy,!!p._isChild,isDead(p.ghi_chu||'')));
+      parts.push(_gLabel(p.ho_ten,p.quan_he,cx,cy));
+    });
+  });
+
+  parts.push(`<text x="14" y="${H-9}" font-size="8.5" fill="#94a3b8" font-family="system-ui">□ Nam  ○ Nữ  ◇ Không rõ  ✕ Đã mất  [- -] Trẻ CTXH</text>`);
+
+  const childName=cb.ho_ten||'Chưa có tên', age=cb.tuoi||'';
+  return `<div style="font-weight:800;font-size:15px;color:#1e293b;margin-bottom:2px;">🧬 Sơ đồ gia đình — ${esc(childName)}${age?' ('+age+' tuổi)':''}</div>
+    <div style="font-size:11px;color:#64748b;margin-bottom:12px;">Từ dữ liệu Form 0 · Cập nhật bằng cách bổ sung thành viên GĐ1</div>
+    <div style="overflow-x:auto">
+    <svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:380px;max-width:${W}px;display:block;margin:0 auto;overflow:visible">
+      ${parts.join('\n')}
+    </svg></div>`;
+}
+
+function openGenogram() {
+  if (!D) { showNotif('⚠️ Chưa mở ca nào', 'warn'); return; }
+  document.getElementById('genogram-overlay').style.display = 'flex';
+  document.getElementById('genogram-body').innerHTML = _buildGenogram();
+}
+function closeGenogram() {
+  document.getElementById('genogram-overlay').style.display = 'none';
+}
+
+// ════════════════════════════════════════════════════════════
+// FOLLOW-UP TRACKING — Theo dõi sau đóng ca
+// ════════════════════════════════════════════════════════════
+
+function saveFollowUp(caseId) {
+  const ngay = document.getElementById('fup-date-'+caseId)?.value || new Date().toISOString().split('T')[0];
+  const hinh_thuc = document.getElementById('fup-type-'+caseId)?.value || '';
+  const ghi_chu = (document.getElementById('fup-note-'+caseId)?.value||'').trim();
+  if (!ghi_chu) { showNotif('⚠️ Nhập nội dung liên lạc', 'warn'); return; }
+  const cases = loadCases();
+  if (!cases[caseId]) return;
+  if (!cases[caseId].followUpLog) cases[caseId].followUpLog = [];
+  cases[caseId].followUpLog.push({ id:Date.now().toString(36), ngay, hinh_thuc, ghi_chu, ts:new Date().toISOString() });
+  cases[caseId].updatedAt = new Date().toISOString();
+  saveCases(cases);
+  showCaseDetail(caseId);
+  showNotif('✅ Đã ghi nhận theo dõi');
+}
+
+function deleteFollowUp(caseId, entryId) {
+  const cases = loadCases();
+  if (cases[caseId]?.followUpLog) {
+    cases[caseId].followUpLog = cases[caseId].followUpLog.filter(e=>e.id!==entryId);
+    saveCases(cases);
+    showCaseDetail(caseId);
+  }
+}
+
+function _renderFollowUpSection(id, c) {
+  const log = c.followUpLog||[];
+  const plan = c.lastAnalysis?.ket_thuc?.ke_hoach_theo_doi || c.lastAnalysis?._report?.follow_up_plan || '';
+  const closedAt = c.closedAt ? new Date(c.closedAt) : null;
+  const daysClosed = closedAt ? Math.floor((Date.now()-closedAt)/86400000) : null;
+  const today = new Date().toISOString().split('T')[0];
+  const inp = 'height:32px;padding:0 8px;border:1px solid var(--bd);border-radius:6px;font-size:12px;font-family:inherit;background:var(--bg);color:var(--t1);';
+
+  const logRows = log.slice().reverse().map(e=>`
+    <div style="display:flex;gap:7px;padding:5px 0;border-bottom:1px solid #f1f5f9;align-items:flex-start;font-size:12px;">
+      <span style="color:var(--t3);white-space:nowrap;min-width:76px;">${esc(e.ngay||'?')}</span>
+      <span style="background:#eff6ff;color:#1e40af;border-radius:4px;padding:1px 7px;font-size:10px;font-weight:600;white-space:nowrap;">${esc(e.hinh_thuc||'Liên lạc')}</span>
+      <span style="flex:1;color:var(--t1);">${esc(e.ghi_chu)}</span>
+      <button onclick="deleteFollowUp('${id}','${e.id}')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:16px;padding:0 2px;line-height:1;">×</button>
+    </div>`).join('');
+
+  return `<div class="followup-section">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="font-weight:700;font-size:13px;color:var(--t1);">📋 Theo dõi sau đóng ca</div>
+      ${daysClosed!==null?`<div style="font-size:11px;color:var(--t3);">${daysClosed>0?'Đóng '+daysClosed+' ngày':'Đóng hôm nay'}</div>`:''}
+    </div>
+    ${plan?`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 10px;font-size:11.5px;color:#166534;margin-bottom:8px;">📌 ${esc(plan)}</div>`:''}
+    <div style="margin-bottom:8px;">${log.length?logRows:'<div style="color:var(--t3);font-size:12px;padding:4px 0;">Chưa có lần liên lạc nào</div>'}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      <input type="date" id="fup-date-${id}" value="${today}" style="${inp}">
+      <select id="fup-type-${id}" style="${inp}">
+        <option>Gọi điện</option><option>Gặp trực tiếp</option><option>Vãng gia</option><option>Tin nhắn</option><option>Email</option>
+      </select>
+      <input type="text" id="fup-note-${id}" placeholder="Ghi chú kết quả liên lạc..." style="${inp}flex:1;min-width:140px;">
+      <button onclick="saveFollowUp('${id}')" style="height:32px;padding:0 14px;background:var(--org);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">+ Thêm</button>
+    </div>
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════════
 // WINDOW EXPORTS — ES modules are scoped; expose onclick handlers globally
 // ════════════════════════════════════════════════════════════
 Object.assign(window, {
-  // Auth
   loginEmail, logoutUser,
-  // Navigation
   switchMain,
-  // Dashboard / Analysis
   runAnalysis, fillForms, newCase, saveCaseNow,
   showStats, showNotifications,
-  // Stage wizard
   completeStage, rollbackStage, reopenCase,
-  // Forms
   showForm, toggleFormSidebar,
-  // Template panel
   toggleTemplate, insertTemplate, insertAllTemplate, clearNotes,
-  // Chat
   sendChat, useSuggestion,
-  // FEC panel
   toggleFEC, sendFEC,
-  // Entries
   loadEntryToEditor, deleteEntry, toggleEntriesPanel,
-  // Cases list
   selectCase, loadCaseIntoApp, deleteCase,
   _reopenCaseFromList, _closeCaseFromList,
-  // Export / Import
   exportCaseJSON, importCaseJSON, exportSelected, dlDocx, exportAllDocx, dlReportDocx,
-  // Misc
   printFullCase, closePov, generateComprehensiveEval,
-  // Confirm dialog
   _doConfirm, _cancelConfirm,
-  // Files
   deleteCaseFile, refreshFileList,
-  // Notifications
   markNotifRead,
-  // DASS
   openDASS, closeDASS, _startDASS, _prevDASS, _answerDASS, _saveDASS,
   _renderDASS, _renderDASSResults,
+  openGenogram, closeGenogram,
+  saveFollowUp, deleteFollowUp,
 });

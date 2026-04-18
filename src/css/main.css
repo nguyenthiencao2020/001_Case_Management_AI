@@ -1074,3 +1074,21 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
   .dass-ver-cards { flex-direction:column; align-items:center; }
 }
 
+
+/* ════════════════════════════════════════════════════
+   GENOGRAM MODAL
+   ════════════════════════════════════════════════════ */
+.genogram-overlay { position:fixed; inset:0; background:rgba(15,23,42,.55); display:flex; align-items:center; justify-content:center; z-index:1200; padding:20px; backdrop-filter:blur(4px); }
+.genogram-modal { background:var(--bg); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.25); width:100%; max-width:700px; max-height:88vh; display:flex; flex-direction:column; overflow:hidden; }
+.genogram-modal-hd { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--bd); flex-shrink:0; }
+.genogram-body { padding:20px; overflow-y:auto; flex:1; }
+
+@media (max-width:768px) {
+  .genogram-modal { border-radius:18px 18px 0 0; max-height:92vh; position:fixed; bottom:0; left:0; right:0; max-width:100%; }
+  .genogram-overlay { align-items:flex-end; padding:0; }
+}
+
+/* ════════════════════════════════════════════════════
+   FOLLOW-UP SECTION
+   ════════════════════════════════════════════════════ */
+.followup-section { margin-top:12px; padding:14px; background:var(--sidebar-bg,#f8fafc); border-radius:10px; border:1px solid var(--bd); }
