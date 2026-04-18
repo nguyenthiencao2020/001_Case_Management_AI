@@ -1906,7 +1906,7 @@ function renderFormTab(idx) {
     h+=Sec("C. Tình trạng trẻ","s0c",
       Dv("Lao động")+F("Công việc",tt.cong_viec)+F("Thời gian (h/ngày)",tt.thoi_gian_lam_viec)+F("Bắt đầu làm từ",tt.bat_dau_lam_tu)+
       Dv("Giấy tờ")+F("Khai sinh",[cf(gks.co),cf(gks.ly_do)].filter(Boolean).join(' — '))+F("Thường trú",[cf(tr.co),cf(tr.ly_do)].filter(Boolean).join(' — '))+F("CCCD",[cf(cc.co),cf(cc.ly_do)].filter(Boolean).join(' — '))+
-      Dv("Giáo dục")+F("Đang học",cf(hv.lop)?'Lớp '+cf(hv.lop)+(cf(hv.truong)?' — '+cf(hv.truong):''):'')+F("Kết quả học tập",hv.ket_qua)+F("Bỏ học",cf(hv.bo_hoc)?('Lớp '+cf(hv.bo_hoc)+(cf(hv.nam_bo_hoc)?' ('+cf(hv.nam_bo_hoc)+')'):''):'')+F("Lý do bỏ học",hv.ly_do_bo_hoc)+F("Học nghề",cf(hv.hoc_nghe)?(cf(hv.nghe_da_hoc)||'Có'):'Không')+F("Sở thích",hv.so_thich)+F("Ước mơ",hv.uoc_mo)+
+      Dv("Giáo dục")+F("Đang học",cf(hv.lop)?'Lớp '+cf(hv.lop)+(cf(hv.truong)?' — '+cf(hv.truong):''):'')+F("Kết quả học tập",hv.ket_qua)+F("Bỏ học",cf(hv.bo_hoc)?'Lớp '+cf(hv.bo_hoc)+(cf(hv.nam_bo_hoc)?' ('+cf(hv.nam_bo_hoc)+')':''):'')+F("Lý do bỏ học",hv.ly_do_bo_hoc)+F("Học nghề",cf(hv.hoc_nghe)?(cf(hv.nghe_da_hoc)||'Có'):'Không')+F("Sở thích",hv.so_thich)+F("Ước mơ",hv.uoc_mo)+
       Dv("Sức khỏe")+F("Tình trạng",sk.tinh_trang)+F("Cân nặng (kg)",sk.can_nang)+F("Chiều cao (cm)",sk.chieu_cao)+F("Bệnh trong 6 tháng",sk.benh_trong_6t)+F("Được khám",sk.duoc_kham)+F("BHYT",sk.bhyt)+
       Dv("Tâm lý")+F("Tăng động",tl.tang_dong)+F("Bi quan",tl.bi_quan)+F("Tự tổn thương",tl.tu_ton_thuong)+F("Mô tả",tl.mo_ta));
     h+=Sec("D. Đánh giá ban đầu","s0d",
