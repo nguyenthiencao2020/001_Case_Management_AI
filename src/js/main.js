@@ -985,9 +985,8 @@ function completeStage() {
     }
   });
 
-  // ★ Snapshot stage hiện tại + push vào Lịch sử nhập
+  // ★ Snapshot stage hiện tại (KHÔNG push history — chỉ "Phân tích" mới tạo phiên bản)
   _flushStage(currentStage);
-  _pushStageHistory(currentStage, 'complete');
 
   // ★ Giữ lại legacy entry cho tab "Danh sách ca" (để vẫn hiện số lần ghi chép)
   const _completeNotes = document.getElementById('dash-notes').value.trim();
@@ -2545,13 +2544,10 @@ function saveCaseNow() {
       }
     }
   }
-  cases[curCaseId] = c;
-  saveCases(cases);
-  // ★ Auto-push Lịch sử nhập cho stage hiện tại + mirror stageData
+  // ★ Mirror stageData (KHÔNG push history — chỉ "Phân tích" mới tạo phiên bản)
   _flushStage(currentStage);
-  _pushStageHistory(currentStage, 'save');
-  // saveCases mới lưu lần đầu — flush sau đó cần commit lại stageData/stageHistory
-  saveCases(loadCases());
+  cases[curCaseId] = loadCases()[curCaseId] || c;
+  saveCases(cases);
   updateHeader(); renderCaseList(); updateCasesCount();
   renderEntriesPanel();
   renderStageHistory();
