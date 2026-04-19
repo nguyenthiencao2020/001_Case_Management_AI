@@ -4098,6 +4098,55 @@ async function buildDocx(fi,logoData,footerData,_collector){
     body.push(NOTE("CƠ SỞ THẢO ĐÀN"));
   }
 
+  // ══ PHÂN TÍCH AI (ĐỒNG BỘ DASHBOARD) — bám đúng cấu trúc web ══
+  const _rep = D && D._report;
+  if (_rep && (_rep.risk || _rep.risk_reason || _rep.red_flags?.length || _rep.risk_matrix)) {
+    body.push(SH("PHÂN TÍCH AI — ĐỒNG BỘ DASHBOARD"));
+    body.push(SUB("1. Đánh giá tổng quan"));
+    body.push(FL("Mức độ rủi ro", _rep.risk || ''));
+    body.push(FL("Lý do đánh giá", _rep.risk_reason || ''));
+    if (_rep.urgent) body.push(FL("Khẩn cấp", 'CÓ'));
+    const _rf = Array.isArray(_rep.red_flags) ? _rep.red_flags.filter(Boolean) : [];
+    if (_rf.length) {
+      body.push(SUB("🚩 Red flags"));
+      _rf.forEach(f => body.push(FL("•", f)));
+    }
+    const _rm = _rep.risk_matrix || {};
+    const _matrixKeys = [
+      ['🛡 An toàn Thể chất', 'an_toan_the_chat'],
+      ['🧠 An toàn Tâm lý', 'an_toan_tam_ly'],
+      ['🏠 Môi trường Sống', 'moi_truong'],
+      ['📚 Giáo dục & Phát triển', 'giao_duc'],
+      ['👨‍👩‍👧 Hệ thống Bảo vệ', 'he_thong_bao_ve']
+    ];
+    const _hasMatrix = _matrixKeys.some(([_, k]) => _rm[k] && (_rm[k].level || _rm[k].detail));
+    if (_hasMatrix) {
+      body.push(SUB("2. Ma trận rủi ro 5 chiều"));
+      _matrixKeys.forEach(([lb, k]) => {
+        const o = _rm[k] || {};
+        if (o.level || o.detail) {
+          body.push(FL(lb + ' — Mức', o.level || ''));
+          body.push(FL(lb + ' — Chi tiết', o.detail || ''));
+        }
+      });
+    }
+    const _nw = _rep.needs_vs_wants || {};
+    const _needs = Array.isArray(_nw.needs) ? _nw.needs.filter(Boolean).join(' • ') : _nw.needs;
+    const _wants = Array.isArray(_nw.wants) ? _nw.wants.filter(Boolean).join(' • ') : _nw.wants;
+    if (_needs || _wants) {
+      body.push(SUB("3. Nhu cầu vs Mong muốn"));
+      body.push(FL("Nhu cầu (Needs)", _needs || ''));
+      body.push(FL("Mong muốn (Wants)", _wants || ''));
+    }
+    const _pf = _rep.parentification || {};
+    if (_pf.detected || _pf.type || _pf.description) {
+      body.push(SUB("4. Phụ mẫu hóa (Parentification)"));
+      body.push(FL("Phát hiện", _pf.detected ? 'Có' : 'Không'));
+      if (_pf.type) body.push(FL("Loại", _pf.type));
+      if (_pf.description) body.push(FL("Mô tả", _pf.description));
+    }
+  }
+
   // ══ FOOTER IMAGE ══
   let footerSection={};
   if(footerData){
