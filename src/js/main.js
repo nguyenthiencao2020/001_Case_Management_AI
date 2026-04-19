@@ -903,7 +903,35 @@ function previewStage(s) {
   _flushStage(currentStage);
   currentStage = s;
   _hydrateStage(s);
-  if (!D) {
+
+  // Tự khôi phục phiên bản mới nhất của GĐ này (notes + báo cáo dashboard)
+  let restoredTs = null;
+  if (curCaseId) {
+    const c = loadCases()[curCaseId];
+    if (c) {
+      _ensureStageStores(c);
+      const hist = c.stageHistory[s] || [];
+      const latest = hist[hist.length - 1];
+      if (latest) {
+        const ta = document.getElementById('dash-notes');
+        const cc = document.getElementById('dash-cc');
+        if (ta) ta.value = latest.notes || '';
+        if (cc) cc.textContent = (latest.notes || '').length + ' ký tự';
+        _stageDataCache[s] = { notes: latest.notes || '' };
+        c.stageData[s] = { notes: latest.notes || '' };
+        _cases = loadCases();
+        _cases[curCaseId] = c;
+        if (latest.D && latest.D._report) {
+          if (!D) D = {};
+          D._report = JSON.parse(JSON.stringify(latest.D._report));
+          renderReport(D._report);
+        }
+        restoredTs = latest.ts;
+      }
+    }
+  }
+
+  if (!D && !restoredTs) {
     const chatMsgs = document.getElementById('chat-msgs');
     if (chatMsgs && !chatMsgs.querySelector('.chat-empty')) {
       chatMsgs.innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">📋</div><div style="font-weight:600;">Chưa có dữ liệu cho giai đoạn này</div><div>Hãy nhập ghi chép và bấm "Phân tích"</div></div>';
@@ -913,6 +941,9 @@ function previewStage(s) {
   renderAnalysisPanel();
   renderEntriesPanel();
   renderStageHistory();
+  if (restoredTs) {
+    showNotif(`⏪ GĐ ${s}: đã khôi phục phiên bản mới nhất (${fmtVN(restoredTs)})`);
+  }
 }
 
 // No-op: giữ lại để các chỗ gọi legacy không vỡ
