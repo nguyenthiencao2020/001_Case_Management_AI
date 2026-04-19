@@ -2697,17 +2697,76 @@ function showCaseDetail(id) {
     ? `<button class="btn-secondary" style="color:#16a34a;border-color:#bbf7d0;" onclick="_reopenCaseFromList('${id}')">🔓 Mở lại ca</button>`
     : `<button class="btn-secondary" style="color:#f07020;border-color:#fed7aa;" onclick="_closeCaseFromList('${id}')">✅ Đóng ca</button>`;
 
+  // ── Tab contents ──
+  const tabOverview = `
+    <div class="cd-section">
+      <div class="cd-section-title">Thông tin ca</div>
+      <div class="cd-kv-grid">
+        <div class="cd-kv"><span class="cd-k">Tên ca</span><span class="cd-v">${esc(c.name||'—')}</span></div>
+        <div class="cd-kv"><span class="cd-k">Trẻ</span><span class="cd-v">${childName ? esc(childName) + (childDob?' · SN '+childDob:'') : '—'}</span></div>
+        <div class="cd-kv"><span class="cd-k">Tạo</span><span class="cd-v">${fmtVN(c.createdAt)}</span></div>
+        <div class="cd-kv"><span class="cd-k">Cập nhật</span><span class="cd-v">${_timeAgo(c.updatedAt)}</span></div>
+        <div class="cd-kv"><span class="cd-k">Ghi chép</span><span class="cd-v">${(c.entries||[]).length}</span></div>
+        <div class="cd-kv"><span class="cd-k">Giai đoạn</span><span class="cd-v">GĐ ${stage} — ${stageLabels[stage]||''}</span></div>
+        ${isClosed ? `<div class="cd-kv"><span class="cd-k">Đóng ca</span><span class="cd-v">${fmtVN(c.closedAt)}</span></div>` : ''}
+      </div>
+    </div>
+    <div class="cd-section">
+      <div class="cd-section-title">Tiến trình</div>
+      <div style="display:flex;align-items:center;gap:0;max-width:280px;">${stageDots}</div>
+    </div>`;
+
+  const tabEntries = entries.length
+    ? entries.map(e=>`<div class="ct-item"><div class="ct-date">📅 ${fmtVN(e.date)}</div><div class="ct-notes">${esc((e.notes||'').substring(0,300))}</div></div>`).join('')
+    : '<div class="cd-empty">Chưa có ghi chép</div>';
+
+  const tabEditLog = (c.editLog && c.editLog.length)
+    ? `<div class="cd-section">
+         <div class="cd-section-title">📝 Lịch sử chỉnh sửa form (${c.editLog.length})</div>
+         <div class="cd-editlog">
+           ${[...c.editLog].reverse().slice(0,50).map(e=>`
+             <div class="cd-editlog-row">
+               <span class="cd-editlog-ts">${fmtVN(e.ts)}</span>
+               <span class="cd-editlog-stage">GĐ${e.stage} ${esc(e.stageLabel)}</span>
+               <span class="cd-editlog-src">${esc(e.source)}</span>
+             </div>`).join('')}
+         </div>
+       </div>`
+    : '<div class="cd-empty">Chưa có chỉnh sửa form nào</div>';
+
+  const tabFollowUp = isClosed
+    ? _renderFollowUpSection(id, c)
+    : '<div class="cd-empty">Tab này chỉ khả dụng khi ca đã đóng</div>';
+
+  const tabFiles = `<div class="cd-section">
+      <div class="cd-section-title">📎 Tài liệu đính kèm</div>
+      ${renderFileUpload(id)}
+    </div>`;
+
+  const tabDef = [
+    { key:'overview', label:'Tổng quan', icon:'📋' },
+    { key:'entries',  label:`Ghi chép (${entries.length})`, icon:'📝' },
+    { key:'editlog',  label:`Lịch sử chỉnh sửa${c.editLog?.length?' ('+c.editLog.length+')':''}`, icon:'🕘' },
+    ...(isClosed ? [{ key:'followup', label:'Theo dõi sau đóng', icon:'📞' }] : []),
+    { key:'files',    label:'Tài liệu', icon:'📎' }
+  ];
+  const active = _caseDetailActiveTab[id] || 'overview';
+  const tabsBar = tabDef.map(t => `
+    <button class="cd-tab ${active===t.key?'active':''}" onclick="_switchCaseDetailTab('${id}','${t.key}')">
+      <span class="cd-tab-ico">${t.icon}</span>${esc(t.label)}
+    </button>`).join('');
+
+  const panelMap = { overview: tabOverview, entries: tabEntries, editlog: tabEditLog, followup: tabFollowUp, files: tabFiles };
+  const activePanel = panelMap[active] || tabOverview;
+
   main.innerHTML = `
     <div class="case-detail-hd">
-      <div style="flex:1;">
+      <div style="flex:1;min-width:0;">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
           <div class="case-detail-title">${esc(c.name||'?')}</div>
           ${statusBadge} ${riskHtml}
         </div>
-        ${childName ? `<div style="font-size:13px;color:var(--t1);margin-top:2px;">👤 <b>${esc(childName)}</b>${childDob ? ' · SN: '+childDob : ''}</div>` : ''}
-        <div class="case-detail-meta">Tạo: ${fmtVN(c.createdAt)} · ${(c.entries||[]).length} ghi chép · Cập nhật: ${_timeAgo(c.updatedAt)}${closedAtTxt}</div>
-        <div style="display:flex;align-items:center;gap:0;margin-top:8px;max-width:280px;">${stageDots}</div>
-        <div style="font-size:10px;color:var(--org);font-weight:600;margin-top:3px;">GĐ ${stage} — ${stageLabels[stage]||''}</div>
+        <div class="case-detail-meta">Tạo ${fmtVN(c.createdAt)} · Cập nhật ${_timeAgo(c.updatedAt)}${closedAtTxt}</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         <button class="btn-secondary" onclick="loadCaseIntoApp('${id}');switchMain('dash')">🔬 Mở</button>
@@ -2716,31 +2775,17 @@ function showCaseDetail(id) {
         <button class="btn-secondary" onclick="deleteCase('${id}')" style="color:#b91c1c;border-color:#fecaca;">🗑 Xóa</button>
       </div>
     </div>
-    <div class="case-detail-body">
-      ${entries.length ? entries.map(e=>`<div class="ct-item"><div class="ct-date">📅 ${fmtVN(e.date)}</div><div class="ct-notes">${esc((e.notes||'').substring(0,300))}</div></div>`).join('') : '<div style="text-align:center;padding:40px;color:var(--t3);">Chưa có ghi chép</div>'}
-      ${(c.editLog && c.editLog.length) ? `
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);">
-        <div style="font-weight:700;font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px;">📝 Lịch sử chỉnh sửa form (${c.editLog.length})</div>
-        <div style="display:flex;flex-direction:column;gap:3px;">
-          ${[...c.editLog].reverse().slice(0,20).map(e=>`
-            <div style="display:flex;align-items:center;gap:8px;font-size:11px;padding:4px 0;border-bottom:1px solid #f1f5f9;">
-              <span style="color:var(--t3);white-space:nowrap;flex-shrink:0;">${fmtVN(e.ts)}</span>
-              <span style="background:#eff6ff;color:#1e40af;border-radius:4px;padding:1px 6px;font-weight:600;font-size:10px;flex-shrink:0;">GĐ${e.stage} ${esc(e.stageLabel)}</span>
-              <span style="color:var(--t2);">${esc(e.source)}</span>
-            </div>`).join('')}
-        </div>
-      </div>` : ''}
-      ${_renderFollowUpSection(id, c)}
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);">
-        <div style="font-weight:600;font-size:13px;margin-bottom:6px;">📎 Tài liệu đính kèm</div>
-        ${renderFileUpload(id)}
-      </div>
-    </div>
-    <div class="case-actions">
-      <button class="btn-analyze" style="font-size:11px;flex:none;padding:7px 14px;" onclick="loadCaseIntoApp('${id}');switchMain('dash')">🔬 Phân tích</button>
-    </div>`;
+    <div class="cd-tabs-bar">${tabsBar}</div>
+    <div class="case-detail-body cd-panel-${active}">${activePanel}</div>`;
   // Load files async
-  refreshFileList(id);
+  if (active === 'files') refreshFileList(id);
+}
+
+// Ghi nhớ tab đang mở cho mỗi case id
+const _caseDetailActiveTab = {};
+function _switchCaseDetailTab(id, key) {
+  _caseDetailActiveTab[id] = key;
+  showCaseDetail(id);
 }
 
 function _closeCaseFromList(id) {

@@ -665,11 +665,57 @@ body {
 }
 .case-detail-title { font-size:16px; font-weight:800; color:var(--navy); }
 .case-detail-meta { font-size:11px; color:var(--t3); margin-top:2px; }
-.case-detail-body { flex:1; overflow-y:auto; padding:16px 18px; }
+.case-detail-body { flex:1; overflow-y:auto; padding:16px 18px; background:#f8fafc; }
 .ct-item { background:#fff; border:1px solid var(--bd); border-radius:8px; padding:10px 13px; margin-bottom:8px; }
 .ct-date { font-size:10px; color:var(--t3); margin-bottom:4px; font-family:'JetBrains Mono',monospace; }
 .ct-notes { font-size:12px; color:#374151; line-height:1.6; white-space:pre-wrap; }
 .case-actions { padding:12px 18px; border-top:1px solid var(--bd); background:#fff; display:flex; gap:8px; flex-wrap:wrap; }
+
+/* ── Case-detail tab bar ── */
+.cd-tabs-bar {
+  display:flex; gap:2px; background:#fff; padding:0 12px;
+  border-bottom:1px solid var(--bd); overflow-x:auto;
+}
+.cd-tab {
+  background:transparent; border:none; padding:10px 14px;
+  font-size:12px; font-weight:600; color:var(--t2);
+  cursor:pointer; border-bottom:2px solid transparent;
+  display:inline-flex; align-items:center; gap:5px;
+  white-space:nowrap; transition:color .15s, border-color .15s, background .15s;
+  font-family:inherit;
+}
+.cd-tab:hover { color:var(--navy); background:#f1f5f9; }
+.cd-tab.active { color:var(--org); border-bottom-color:var(--org); }
+.cd-tab-ico { font-size:13px; }
+
+/* ── Case-detail sections / grid ── */
+.cd-section {
+  background:#fff; border:1px solid var(--bd); border-radius:10px;
+  padding:14px 16px; margin-bottom:12px;
+}
+.cd-section-title {
+  font-size:11px; font-weight:700; color:var(--t3);
+  text-transform:uppercase; letter-spacing:.7px; margin-bottom:10px;
+}
+.cd-kv-grid {
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
+  gap:10px 16px;
+}
+.cd-kv { display:flex; flex-direction:column; gap:2px; }
+.cd-k { font-size:10px; color:var(--t3); font-weight:600; text-transform:uppercase; letter-spacing:.4px; }
+.cd-v { font-size:13px; color:var(--t1); font-weight:500; }
+.cd-empty { text-align:center; padding:50px 20px; color:var(--t3); font-size:13px; font-style:italic; }
+
+/* ── Edit log compact rows ── */
+.cd-editlog { display:flex; flex-direction:column; gap:0; }
+.cd-editlog-row {
+  display:flex; align-items:center; gap:10px; font-size:11.5px;
+  padding:7px 0; border-bottom:1px solid #f1f5f9;
+}
+.cd-editlog-row:last-child { border-bottom:none; }
+.cd-editlog-ts { color:var(--t3); white-space:nowrap; flex-shrink:0; font-family:'JetBrains Mono',monospace; font-size:10.5px; }
+.cd-editlog-stage { background:#eff6ff; color:#1e40af; border-radius:4px; padding:2px 7px; font-weight:700; font-size:10px; flex-shrink:0; }
+.cd-editlog-src { color:var(--t2); flex:1; }
 
 /* ══ RISK BADGES ══ */
 .risk-high { background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; }
