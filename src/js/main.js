@@ -47,85 +47,70 @@ function _ensureStageStores(c) {
   }
 }
 
-// Lấy snapshot hiện tại từ textarea + D (KHÔNG clone lại chỗ gọi)
-function _snapshotCurrent() {
-  const ta = document.getElementById('dash-notes');
-  return {
-    notes: ta ? ta.value : '',
-    D: D ? JSON.parse(JSON.stringify(D)) : null
-  };
-}
-
-// Ghi snapshot hiện tại vào ô dữ liệu của stage X (bộ nhớ + case)
+// stageData CHỈ lưu textarea notes theo GĐ. Forms dùng chung D tích luỹ của cả ca.
 function _flushStage(stage) {
   if (!stage) stage = currentStage;
-  const snap = _snapshotCurrent();
-  _stageDataCache[stage] = snap;
+  const ta = document.getElementById('dash-notes');
+  const notes = ta ? ta.value : '';
+  _stageDataCache[stage] = { notes };
   if (curCaseId) {
     const cases = loadCases();
     const c = cases[curCaseId];
     if (c) {
       _ensureStageStores(c);
-      c.stageData[stage] = snap;
+      c.stageData[stage] = { notes };
       _cases = cases;
     }
   }
 }
 
-// Đổ dữ liệu của stage X ra textarea + D + UI. KHÔNG động chạm stage khác.
+// Đổ notes của stage X ra textarea. KHÔNG động chạm D (D là tích luỹ toàn ca).
 function _hydrateStage(stage) {
-  let snap = null;
+  let notes = null;
   if (curCaseId) {
     const c = loadCases()[curCaseId];
-    if (c) { _ensureStageStores(c); snap = c.stageData[stage] || null; }
+    if (c) {
+      _ensureStageStores(c);
+      if (c.stageData[stage] && typeof c.stageData[stage].notes === 'string') {
+        notes = c.stageData[stage].notes;
+      }
+    }
   }
-  if (!snap && _stageDataCache[stage]) snap = _stageDataCache[stage];
-  if (!snap && curCaseId) {
-    // Fallback: legacy entries (lần nhập cuối cho stage này)
+  if (notes === null && _stageDataCache[stage] && typeof _stageDataCache[stage].notes === 'string') {
+    notes = _stageDataCache[stage].notes;
+  }
+  if (notes === null && curCaseId) {
+    // Fallback: ghi chép cuối cùng của stage trong c.entries (legacy)
     const c = loadCases()[curCaseId];
     const last = (c?.entries || []).filter(e => (e.stage || 1) === stage).pop();
-    if (last) snap = { notes: last.notes || '', D: last.analysis ? JSON.parse(JSON.stringify(last.analysis)) : null };
+    if (last) notes = last.notes || '';
   }
+  if (notes === null) notes = '';
   const ta = document.getElementById('dash-notes');
   const cc = document.getElementById('dash-cc');
-  if (snap) {
-    if (ta) ta.value = snap.notes || '';
-    if (cc) cc.textContent = (snap.notes || '').length + ' ký tự';
-    D = snap.D ? JSON.parse(JSON.stringify(snap.D)) : null;
-    if (D) {
-      D._currentStage = stage;
-      if (D._report) renderReport(D._report);
-      const bf = document.getElementById('btn-fill'); if (bf) bf.disabled = false;
-      const ci = document.getElementById('chat-input'); if (ci) ci.disabled = false;
-      const bs = document.getElementById('btn-send'); if (bs) bs.disabled = false;
-    } else {
-      const bf = document.getElementById('btn-fill'); if (bf) bf.disabled = true;
-    }
-  } else {
-    if (ta) ta.value = '';
-    if (cc) cc.textContent = '0 ký tự';
-    D = null;
-    const bf = document.getElementById('btn-fill'); if (bf) bf.disabled = true;
-  }
+  if (ta) ta.value = notes;
+  if (cc) cc.textContent = notes.length + ' ký tự';
+  if (D) D._currentStage = stage;
   _editingEntryIdx = null;
-  _stageDataCache[stage] = snap;
+  _stageDataCache[stage] = { notes };
 }
 
-// Đẩy một phiên bản vào Lịch sử nhập của stage X (tự động de-dup)
+// Lịch sử lưu CẢ notes + snapshot D tại thời điểm đó
 function _pushStageHistory(stage, source) {
   if (!stage) stage = currentStage;
-  const snap = _snapshotCurrent();
-  if (!snap.notes.trim() && !snap.D) return;
+  const ta = document.getElementById('dash-notes');
+  const notes = ta ? ta.value : '';
+  if (!notes.trim() && !D) return;
   _stageHistoryCache[stage] = _stageHistoryCache[stage] || [];
   const last = _stageHistoryCache[stage].slice(-1)[0];
-  if (last && last.notes === snap.notes && last.source === source
+  if (last && last.notes === notes && last.source === source
       && (Date.now() - new Date(last.ts).getTime()) < 4000) return;
   const item = {
     id: 'h_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     ts: new Date().toISOString(),
     source: source || 'save',
-    notes: snap.notes,
-    D: snap.D
+    notes,
+    D: D ? JSON.parse(JSON.stringify(D)) : null
   };
   _stageHistoryCache[stage].push(item);
   if (_stageHistoryCache[stage].length > 30) _stageHistoryCache[stage] = _stageHistoryCache[stage].slice(-30);
@@ -142,7 +127,8 @@ function _pushStageHistory(stage, source) {
   renderStageHistory();
 }
 
-// Khôi phục một phiên bản lịch sử CHỈ cho stage đã chọn
+// Khôi phục phiên bản cũ: đổi textarea notes của stage đó + đổi báo cáo dashboard
+// về snapshot của phiên bản đó. KHÔNG đụng các field form khác (tránh đè GĐ khác).
 function _restoreStageHistory(stage, histId) {
   if (!curCaseId) return;
   const cases = loadCases();
@@ -151,17 +137,22 @@ function _restoreStageHistory(stage, histId) {
   _ensureStageStores(c);
   const item = (c.stageHistory[stage] || []).find(h => h.id === histId);
   if (!item) return;
-  // ⚠️ CHỈ ghi vào stageData[stage] — các stage khác không bị ảnh hưởng
-  c.stageData[stage] = { notes: item.notes || '', D: item.D ? JSON.parse(JSON.stringify(item.D)) : null };
+  c.stageData[stage] = { notes: item.notes || '' };
   _stageDataCache[stage] = c.stageData[stage];
   _cases = cases;
   if (stage === currentStage) {
     _hydrateStage(stage);
+    // Đổi báo cáo dashboard về phiên bản đã chụp của stage này
+    if (item.D && item.D._report) {
+      if (!D) D = {};
+      D._report = JSON.parse(JSON.stringify(item.D._report));
+      renderReport(D._report);
+    }
     updateStageUI();
   }
   renderStageHistory();
   if (window._markUnsaved) window._markUnsaved();
-  showNotif(`⏪ GĐ ${stage}: đã khôi phục phiên bản ${fmtVN(item.ts)}`);
+  showNotif(`⏪ GĐ ${stage}: đã khôi phục ghi chép ${fmtVN(item.ts)} — bấm 🔬 Phân tích để cập nhật form`);
 }
 
 // Khởi tạo stageData + stageHistory từ case hiện hành + mirror vào cache toàn cục
@@ -171,12 +162,14 @@ function _bootstrapStageStoresFromCase(c) {
   if (!c) return;
   _ensureStageStores(c);
   for (let s = 1; s <= 5; s++) {
-    if (c.stageData[s]) _stageDataCache[s] = c.stageData[s];
-    // Migrate một lần từ legacy entries nếu stageData[s] rỗng
+    if (c.stageData[s] && typeof c.stageData[s].notes === 'string') {
+      _stageDataCache[s] = { notes: c.stageData[s].notes };
+    }
+    // Migrate một lần từ legacy entries nếu stageData[s] rỗng (chỉ lấy notes)
     if (!_stageDataCache[s]) {
       const last = (c.entries || []).filter(e => (e.stage || 1) === s).pop();
       if (last) {
-        _stageDataCache[s] = { notes: last.notes || '', D: last.analysis ? JSON.parse(JSON.stringify(last.analysis)) : null };
+        _stageDataCache[s] = { notes: last.notes || '' };
         c.stageData[s] = _stageDataCache[s];
       }
     }
@@ -985,9 +978,8 @@ function completeStage() {
     }
   });
 
-  // ★ Snapshot stage hiện tại + push vào Lịch sử nhập
+  // ★ Snapshot stage hiện tại (KHÔNG push history — chỉ "Phân tích" mới tạo phiên bản)
   _flushStage(currentStage);
-  _pushStageHistory(currentStage, 'complete');
 
   // ★ Giữ lại legacy entry cho tab "Danh sách ca" (để vẫn hiện số lần ghi chép)
   const _completeNotes = document.getElementById('dash-notes').value.trim();
@@ -1835,12 +1827,9 @@ function loadEntryToEditor(idx) {
 
   _editingEntryIdx = idx;
 
-  // Ghi entry vào stageData của đúng stage (không đụng stage khác)
+  // Ghi notes entry vào stageData (chỉ notes — không đụng D tích luỹ)
   _ensureStageStores(c);
-  c.stageData[entryStage] = {
-    notes: entry.notes || '',
-    D: entry.analysis ? JSON.parse(JSON.stringify(entry.analysis)) : null
-  };
+  c.stageData[entryStage] = { notes: entry.notes || '' };
   _stageDataCache[entryStage] = c.stageData[entryStage];
   _cases = cases;
 
@@ -2545,13 +2534,10 @@ function saveCaseNow() {
       }
     }
   }
-  cases[curCaseId] = c;
-  saveCases(cases);
-  // ★ Auto-push Lịch sử nhập cho stage hiện tại + mirror stageData
+  // ★ Mirror stageData (KHÔNG push history — chỉ "Phân tích" mới tạo phiên bản)
   _flushStage(currentStage);
-  _pushStageHistory(currentStage, 'save');
-  // saveCases mới lưu lần đầu — flush sau đó cần commit lại stageData/stageHistory
-  saveCases(loadCases());
+  cases[curCaseId] = loadCases()[curCaseId] || c;
+  saveCases(cases);
   updateHeader(); renderCaseList(); updateCasesCount();
   renderEntriesPanel();
   renderStageHistory();
@@ -2790,13 +2776,22 @@ function loadCaseIntoApp(id) {
   _editingEntryIdx = null;
   // ★ Khôi phục giai đoạn đã lưu
   currentStage = c.currentStage || (c.lastAnalysis?._currentStage) || 1;
-  // ★ Khởi tạo stageData/stageHistory từ case + migrate legacy entries nếu cần
-  _bootstrapStageStoresFromCase(c);
-  // Nếu chưa có stageData cho stage hiện tại mà có lastAnalysis, dùng lastAnalysis làm seed
-  if (!_stageDataCache[currentStage] && c.lastAnalysis) {
-    _stageDataCache[currentStage] = { notes: (c.entries||[]).filter(e=>(e.stage||1)===currentStage).slice(-1)[0]?.notes || '', D: c.lastAnalysis };
-    c.stageData[currentStage] = _stageDataCache[currentStage];
+  // ★ Load D từ lastAnalysis (tích luỹ toàn ca — forms đọc từ đây)
+  if (c.lastAnalysis) {
+    D = c.lastAnalysis;
+    if (!Array.isArray(D.cap_nhat)) D.cap_nhat = [];
+    if (D.co_ban && Object.keys(D.co_ban).length) {
+      document.getElementById('btn-fill').disabled = false;
+      document.getElementById('chat-input').disabled = false;
+      document.getElementById('btn-send').disabled = false;
+    }
+    if (D._report) renderReport(D._report);
+  } else {
+    D = null;
+    document.getElementById('btn-fill').disabled = true;
   }
+  // ★ Khởi tạo stageData/stageHistory theo GĐ (CHỈ chứa notes) + hydrate textarea
+  _bootstrapStageStoresFromCase(c);
   _hydrateStage(currentStage);
   chatHistory = [];
   updateHeader();
@@ -4482,8 +4477,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const ta = document.getElementById('dash-notes');
   ta?.addEventListener('input', e => {
     document.getElementById('dash-cc').textContent = e.target.value.length+' ký tự';
-    // ★ Mirror draft vào _stageDataCache[currentStage] để không mất khi chuyển GĐ
-    _stageDataCache[currentStage] = { notes: e.target.value, D: D ? JSON.parse(JSON.stringify(D)) : null };
+    // ★ Mirror draft notes vào _stageDataCache[currentStage] để không mất khi chuyển GĐ
+    _stageDataCache[currentStage] = { notes: e.target.value };
   });
 
   function fixHeights() {
