@@ -2202,17 +2202,37 @@ function inlineEdit(el, path) {
 
   const restore = () => {
     el.classList.remove('fl-editing');
-    const v = clean(inp.value);
-    setNested(D, path, v);
-    el.classList.toggle('ok', !!v);
-    el.classList.toggle('no', !v);
-    el.textContent = v || '—';
+    const raw = inp.value;
+    const v = clean(raw);
+    // red_flags: lưu dạng array trong D._report, hiển thị dạng text "• flag" nhiều dòng
+    if (path === '_report.red_flags') {
+      const arr = raw.split(/\r?\n/).map(s => s.replace(/^\s*[-•*]\s*/, '').trim()).filter(Boolean);
+      setNested(D, path, arr);
+      el.textContent = arr.length ? arr.map(f=>'• '+f).join('\n') : '—';
+      el.classList.toggle('ok', arr.length > 0);
+      el.classList.toggle('no', arr.length === 0);
+    } else if (path === '_report.parentification.detected') {
+      const b = /^(có|true|1|yes|y)$/i.test(raw.trim());
+      setNested(D, path, b);
+      el.textContent = b ? 'Có' : 'Không';
+      el.classList.toggle('ok', b);
+      el.classList.toggle('no', !b);
+    } else {
+      setNested(D, path, v);
+      el.classList.toggle('ok', !!v);
+      el.classList.toggle('no', !v);
+      el.textContent = v || '—';
+    }
     if (curCaseId) {
       const cases = loadCases();
       const c = cases[curCaseId];
       if (c) { c.lastAnalysis = JSON.parse(JSON.stringify(D)); c.updatedAt = new Date().toISOString(); cases[curCaseId] = c; _cases = cases; }
       if (window._markUnsaved) window._markUnsaved();
       showNotif('✅ Đã cập nhật — nhớ bấm Lưu', 'ok', 2000);
+    }
+    // Khi sửa field báo cáo AI → đồng bộ lại dashboard ngay
+    if (path && path.startsWith('_report.') && D && D._report && typeof renderReport === 'function') {
+      try { renderReport(D._report); } catch(_) {}
     }
   };
 
@@ -2226,6 +2246,57 @@ function inlineEdit(el, path) {
 function Sec(ttl, id, body, ic='📌') {
   const safeTtl = ttl.replace(/'/g, '&apos;').replace(/"/g, '&quot;');
   return `<div class="sec"><div class="sec-hd"><div class="sec-hl"><span class="sec-ico">${ic}</span>${ttl}</div><div class="sec-acts"><button class="btn-cp" onclick="navigator.clipboard.writeText(document.getElementById('${id}').innerText).then(()=>{this.textContent='✓';setTimeout(()=>this.textContent='Copy',1400)}).catch(()=>{})">Copy</button></div></div><div class="sec-bd" id="${id}">${body}</div></div>`;
+}
+
+// Section "Phân tích AI" — đồng bộ 2 chiều với dashboard báo cáo.
+// Hiển thị các trường trọng yếu của D._report theo từng GĐ, cho phép click Chỉnh sửa.
+function SecDashboard(idx) {
+  const r = D?._report || {};
+  const rm = r.risk_matrix || {};
+  const pf = r.parentification || {};
+  const nw = r.needs_vs_wants || {};
+  const rf = Array.isArray(r.red_flags) ? r.red_flags.filter(Boolean) : [];
+  const rfText = rf.length ? rf.map(f=>'• '+f).join('\n') : '';
+
+  const matrixRows = [
+    ['🛡 An toàn Thể chất','an_toan_the_chat'],
+    ['🧠 An toàn Tâm lý','an_toan_tam_ly'],
+    ['🏠 Môi trường Sống','moi_truong'],
+    ['📚 Giáo dục & Phát triển','giao_duc'],
+    ['👨‍👩‍👧 Hệ thống Bảo vệ','he_thong_bao_ve']
+  ].map(([lb, k]) => {
+    const o = rm[k] || {};
+    return F(lb + ' — Mức', o.level, '-', '_report.risk_matrix.'+k+'.level')
+         + F(lb + ' — Chi tiết', o.detail, '-', '_report.risk_matrix.'+k+'.detail');
+  }).join('');
+
+  let body = '';
+  body += Dv('Đánh giá tổng quan');
+  body += F('Mức độ rủi ro', r.risk, '-', '_report.risk');
+  body += F('Lý do đánh giá', r.risk_reason, '-', '_report.risk_reason');
+  body += F('🚩 Red flags', rfText, '-', '_report.red_flags');
+
+  body += Dv('Ma trận rủi ro 5 chiều');
+  body += matrixRows;
+
+  // GĐ 2-3: Needs vs Wants
+  if (idx === 2 || idx === 4 || idx === 5) {
+    if (nw.needs || nw.wants) {
+      body += Dv('Nhu cầu vs Mong muốn');
+      body += F('Nhu cầu (Needs)', Array.isArray(nw.needs)?nw.needs.join('\n• '):nw.needs, '-', '_report.needs_vs_wants.needs');
+      body += F('Mong muốn (Wants)', Array.isArray(nw.wants)?nw.wants.join('\n• '):nw.wants, '-', '_report.needs_vs_wants.wants');
+    }
+  }
+
+  // Phụ mẫu hóa
+  if (pf.detected || pf.type || pf.description) {
+    body += Dv('Phụ mẫu hóa (Parentification)');
+    body += F('Phát hiện', pf.detected ? 'Có' : 'Không', '-', '_report.parentification.detected');
+    body += F('Loại', pf.type, '-', '_report.parentification.type');
+    body += F('Mô tả', pf.description, '-', '_report.parentification.description');
+  }
+
+  return Sec('📊 Phân tích AI (đồng bộ Dashboard)', 's_dash_'+idx, body, '📊');
 }
 
 function Dv(t) { return `<div class="dv">${t}</div>`; }
@@ -2254,7 +2325,8 @@ function renderFormTab(idx) {
     <div class="fv-acts">
       <button class="btn-fv-edit" id="btn-fv-edit-${idx}" onclick="toggleFvEditMode(${idx})">✏️ Chỉnh sửa</button>
       <button class="btn-fv-save" onclick="saveCaseNow()">💾 Lưu ca</button>
-      <button class="btn-dl-docx" onclick="dlDocx(${idx})">⬇ .docx</button>
+      <button class="btn-dl-docx" title="Bản Word dữ liệu — dùng để chỉnh sửa, nối tiếp" onclick="dlDocx(${idx})">📝 Bản chỉnh sửa</button>
+      <button class="btn-dl-docx-brand" title="Bản in chính thức — có bìa logo Thảo Đàn, footer trên mỗi trang" onclick="dlDocxBranded(${idx})">📄 Bản in Thảo Đàn</button>
     </div>
   </div>`;
 
@@ -2338,6 +2410,8 @@ function renderFormTab(idx) {
     h+=Sec("PHẦN I — Thông tin cơ bản","sbc1",F("Họ tên",cb.ho_ten)+F("Năm sinh",cb.ngay_sinh)+F("Yêu cầu",dg.yeu_cau_tre)+F("Nguy cơ",dg.nguy_co));
     h+=Sec("PHẦN II — Tiến trình","sbc2",F("Bối cảnh GĐ",gd.hoan_canh)+F("Nhu cầu thể chất",dg.nhu_cau_the_chat)+F("Nhu cầu tâm lý",dg.nhu_cau_tam_ly)+F("Ưu thế trẻ",dg.uu_the_tre)+F("Đề xuất",D.de_xuat));
   }
+  // Append unified "Phân tích AI (Dashboard)" section for every form when a report exists
+  if (D && D._report) h += SecDashboard(idx);
   document.getElementById('fv').innerHTML = h;
 }
 
@@ -3220,6 +3294,85 @@ async function dlDocx(fi){
     URL.revokeObjectURL(url);
     showNotif('✅ Đã tải '+FORM_NAMES[fi]);
   }catch(e){showNotif('❌ '+e.message,'err');}
+}
+
+// ── Bản in Thảo Đàn: bìa có logo lớn + thông tin ca + form chuẩn + footer ảnh ──
+async function dlDocxBranded(fi){
+  if(!D){showNotif('⚠️ Chưa có dữ liệu','warn');return;}
+  try{
+    const lib=await loadDocxLib();
+    const [logoData, footerData] = await Promise.all([fetchImg(LOGO_URL), fetchImg(FOOTER_URL)]);
+    // Lấy body + footerSection từ buildDocx gốc (giữ nguyên thông số layout)
+    const collector = [];
+    await buildDocx(fi, logoData, footerData, collector);
+    const pack = collector[0] || { body: [], footerSection: {} };
+    const body = pack.body || [];
+    const footerSection = pack.footerSection || {};
+
+    const { Document, Paragraph, TextRun, AlignmentType, ImageRun } = lib;
+    const PW=11906, PH=16838, MG=1134;
+    const TNR='Times New Roman', NAVY='0F2D6B';
+    const childName = (D.co_ban && D.co_ban.ho_ten) || '—';
+    const caseDate = new Date().toLocaleDateString('vi-VN');
+    const stageLabel = (typeof STAGE_CONFIG !== 'undefined' && STAGE_CONFIG[currentStage]?.label) || ('Giai đoạn '+currentStage);
+
+    const cover = [];
+    // Logo lớn giữa trang
+    if (logoData) {
+      cover.push(new Paragraph({
+        children:[new ImageRun({data:logoData,transformation:{width:180,height:180},type:'png'})],
+        alignment:AlignmentType.CENTER,
+        spacing:{before:2400,after:300}
+      }));
+    }
+    cover.push(new Paragraph({
+      children:[new TextRun({text:'CƠ SỞ THẢO ĐÀN',bold:true,size:40,font:TNR,color:NAVY})],
+      alignment:AlignmentType.CENTER,
+      spacing:{before:100,after:60}
+    }));
+    cover.push(new Paragraph({
+      children:[new TextRun({text:'Hỗ trợ Công tác Xã hội cho Trẻ em',italics:true,size:24,font:TNR,color:'334155'})],
+      alignment:AlignmentType.CENTER,
+      spacing:{before:0,after:1400}
+    }));
+    cover.push(new Paragraph({
+      children:[new TextRun({text:(FORM_NAMES[fi]||'').toUpperCase(),bold:true,size:44,font:TNR,color:NAVY})],
+      alignment:AlignmentType.CENTER,
+      spacing:{before:200,after:500}
+    }));
+    cover.push(new Paragraph({
+      children:[new TextRun({text:'Họ tên trẻ: '+childName,size:28,font:TNR})],
+      alignment:AlignmentType.CENTER,
+      spacing:{before:200,after:80}
+    }));
+    cover.push(new Paragraph({
+      children:[new TextRun({text:stageLabel,size:26,font:TNR,color:'0F2D6B'})],
+      alignment:AlignmentType.CENTER,
+      spacing:{before:100,after:80}
+    }));
+    cover.push(new Paragraph({
+      children:[new TextRun({text:'Ngày phát hành: '+caseDate,size:24,font:TNR,color:'6B7280'})],
+      alignment:AlignmentType.CENTER,
+      spacing:{before:100,after:400}
+    }));
+
+    const pageProps = { page: { size:{width:PW,height:PH}, margin:{top:MG,right:MG,bottom:720,left:MG,footer:0} } };
+    const doc = new Document({
+      sections: [
+        { properties: pageProps, footers: footerSection, children: cover },
+        { properties: pageProps, footers: footerSection, children: body }
+      ]
+    });
+    const blob = await lib.Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'ThaoDan_BanIn_' + FF[fi] + '.docx'; a.click();
+    URL.revokeObjectURL(url);
+    showNotif('✅ Đã tải Bản in Thảo Đàn — '+FORM_NAMES[fi]);
+  } catch(e){
+    console.error(e);
+    showNotif('❌ '+e.message,'err');
+  }
 }
 
 async function buildDocx(fi,logoData,footerData,_collector){

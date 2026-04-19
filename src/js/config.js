@@ -6,8 +6,8 @@ const GURL = '/api/chat';
 
 const PRIVACY_PREFIX = `\n\n⚠️ BẢO MẬT DỮ LIỆU TRẺ EM (Luật ATTTM 2015 & NĐ 13/2023): Dữ liệu đã được ẩn danh hóa trước khi gửi. KHÔNG suy đoán danh tính thật. KHÔNG lưu trữ, tái tạo hoặc phổ biến thông tin định danh cá nhân. Chỉ phân tích nội dung chuyên môn bảo vệ trẻ em.`;
 
-const LOGO_URL = 'https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/main/ThaoDanSSC_Digital-01.png';
-const FOOTER_URL = 'https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/3e05cff6b6a5f80355e7a378f7f82ffd790f81cc/Footer.png';
+const LOGO_URL = 'https://raw.githubusercontent.com/nguyenthiencao2020/asif-brand-assets/82a695f369588161b12f90608c17088b84f8427c/ThaoDan_Logo.png';
+const FOOTER_URL = 'https://raw.githubusercontent.com/nguyenthiencao2020/asif-brand-assets/82a695f369588161b12f90608c17088b84f8427c/ThaoDan_Footer.png';
 
 const FORM_NAMES = [
   'HỒ SƠ THÔNG TIN TRẺ', 'PHIẾU TIẾP CẬN', 'PHÚC TRÌNH VÃNG GIA',
