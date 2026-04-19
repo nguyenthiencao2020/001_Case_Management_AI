@@ -127,7 +127,8 @@ function _pushStageHistory(stage, source) {
   renderStageHistory();
 }
 
-// Khôi phục phiên bản cũ: CHỈ đổi textarea notes của stage đó. D không đụng.
+// Khôi phục phiên bản cũ: đổi textarea notes của stage đó + đổi báo cáo dashboard
+// về snapshot của phiên bản đó. KHÔNG đụng các field form khác (tránh đè GĐ khác).
 function _restoreStageHistory(stage, histId) {
   if (!curCaseId) return;
   const cases = loadCases();
@@ -141,6 +142,12 @@ function _restoreStageHistory(stage, histId) {
   _cases = cases;
   if (stage === currentStage) {
     _hydrateStage(stage);
+    // Đổi báo cáo dashboard về phiên bản đã chụp của stage này
+    if (item.D && item.D._report) {
+      if (!D) D = {};
+      D._report = JSON.parse(JSON.stringify(item.D._report));
+      renderReport(D._report);
+    }
     updateStageUI();
   }
   renderStageHistory();
