@@ -2248,17 +2248,24 @@ function Sec(ttl, id, body, ic='📌') {
   return `<div class="sec"><div class="sec-hd"><div class="sec-hl"><span class="sec-ico">${ic}</span>${ttl}</div><div class="sec-acts"><button class="btn-cp" onclick="navigator.clipboard.writeText(document.getElementById('${id}').innerText).then(()=>{this.textContent='✓';setTimeout(()=>this.textContent='Copy',1400)}).catch(()=>{})">Copy</button></div></div><div class="sec-bd" id="${id}">${body}</div></div>`;
 }
 
-// Section "Phân tích AI" — đồng bộ 2 chiều với dashboard báo cáo.
-// Hiển thị các trường trọng yếu của D._report theo từng GĐ, cho phép click Chỉnh sửa.
+// Phần đánh giá chuyên môn — đồng bộ 2 chiều với dashboard báo cáo.
+// Mỗi form có tiêu đề & bộ trường riêng, chỉ hiển thị những gì hợp ngữ cảnh.
 function SecDashboard(idx) {
   const r = D?._report || {};
+  if (!r.risk && !r.risk_reason && !Array.isArray(r.red_flags) && !r.risk_matrix) return '';
+
   const rm = r.risk_matrix || {};
   const pf = r.parentification || {};
   const nw = r.needs_vs_wants || {};
   const rf = Array.isArray(r.red_flags) ? r.red_flags.filter(Boolean) : [];
   const rfText = rf.length ? rf.map(f=>'• '+f).join('\n') : '';
 
-  const matrixRows = [
+  const overview = () =>
+    F('Mức độ rủi ro', r.risk, '-', '_report.risk') +
+    F('Lý do đánh giá', r.risk_reason, '-', '_report.risk_reason') +
+    (r.urgent ? F('Trạng thái khẩn cấp', 'CÓ', '-', '_report.urgent') : '');
+
+  const matrix = () => [
     ['🛡 An toàn Thể chất','an_toan_the_chat'],
     ['🧠 An toàn Tâm lý','an_toan_tam_ly'],
     ['🏠 Môi trường Sống','moi_truong'],
@@ -2270,33 +2277,61 @@ function SecDashboard(idx) {
          + F(lb + ' — Chi tiết', o.detail, '-', '_report.risk_matrix.'+k+'.detail');
   }).join('');
 
-  let body = '';
-  body += Dv('Đánh giá tổng quan');
-  body += F('Mức độ rủi ro', r.risk, '-', '_report.risk');
-  body += F('Lý do đánh giá', r.risk_reason, '-', '_report.risk_reason');
-  body += F('🚩 Red flags', rfText, '-', '_report.red_flags');
+  const redFlags = () => F('Red flags quan sát', rfText, '-', '_report.red_flags');
 
-  body += Dv('Ma trận rủi ro 5 chiều');
-  body += matrixRows;
+  const needsWants = () =>
+    F('Nhu cầu (Needs)', Array.isArray(nw.needs)?nw.needs.join('\n• '):nw.needs, '-', '_report.needs_vs_wants.needs') +
+    F('Mong muốn (Wants)', Array.isArray(nw.wants)?nw.wants.join('\n• '):nw.wants, '-', '_report.needs_vs_wants.wants');
+  const hasNW = () => !!(nw.needs || nw.wants);
 
-  // GĐ 2-3: Needs vs Wants
-  if (idx === 2 || idx === 4 || idx === 5) {
-    if (nw.needs || nw.wants) {
-      body += Dv('Nhu cầu vs Mong muốn');
-      body += F('Nhu cầu (Needs)', Array.isArray(nw.needs)?nw.needs.join('\n• '):nw.needs, '-', '_report.needs_vs_wants.needs');
-      body += F('Mong muốn (Wants)', Array.isArray(nw.wants)?nw.wants.join('\n• '):nw.wants, '-', '_report.needs_vs_wants.wants');
-    }
-  }
+  const parent = () =>
+    F('Phát hiện phụ mẫu hóa', pf.detected ? 'Có' : 'Không', '-', '_report.parentification.detected') +
+    F('Loại', pf.type, '-', '_report.parentification.type') +
+    F('Mô tả', pf.description, '-', '_report.parentification.description');
+  const hasPF = () => !!(pf.detected || pf.type || pf.description);
 
-  // Phụ mẫu hóa
-  if (pf.detected || pf.type || pf.description) {
-    body += Dv('Phụ mẫu hóa (Parentification)');
-    body += F('Phát hiện', pf.detected ? 'Có' : 'Không', '-', '_report.parentification.detected');
-    body += F('Loại', pf.type, '-', '_report.parentification.type');
-    body += F('Mô tả', pf.description, '-', '_report.parentification.description');
-  }
+  const MAP = {
+    0:  { title: 'F. Đánh giá chuyên môn',                       icon: '🎯',
+          body: Dv('Tổng quan rủi ro') + overview() +
+                Dv('Ma trận rủi ro đa chiều') + matrix() +
+                Dv('Red flags') + redFlags() +
+                (hasNW() ? Dv('Nhu cầu ưu tiên') + needsWants() : '') +
+                (hasPF() ? Dv('Phụ mẫu hóa') + parent() : '') },
+    1:  { title: 'E. Đánh giá rủi ro ban đầu',                   icon: '⚠️',
+          body: Dv('Tổng quan') + overview() + Dv('Red flags') + redFlags() },
+    2:  { title: 'C. Cập nhật đánh giá rủi ro sau vãng gia',     icon: '🔄',
+          body: Dv('Tổng quan') + overview() +
+                Dv('Ma trận rủi ro đa chiều') + matrix() +
+                Dv('Red flags') + redFlags() },
+    3:  { title: 'B. Ma trận đánh giá khẩn cấp',                 icon: '🚨',
+          body: Dv('Tổng quan') + overview() +
+                Dv('Ma trận rủi ro 5 chiều') + matrix() +
+                Dv('Red flags') + redFlags() },
+    4:  { title: 'E. Phân tích nhu cầu chuyên sâu',              icon: '🧠',
+          body: (hasNW() ? Dv('Nhu cầu vs Mong muốn') + needsWants() : '') +
+                (hasPF() ? Dv('Phụ mẫu hóa') + parent() : '') +
+                Dv('Ngữ cảnh rủi ro') + F('Mức độ rủi ro', r.risk, '-', '_report.risk') },
+    5:  { title: 'E. Ngữ cảnh rủi ro định hướng kế hoạch',       icon: '🎯',
+          body: Dv('Tổng quan') + overview() +
+                Dv('Red flags cần giải quyết') + redFlags() +
+                (hasNW() ? Dv('Nhu cầu ưu tiên (input cho mục tiêu)') + needsWants() : '') },
+    8:  { title: 'D. Tóm tắt rủi ro phục vụ chuyển gửi',         icon: '📤',
+          body: Dv('Tổng quan') + overview() + Dv('Red flags') + redFlags() },
+    9:  { title: 'F. Đánh giá rủi ro khi đóng ca',               icon: '🏁',
+          body: Dv('Tổng quan cuối') + overview() +
+                Dv('Ma trận rủi ro cuối') + matrix() +
+                Dv('Red flags còn lại') + redFlags() },
+    10: { title: 'VI. Phân tích chuyên môn tổng hợp',            icon: '📊',
+          body: Dv('Tổng quan') + overview() +
+                Dv('Ma trận rủi ro') + matrix() +
+                Dv('Red flags') + redFlags() +
+                (hasNW() ? Dv('Nhu cầu vs Mong muốn') + needsWants() : '') +
+                (hasPF() ? Dv('Phụ mẫu hóa') + parent() : '') }
+  };
 
-  return Sec('📊 Phân tích AI (đồng bộ Dashboard)', 's_dash_'+idx, body, '📊');
+  const cfg = MAP[idx];
+  if (!cfg || !cfg.body.trim()) return '';
+  return Sec(cfg.title, 's_dash_'+idx, cfg.body, cfg.icon);
 }
 
 function Dv(t) { return `<div class="dv">${t}</div>`; }
@@ -2325,7 +2360,7 @@ function renderFormTab(idx) {
     <div class="fv-acts">
       <button class="btn-fv-edit" id="btn-fv-edit-${idx}" onclick="toggleFvEditMode(${idx})">✏️ Chỉnh sửa</button>
       <button class="btn-fv-save" onclick="saveCaseNow()">💾 Lưu ca</button>
-      <button class="btn-dl-docx" title="Bản Word dữ liệu — dùng để chỉnh sửa, nối tiếp" onclick="dlDocx(${idx})">📝 Bản chỉnh sửa</button>
+      <button class="btn-dl-docx" title="Bản Word trích xuất nguyên cấu trúc form web — dùng để chỉnh sửa, nối tiếp" onclick="dlDocx(${idx})">📝 Bản form web</button>
       <button class="btn-dl-docx-brand" title="Bản in chính thức — có bìa logo Thảo Đàn, footer trên mỗi trang" onclick="dlDocxBranded(${idx})">📄 Bản in Thảo Đàn</button>
     </div>
   </div>`;
@@ -2410,7 +2445,7 @@ function renderFormTab(idx) {
     h+=Sec("PHẦN I — Thông tin cơ bản","sbc1",F("Họ tên",cb.ho_ten)+F("Năm sinh",cb.ngay_sinh)+F("Yêu cầu",dg.yeu_cau_tre)+F("Nguy cơ",dg.nguy_co));
     h+=Sec("PHẦN II — Tiến trình","sbc2",F("Bối cảnh GĐ",gd.hoan_canh)+F("Nhu cầu thể chất",dg.nhu_cau_the_chat)+F("Nhu cầu tâm lý",dg.nhu_cau_tam_ly)+F("Ưu thế trẻ",dg.uu_the_tre)+F("Đề xuất",D.de_xuat));
   }
-  // Append unified "Phân tích AI (Dashboard)" section for every form when a report exists
+  // Gắn phần Đánh giá chuyên môn tương ứng với từng form (SecDashboard tự bỏ qua form 5/6 vận hành).
   if (D && D._report) h += SecDashboard(idx);
   document.getElementById('fv').innerHTML = h;
 }
@@ -4098,20 +4133,17 @@ async function buildDocx(fi,logoData,footerData,_collector){
     body.push(NOTE("CƠ SỞ THẢO ĐÀN"));
   }
 
-  // ══ PHÂN TÍCH AI (ĐỒNG BỘ DASHBOARD) — bám đúng cấu trúc web ══
+  // ══ PHẦN ĐÁNH GIÁ CHUYÊN MÔN — bám đúng cấu trúc form web ══
+  // Mỗi form có tiêu đề + bộ trường riêng; loại Form 5 (idx=6) và Form 6 (idx=7) — operational trackers.
   const _rep = D && D._report;
-  if (_rep && (_rep.risk || _rep.risk_reason || _rep.red_flags?.length || _rep.risk_matrix)) {
-    body.push(SH("PHÂN TÍCH AI — ĐỒNG BỘ DASHBOARD"));
-    body.push(SUB("1. Đánh giá tổng quan"));
-    body.push(FL("Mức độ rủi ro", _rep.risk || ''));
-    body.push(FL("Lý do đánh giá", _rep.risk_reason || ''));
-    if (_rep.urgent) body.push(FL("Khẩn cấp", 'CÓ'));
-    const _rf = Array.isArray(_rep.red_flags) ? _rep.red_flags.filter(Boolean) : [];
-    if (_rf.length) {
-      body.push(SUB("🚩 Red flags"));
-      _rf.forEach(f => body.push(FL("•", f)));
-    }
+  const _hasRep = _rep && (_rep.risk || _rep.risk_reason || _rep.red_flags?.length || _rep.risk_matrix);
+  if (_hasRep) {
     const _rm = _rep.risk_matrix || {};
+    const _pf = _rep.parentification || {};
+    const _nw = _rep.needs_vs_wants || {};
+    const _rf = Array.isArray(_rep.red_flags) ? _rep.red_flags.filter(Boolean) : [];
+    const _needs = Array.isArray(_nw.needs) ? _nw.needs.filter(Boolean).join(' • ') : _nw.needs;
+    const _wants = Array.isArray(_nw.wants) ? _nw.wants.filter(Boolean).join(' • ') : _nw.wants;
     const _matrixKeys = [
       ['🛡 An toàn Thể chất', 'an_toan_the_chat'],
       ['🧠 An toàn Tâm lý', 'an_toan_tam_ly'],
@@ -4120,8 +4152,18 @@ async function buildDocx(fi,logoData,footerData,_collector){
       ['👨‍👩‍👧 Hệ thống Bảo vệ', 'he_thong_bao_ve']
     ];
     const _hasMatrix = _matrixKeys.some(([_, k]) => _rm[k] && (_rm[k].level || _rm[k].detail));
-    if (_hasMatrix) {
-      body.push(SUB("2. Ma trận rủi ro 5 chiều"));
+    const _hasNW = _needs || _wants;
+    const _hasPF = _pf.detected || _pf.type || _pf.description;
+
+    const _pushOverview = () => {
+      body.push(SUB("Tổng quan"));
+      body.push(FL("Mức độ rủi ro", _rep.risk || ''));
+      body.push(FL("Lý do đánh giá", _rep.risk_reason || ''));
+      if (_rep.urgent) body.push(FL("Trạng thái khẩn cấp", 'CÓ'));
+    };
+    const _pushMatrix = (label) => {
+      if (!_hasMatrix) return;
+      body.push(SUB(label || "Ma trận rủi ro 5 chiều"));
       _matrixKeys.forEach(([lb, k]) => {
         const o = _rm[k] || {};
         if (o.level || o.detail) {
@@ -4129,21 +4171,70 @@ async function buildDocx(fi,logoData,footerData,_collector){
           body.push(FL(lb + ' — Chi tiết', o.detail || ''));
         }
       });
-    }
-    const _nw = _rep.needs_vs_wants || {};
-    const _needs = Array.isArray(_nw.needs) ? _nw.needs.filter(Boolean).join(' • ') : _nw.needs;
-    const _wants = Array.isArray(_nw.wants) ? _nw.wants.filter(Boolean).join(' • ') : _nw.wants;
-    if (_needs || _wants) {
-      body.push(SUB("3. Nhu cầu vs Mong muốn"));
-      body.push(FL("Nhu cầu (Needs)", _needs || ''));
-      body.push(FL("Mong muốn (Wants)", _wants || ''));
-    }
-    const _pf = _rep.parentification || {};
-    if (_pf.detected || _pf.type || _pf.description) {
-      body.push(SUB("4. Phụ mẫu hóa (Parentification)"));
+    };
+    const _pushRedFlags = (label) => {
+      if (!_rf.length) return;
+      body.push(SUB(label || "Red flags"));
+      _rf.forEach(f => body.push(FL("•", f)));
+    };
+    const _pushNeedsWants = (label) => {
+      if (!_hasNW) return;
+      body.push(SUB(label || "Nhu cầu vs Mong muốn"));
+      if (_needs) body.push(FL("Nhu cầu (Needs)", _needs));
+      if (_wants) body.push(FL("Mong muốn (Wants)", _wants));
+    };
+    const _pushParent = () => {
+      if (!_hasPF) return;
+      body.push(SUB("Phụ mẫu hóa (Parentification)"));
       body.push(FL("Phát hiện", _pf.detected ? 'Có' : 'Không'));
       if (_pf.type) body.push(FL("Loại", _pf.type));
       if (_pf.description) body.push(FL("Mô tả", _pf.description));
+    };
+
+    // Per-form dispatch
+    switch (fi) {
+      case 0:
+        body.push(SH("F. ĐÁNH GIÁ CHUYÊN MÔN"));
+        _pushOverview(); _pushMatrix("Ma trận rủi ro đa chiều"); _pushRedFlags();
+        _pushNeedsWants("Nhu cầu ưu tiên"); _pushParent();
+        break;
+      case 1:
+        body.push(SH("E. ĐÁNH GIÁ RỦI RO BAN ĐẦU"));
+        _pushOverview(); _pushRedFlags();
+        break;
+      case 2:
+        body.push(SH("C. CẬP NHẬT ĐÁNH GIÁ RỦI RO SAU VÃNG GIA"));
+        _pushOverview(); _pushMatrix(); _pushRedFlags();
+        break;
+      case 3:
+        body.push(SH("B. MA TRẬN ĐÁNH GIÁ KHẨN CẤP"));
+        _pushOverview(); _pushMatrix(); _pushRedFlags();
+        break;
+      case 4:
+        body.push(SH("E. PHÂN TÍCH NHU CẦU CHUYÊN SÂU"));
+        _pushNeedsWants(); _pushParent();
+        body.push(SUB("Ngữ cảnh rủi ro"));
+        body.push(FL("Mức độ rủi ro", _rep.risk || ''));
+        break;
+      case 5:
+        body.push(SH("E. NGỮ CẢNH RỦI RO ĐỊNH HƯỚNG KẾ HOẠCH"));
+        _pushOverview(); _pushRedFlags("Red flags cần giải quyết");
+        _pushNeedsWants("Nhu cầu ưu tiên (input cho mục tiêu)");
+        break;
+      case 8:
+        body.push(SH("D. TÓM TẮT RỦI RO PHỤC VỤ CHUYỂN GỬI"));
+        _pushOverview(); _pushRedFlags();
+        break;
+      case 9:
+        body.push(SH("F. ĐÁNH GIÁ RỦI RO KHI ĐÓNG CA"));
+        _pushOverview(); _pushMatrix("Ma trận rủi ro cuối"); _pushRedFlags("Red flags còn lại");
+        break;
+      case 10:
+        body.push(SH("VI. PHÂN TÍCH CHUYÊN MÔN TỔNG HỢP"));
+        _pushOverview(); _pushMatrix(); _pushRedFlags();
+        _pushNeedsWants(); _pushParent();
+        break;
+      // fi = 6, 7 → skip (trackers vận hành)
     }
   }
 
