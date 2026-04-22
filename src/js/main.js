@@ -21,6 +21,8 @@ let _draftCaseId = null;
 let chatHistory = [];
 let docxLib = null;
 let currentStage = 1;
+let _editingEntryIdx = null;
+let _selectedActionGroup = null;
 
 // ── AUTH ──
 async function loginEmail() {
@@ -52,7 +54,7 @@ async function logoutUser() {
   window._sessionReset?.();
   // ── Reset toàn bộ state ──
   _discardDraft();
-  D = null; curCaseId = null; currentStage = 1; chatHistory = []; curForm = 0;
+  D = null; curCaseId = null; currentStage = 1; chatHistory = []; curForm = 0; _editingEntryIdx = null;
   // Input & chat
   document.getElementById('dash-notes').value = '';
   document.getElementById('dash-cc').textContent = '0 ký tự';
@@ -106,7 +108,7 @@ function _onLogin(user) {
     updateCasesCount();
     renderCaseList();
     // Reset dashboard về trạng thái sạch (không auto-load ca cũ)
-    D = null; curCaseId = null; currentStage = 1; chatHistory = [];
+    D = null; curCaseId = null; currentStage = 1; chatHistory = []; _editingEntryIdx = null;
     document.getElementById('dash-notes').value = '';
     document.getElementById('dash-cc').textContent = '0 ký tự';
     document.getElementById('btn-fill').disabled = true;
@@ -743,6 +745,7 @@ function updateStageUI() {
 function previewStage(s) {
   const panel = document.getElementById('stage-preview-panel');
   if (!panel) return;
+  _jumpToStage(s, { notifyUser: false });
   // Toggle off if same stage clicked again
   if (panel.style.display === 'block' && panel.dataset.stage === String(s)) {
     closeStagePreview(); return;
@@ -787,6 +790,41 @@ function closeStagePreview() {
   if (p) { p.style.display = 'none'; p.dataset.stage = ''; }
 }
 
+function _jumpToStage(stage, { notifyUser = true } = {}) {
+  if (!Number.isFinite(stage) || stage < 1 || stage > 5) return;
+  const cases = loadCases();
+  const c = curCaseId ? cases[curCaseId] : null;
+
+  currentStage = stage;
+  _editingEntryIdx = null;
+
+  if (c?.entries?.length) {
+    const list = c.entries
+      .map((e, i) => ({ ...e, _idx: i }))
+      .filter(e => (e.stage || 1) === stage);
+    const latest = list.length ? list[list.length - 1] : null;
+    const ta = document.getElementById('dash-notes');
+    if (latest) {
+      if (ta) ta.value = latest.notes || '';
+      document.getElementById('dash-cc').textContent = ((latest.notes || '').length) + ' ký tự';
+      _editingEntryIdx = latest._idx;
+      if (latest.analysis) {
+        D = JSON.parse(JSON.stringify(latest.analysis));
+        D._currentStage = stage;
+        if (D._report) renderReport(D._report);
+      }
+    } else {
+      if (ta) ta.value = '';
+      document.getElementById('dash-cc').textContent = '0 ký tự';
+    }
+  }
+
+  updateStageUI();
+  renderEntriesPanel();
+  renderAnalysisPanel();
+  if (notifyUser) showNotif(`🔎 Đã chuyển về GĐ ${stage}`);
+}
+
 function completeStage() {
   if (!D) { showNotif('⚠️ Hãy phân tích ghi chép trước khi hoàn thành giai đoạn', 'warn'); return; }
 
@@ -812,7 +850,7 @@ function completeStage() {
           saveCases(cases);
         }
         // Reset dashboard về trạng thái sạch
-        D = null; curCaseId = null; currentStage = 1; chatHistory = [];
+        D = null; curCaseId = null; currentStage = 1; chatHistory = []; _editingEntryIdx = null;
         document.getElementById('dash-notes').value = '';
         document.getElementById('dash-cc').textContent = '0 ký tự';
         document.getElementById('btn-fill').disabled = true;
@@ -851,14 +889,13 @@ function completeStage() {
     const _ce = _cc[curCaseId];
     if (_ce) {
       _ce.entries = _ce.entries || [];
-      const _today = new Date().toDateString();
-      const _last = _ce.entries[_ce.entries.length-1];
-      const _sameDS = _last && _last.stage === currentStage && new Date(_last.date).toDateString() === _today;
+      const _nowIso = new Date().toISOString();
       const _snap = D ? JSON.parse(JSON.stringify(D)) : null;
-      if (_sameDS) {
-        _ce.entries[_ce.entries.length-1] = {..._last, notes:_completeNotes, analysis:_snap, date:new Date().toISOString()};
+      const _target = (_editingEntryIdx != null && _ce.entries[_editingEntryIdx]) ? _ce.entries[_editingEntryIdx] : null;
+      if (_target && (_target.stage || 1) === currentStage) {
+        _ce.entries[_editingEntryIdx] = { ..._target, notes: _completeNotes, analysis: _snap, date: _nowIso, stage: currentStage };
       } else {
-        _ce.entries.push({ date:new Date().toISOString(), notes:_completeNotes, analysis:_snap, stage:currentStage });
+        _ce.entries.push({ id: 'en_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), date: _nowIso, notes: _completeNotes, analysis: _snap, stage: currentStage });
       }
       _cc[curCaseId] = _ce;
       _cases = _cc;
@@ -872,6 +909,7 @@ function completeStage() {
   // Clear textarea cho giai đoạn mới
   document.getElementById('dash-notes').value = '';
   document.getElementById('dash-cc').textContent = '0 ký tự';
+  _editingEntryIdx = null;
 
   updateStageUI();
   saveCaseNow();
@@ -916,7 +954,7 @@ function rollbackStage() {
   }
 
   updateStageUI();
-  saveCaseNow();
+  saveCaseNow({ allowStageDowngrade: true });
   showNotif(`↩ Đã lùi về GĐ ${prevStage}: ${STAGE_CONFIG[prevStage].label}`);
 }
 
@@ -1611,33 +1649,36 @@ function renderEntriesPanel() {
   const cases = loadCases();
   const c = curCaseId ? cases[curCaseId] : null;
   const entries = c?.entries || [];
+  const stageEntries = entries
+    .map((e, i) => ({ ...e, _realIdx: i }))
+    .filter(e => (e.stage || 1) === currentStage);
 
   // Cập nhật label toggle header
   const toggleCount = document.getElementById('entries-toggle-count');
   if (toggleCount) {
-    toggleCount.textContent = entries.length
-      ? `Lịch sử ghi chép · ${entries.length} lần`
-      : 'Lịch sử ghi chép';
+    toggleCount.textContent = stageEntries.length
+      ? `Lịch sử GĐ ${currentStage} · ${stageEntries.length} lần`
+      : `Lịch sử GĐ ${currentStage}`;
   }
 
-  if (!entries.length && !D) {
+  if (!stageEntries.length && !D) {
     panel.innerHTML = `<div id="entries-empty" style="text-align:center;padding:28px 16px;color:var(--t3);">
       <div style="font-size:28px;margin-bottom:8px;opacity:.4">📋</div>
       <div style="font-size:12.5px;font-weight:700;color:var(--t2);margin-bottom:4px">Chưa có ghi chép</div>
-      <div style="font-size:11.5px">Nhập ghi chép và nhấn <strong>Phân tích</strong></div>
+      <div style="font-size:11.5px">GĐ ${currentStage} chưa có lịch sử. Nhập ghi chép và nhấn <strong>Phân tích</strong></div>
     </div>`;
     return;
   }
 
   const stageNames = ['','Tiếp cận','Vãng gia','Kế hoạch','Tiến trình','Kết thúc'];
-  const sorted = [...entries].reverse();
+  const sorted = [...stageEntries].reverse();
 
   panel.innerHTML = `
     ${sorted.map((e, i) => {
-      const realIdx = entries.length - 1 - i;
+      const realIdx = e._realIdx;
       const stageLabel = stageNames[e.stage || 1] || 'GĐ ' + (e.stage || 1);
       const preview = (e.notes || '').replace(/\n+/g, ' ').substring(0, 100);
-      const isLatest = i === 0;
+      const isLatest = _editingEntryIdx === realIdx || (i === 0 && _editingEntryIdx == null);
       return `<div class="entry-card${isLatest ? ' active-entry' : ''}" id="ecard-${realIdx}">
         <div class="entry-card-stage">GĐ ${e.stage || 1} — ${stageLabel}</div>
         <div class="entry-card-date">${fmtVN(e.date)}</div>
@@ -1655,6 +1696,7 @@ function loadEntryToEditor(idx) {
   const c = curCaseId ? cases[curCaseId] : null;
   if (!c?.entries?.[idx]) return;
   const entry = c.entries[idx];
+  _editingEntryIdx = idx;
 
   // Restore notes into textarea
   const ta = document.getElementById('dash-notes');
@@ -1667,6 +1709,8 @@ function loadEntryToEditor(idx) {
   if (entry.stage && entry.stage !== currentStage) {
     currentStage = entry.stage;
     updateStageUI();
+    renderEntriesPanel();
+    renderAnalysisPanel();
   }
 
   // Restore analysis data if available
@@ -1693,6 +1737,8 @@ function deleteEntry(idx) {
   const c = curCaseId ? cases[curCaseId] : null;
   if (!c?.entries) return;
   c.entries.splice(idx, 1);
+  if (_editingEntryIdx === idx) _editingEntryIdx = null;
+  else if (_editingEntryIdx != null && _editingEntryIdx > idx) _editingEntryIdx--;
   c.updatedAt = new Date().toISOString();
   cases[curCaseId] = c;
   saveCases(cases);
@@ -2290,7 +2336,7 @@ function newCase() {
   // Tạo trong memory THÔI, chưa lưu xuống DB
   _cases[id] = { id, name:'Ca mới '+new Date().toLocaleDateString('vi-VN'), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), status:'open', entries:[], currentStage:1 };
   _draftCaseId = id;
-  curCaseId = id; D = null; chatHistory = [];
+  curCaseId = id; D = null; chatHistory = []; _editingEntryIdx = null;
   currentStage = 1;
   // Xóa checkmark cam + unlock forms từ ca cũ
   document.querySelectorAll('.fi-ck').forEach(el => el.remove());
@@ -2338,7 +2384,7 @@ function _logEdit(source, stage) {
   _cases = cases;
 }
 
-function saveCaseNow() {
+function saveCaseNow({ allowStageDowngrade = false } = {}) {
   if (!D && !document.getElementById('dash-notes').value.trim()) { showNotif('⚠️ Chưa có dữ liệu','warn'); return; }
   _commitDraft(); // lưu ca draft thành thật nếu chưa lưu
   const cases = loadCases();
@@ -2347,17 +2393,23 @@ function saveCaseNow() {
   const notes = document.getElementById('dash-notes').value.trim();
   if (D?.co_ban?.ho_ten) c.name = D.co_ban.ho_ten;
   c.updatedAt = new Date().toISOString();
-  c.currentStage = currentStage;
+  const prevStage = c.currentStage || 1;
+  c.currentStage = allowStageDowngrade ? currentStage : Math.max(prevStage, currentStage);
   if (D) c.lastAnalysis = D;
   if (notes) {
     c.entries = c.entries || [];
-    const today = new Date().toDateString();
-    const last = c.entries[c.entries.length-1];
-    const isSameDayStage = last && last.stage === currentStage && new Date(last.date).toDateString() === today;
-    if (isSameDayStage) {
-      c.entries[c.entries.length-1] = {...last, notes, analysis:D||null, date:new Date().toISOString()};
-    } else if (!last || last.notes !== notes) {
-      c.entries.push({ date:new Date().toISOString(), notes, analysis:D||null, stage:currentStage });
+    const nowIso = new Date().toISOString();
+    const target = (_editingEntryIdx != null && c.entries[_editingEntryIdx]) ? c.entries[_editingEntryIdx] : null;
+    if (target && (target.stage || 1) === currentStage) {
+      c.entries[_editingEntryIdx] = { ...target, notes, analysis: D || null, date: nowIso, stage: currentStage };
+    } else {
+      const lastSameStageIdx = [...c.entries].map((e, i) => ({ e, i })).reverse().find(x => (x.e.stage || 1) === currentStage)?.i;
+      const lastSameStage = lastSameStageIdx != null ? c.entries[lastSameStageIdx] : null;
+      if (lastSameStage && (lastSameStage.notes || '').trim() === notes) {
+        c.entries[lastSameStageIdx] = { ...lastSameStage, analysis: D || null, date: nowIso, stage: currentStage };
+      } else {
+        c.entries.push({ id: 'en_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), date: nowIso, notes, analysis: D || null, stage: currentStage });
+      }
     }
   }
   cases[curCaseId] = c;
@@ -2555,7 +2607,7 @@ function _closeCaseFromList(id) {
       saveCases(cases);
       if (curCaseId === id) {
         // Reset dashboard về trạng thái sạch sau khi đóng ca
-        D = null; curCaseId = null; currentStage = 1; chatHistory = [];
+        D = null; curCaseId = null; currentStage = 1; chatHistory = []; _editingEntryIdx = null;
         document.getElementById('dash-notes').value = '';
         document.getElementById('dash-cc').textContent = '0 ký tự';
         document.getElementById('btn-fill').disabled = true;
@@ -2596,6 +2648,7 @@ function loadCaseIntoApp(id) {
   const c = loadCases()[id];
   if (!c) return;
   curCaseId = id;
+  _editingEntryIdx = null;
   // ★ Khôi phục giai đoạn đã lưu
   currentStage = c.currentStage || (c.lastAnalysis?._currentStage) || 1;
   // ★ FIX: load D nếu có bất kỳ lastAnalysis nào (không chỉ khi co_ban tồn tại)
@@ -4223,7 +4276,109 @@ function renderAnalysisPanel() {
     </div>
   </div>`;
 
+  // ── Group Action Plan Review (objective, board-safe) ──
+  html += _renderGroupActionPlanReview(c, data);
+
   leftEl.innerHTML = html;
+}
+
+function _isGoldenLikeGroup(g) {
+  const nm = String(g?.group || g?.name || g?.label || '').toLowerCase();
+  const seg = String(g?.segment || g?.nhom || '').toLowerCase();
+  const stage = String(g?.funnel_stage || g?.stage || '').toLowerCase();
+  const gidRaw = g?.group_id ?? g?.id ?? g?.groupNo;
+  const gid = Number(gidRaw);
+  return nm.includes('golden') || (gid === 6 && seg === 'd' && stage.includes('consideration'));
+}
+
+function _normalizeActionGroups(c, data) {
+  const sources = [
+    data?.group_action_plans,
+    data?._report?.group_action_plans,
+    c?.groupActionPlans,
+    c?.actionPlansByGroup,
+  ];
+  const raw = sources.find(Array.isArray) || [];
+  return raw
+    .map((g, i) => ({
+      key: String(g?.key || g?.group_id || g?.id || g?.group || g?.name || ('group_'+i)),
+      group: g?.group || g?.name || g?.label || ('Group ' + (i + 1)),
+      segment: g?.segment || g?.nhom || '',
+      funnel_stage: g?.funnel_stage || g?.stage || '',
+      action_plan: g?.action_plan || g?.plan || g?.actions || '',
+      owner: g?.owner || g?.pic || g?.responsible || '',
+      timeline: g?.timeline || g?.eta || '',
+      kpis: Array.isArray(g?.kpis) ? g.kpis : (Array.isArray(g?.metrics) ? g.metrics : []),
+      dependencies: Array.isArray(g?.dependencies) ? g.dependencies : [],
+      risks: Array.isArray(g?.risks) ? g.risks : [],
+      raw: g
+    }))
+    .filter(g => g.action_plan && !_isGoldenLikeGroup(g.raw));
+}
+
+function _renderGroupActionPlanReview(c, data) {
+  const groups = _normalizeActionGroups(c, data);
+  if (!groups.length) return '';
+  if (!_selectedActionGroup || !groups.some(g => g.key === _selectedActionGroup)) {
+    _selectedActionGroup = groups[0].key;
+  }
+  const selected = groups.find(g => g.key === _selectedActionGroup) || groups[0];
+  const btns = groups.map(g => {
+    const active = g.key === _selectedActionGroup;
+    return `<button onclick="selectActionGroup('${esc(g.key)}')"
+      style="border:1px solid ${active ? '#2563eb' : '#cbd5e1'};background:${active ? '#eff6ff' : '#fff'};color:${active ? '#1d4ed8' : '#334155'};padding:5px 9px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;">
+      ${esc(g.group)}${g.segment ? ` · ${esc(g.segment)}` : ''}${g.funnel_stage ? ` · ${esc(g.funnel_stage)}` : ''}
+    </button>`;
+  }).join('');
+
+  const kpiList = (selected.kpis||[]).length
+    ? `<ul style="margin:4px 0 0 16px;padding:0;">${selected.kpis.map(k => `<li style="font-size:11px;color:#334155;line-height:1.5">${esc(typeof k==='string'?k:JSON.stringify(k))}</li>`).join('')}</ul>`
+    : '<div style="font-size:11px;color:#94a3b8">Chưa ghi KPI</div>';
+  const depList = (selected.dependencies||[]).length
+    ? `<ul style="margin:4px 0 0 16px;padding:0;">${selected.dependencies.map(k => `<li style="font-size:11px;color:#334155;line-height:1.5">${esc(String(k))}</li>`).join('')}</ul>`
+    : '<div style="font-size:11px;color:#94a3b8">Không có dữ liệu phụ thuộc</div>';
+  const riskList = (selected.risks||[]).length
+    ? `<ul style="margin:4px 0 0 16px;padding:0;">${selected.risks.map(k => `<li style="font-size:11px;color:#7f1d1d;line-height:1.5">${esc(String(k))}</li>`).join('')}</ul>`
+    : '<div style="font-size:11px;color:#94a3b8">Không có dữ liệu rủi ro</div>';
+
+  return `<div class="analysis-card">
+    <div class="analysis-card-title">🧭 ĐÁNH GIÁ GROUP CÓ ACTION PLAN (loại trừ Golden)</div>
+    <div style="font-size:10px;color:#64748b;line-height:1.5;margin-bottom:8px;">
+      Chế độ trình bày khách quan cho Ban Giám đốc/NPP: chỉ hiển thị dữ liệu kế hoạch hiện có, không tự động đề xuất chủ quan.
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">${btns}</div>
+    <div style="border:1px solid #e2e8f0;border-radius:8px;padding:8px;background:#f8fafc;">
+      <div style="font-size:11px;font-weight:800;color:#0f172a;margin-bottom:6px;">${esc(selected.group)}${selected.segment?` · Nhóm ${esc(selected.segment)}`:''}${selected.funnel_stage?` · ${esc(selected.funnel_stage)}`:''}</div>
+      <div style="font-size:11px;color:#334155;line-height:1.55;white-space:pre-wrap;"><b>Action Plan:</b> ${esc(typeof selected.action_plan==='string' ? selected.action_plan : JSON.stringify(selected.action_plan))}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:7px;padding:7px;">
+          <div style="font-size:10px;font-weight:700;color:#475569;">Owner/PIC</div>
+          <div style="font-size:11px;color:#0f172a;margin-top:2px;">${esc(selected.owner || 'Chưa ghi')}</div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:7px;padding:7px;">
+          <div style="font-size:10px;font-weight:700;color:#475569;">Timeline</div>
+          <div style="font-size:11px;color:#0f172a;margin-top:2px;">${esc(selected.timeline || 'Chưa ghi')}</div>
+        </div>
+      </div>
+      <div style="margin-top:8px;background:#fff;border:1px solid #e2e8f0;border-radius:7px;padding:7px;">
+        <div style="font-size:10px;font-weight:700;color:#475569;">KPI/Chỉ số theo dõi</div>
+        ${kpiList}
+      </div>
+      <div style="margin-top:8px;background:#fff;border:1px solid #e2e8f0;border-radius:7px;padding:7px;">
+        <div style="font-size:10px;font-weight:700;color:#475569;">Dependencies (liên quan nhiều bên)</div>
+        ${depList}
+      </div>
+      <div style="margin-top:8px;background:#fff;border:1px solid #fecaca;border-radius:7px;padding:7px;">
+        <div style="font-size:10px;font-weight:700;color:#7f1d1d;">Rủi ro đã ghi nhận</div>
+        ${riskList}
+      </div>
+    </div>
+  </div>`;
+}
+
+function selectActionGroup(key) {
+  _selectedActionGroup = key;
+  renderAnalysisPanel();
 }
 
 async function generateComprehensiveEval() {
@@ -4967,5 +5122,3 @@ function _renderFollowUpSection(id, c) {
     </div>
   </div>`;
 }
-
-
