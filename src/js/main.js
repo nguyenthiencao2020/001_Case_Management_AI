@@ -773,31 +773,42 @@ function updateStageUI() {
   if (pillNum) pillNum.textContent = currentStage;
   if (pillLabel) pillLabel.textContent = stageLabels[currentStage] || cfg.label;
 
-  // Progress steps
+  // Stage tab buttons
   const _closedCase = curCaseId ? loadCases()[curCaseId] : null;
   const _caseIsClosed = _closedCase?.status === 'closed';
+  const _tabShortLabels = ['','Tiếp cận','Vãng gia','Kế hoạch','Tiến trình','Kết thúc'];
+  let _hasDone = false;
   for (let s = 1; s <= 5; s++) {
     const sp = document.getElementById('sp-' + s);
     if (!sp) continue;
-    sp.className = 'sp-step';
+    sp.className = 'stage-tab-btn';
+    const numEl = sp.querySelector('.stb-num');
+    const lblEl = sp.querySelector('.stb-lbl');
+    if (lblEl) lblEl.textContent = _tabShortLabels[s];
     const isDone = _caseIsClosed || s < currentStage;
     if (isDone) {
+      _hasDone = true;
       sp.classList.add('done');
       sp.style.cursor = 'pointer';
       sp.title = `Xem lại GĐ ${s}`;
       sp.onclick = () => previewStage(s);
+      if (numEl) numEl.textContent = s + ' ✓';
     } else if (s === currentStage) {
       sp.classList.add('active');
       sp.style.cursor = 'default';
       sp.onclick = null;
       sp.title = '';
+      if (numEl) numEl.textContent = s;
     } else {
       sp.classList.add('locked');
       sp.style.cursor = 'default';
       sp.onclick = null;
       sp.title = '';
+      if (numEl) numEl.textContent = s + ' 🔒';
     }
   }
+  const hintEl = document.getElementById('stage-tab-hint');
+  if (hintEl) hintEl.style.display = _hasDone ? 'flex' : 'none';
 
   // Form chips
   const chipsEl = document.getElementById('stage-form-chips');
