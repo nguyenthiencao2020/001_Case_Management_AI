@@ -78,10 +78,14 @@
   <div class="dash">
     <div class="dash-left">
       <div class="stage-header-card" id="stage-header-card">
-        <div class="stage-progress-row">
-          <div class="sp-step active" id="sp-1"></div><div class="sp-step locked" id="sp-2"></div>
-          <div class="sp-step locked" id="sp-3"></div><div class="sp-step locked" id="sp-4"></div><div class="sp-step locked" id="sp-5"></div>
+        <div class="stage-progress-row" id="stage-progress-row" title="Click vào mốc giai đoạn để quay lại & xem ghi chép">
+          <div class="sp-step active" id="sp-1" data-stage="1"><span class="sp-num">1</span><span class="sp-lbl">Tiếp cận</span></div>
+          <div class="sp-step locked" id="sp-2" data-stage="2"><span class="sp-num">2</span><span class="sp-lbl">Vãng gia</span></div>
+          <div class="sp-step locked" id="sp-3" data-stage="3"><span class="sp-num">3</span><span class="sp-lbl">Kế hoạch</span></div>
+          <div class="sp-step locked" id="sp-4" data-stage="4"><span class="sp-num">4</span><span class="sp-lbl">Tiến trình</span></div>
+          <div class="sp-step locked" id="sp-5" data-stage="5"><span class="sp-num">5</span><span class="sp-lbl">Kết thúc</span></div>
         </div>
+        <div class="stage-progress-hint">👆 Click mốc đã hoàn thành để quay lại GĐ đó</div>
         <div class="stage-title-row">
           <div class="stage-pill" id="stage-pill"><span class="stage-pill-num" id="stage-pill-num">1</span><span id="stage-pill-label">Tiếp cận ban đầu</span></div>
           <button class="btn-complete-stage" id="btn-complete-stage" onclick="completeStage()">✓ Hoàn thành</button>

@@ -903,7 +903,35 @@ function previewStage(s) {
   _flushStage(currentStage);
   currentStage = s;
   _hydrateStage(s);
-  if (!D) {
+
+  // Tự khôi phục phiên bản mới nhất của GĐ này (notes + báo cáo dashboard)
+  let restoredTs = null;
+  if (curCaseId) {
+    const c = loadCases()[curCaseId];
+    if (c) {
+      _ensureStageStores(c);
+      const hist = c.stageHistory[s] || [];
+      const latest = hist[hist.length - 1];
+      if (latest) {
+        const ta = document.getElementById('dash-notes');
+        const cc = document.getElementById('dash-cc');
+        if (ta) ta.value = latest.notes || '';
+        if (cc) cc.textContent = (latest.notes || '').length + ' ký tự';
+        _stageDataCache[s] = { notes: latest.notes || '' };
+        c.stageData[s] = { notes: latest.notes || '' };
+        _cases = loadCases();
+        _cases[curCaseId] = c;
+        if (latest.D && latest.D._report) {
+          if (!D) D = {};
+          D._report = JSON.parse(JSON.stringify(latest.D._report));
+          renderReport(D._report);
+        }
+        restoredTs = latest.ts;
+      }
+    }
+  }
+
+  if (!D && !restoredTs) {
     const chatMsgs = document.getElementById('chat-msgs');
     if (chatMsgs && !chatMsgs.querySelector('.chat-empty')) {
       chatMsgs.innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">📋</div><div style="font-weight:600;">Chưa có dữ liệu cho giai đoạn này</div><div>Hãy nhập ghi chép và bấm "Phân tích"</div></div>';
@@ -913,6 +941,9 @@ function previewStage(s) {
   renderAnalysisPanel();
   renderEntriesPanel();
   renderStageHistory();
+  if (restoredTs) {
+    showNotif(`⏪ GĐ ${s}: đã khôi phục phiên bản mới nhất (${fmtVN(restoredTs)})`);
+  }
 }
 
 // No-op: giữ lại để các chỗ gọi legacy không vỡ
@@ -2171,17 +2202,37 @@ function inlineEdit(el, path) {
 
   const restore = () => {
     el.classList.remove('fl-editing');
-    const v = clean(inp.value);
-    setNested(D, path, v);
-    el.classList.toggle('ok', !!v);
-    el.classList.toggle('no', !v);
-    el.textContent = v || '—';
+    const raw = inp.value;
+    const v = clean(raw);
+    // red_flags: lưu dạng array trong D._report, hiển thị dạng text "• flag" nhiều dòng
+    if (path === '_report.red_flags') {
+      const arr = raw.split(/\r?\n/).map(s => s.replace(/^\s*[-•*]\s*/, '').trim()).filter(Boolean);
+      setNested(D, path, arr);
+      el.textContent = arr.length ? arr.map(f=>'• '+f).join('\n') : '—';
+      el.classList.toggle('ok', arr.length > 0);
+      el.classList.toggle('no', arr.length === 0);
+    } else if (path === '_report.parentification.detected') {
+      const b = /^(có|true|1|yes|y)$/i.test(raw.trim());
+      setNested(D, path, b);
+      el.textContent = b ? 'Có' : 'Không';
+      el.classList.toggle('ok', b);
+      el.classList.toggle('no', !b);
+    } else {
+      setNested(D, path, v);
+      el.classList.toggle('ok', !!v);
+      el.classList.toggle('no', !v);
+      el.textContent = v || '—';
+    }
     if (curCaseId) {
       const cases = loadCases();
       const c = cases[curCaseId];
       if (c) { c.lastAnalysis = JSON.parse(JSON.stringify(D)); c.updatedAt = new Date().toISOString(); cases[curCaseId] = c; _cases = cases; }
       if (window._markUnsaved) window._markUnsaved();
       showNotif('✅ Đã cập nhật — nhớ bấm Lưu', 'ok', 2000);
+    }
+    // Khi sửa field báo cáo AI → đồng bộ lại dashboard ngay
+    if (path && path.startsWith('_report.') && D && D._report && typeof renderReport === 'function') {
+      try { renderReport(D._report); } catch(_) {}
     }
   };
 
@@ -2195,6 +2246,92 @@ function inlineEdit(el, path) {
 function Sec(ttl, id, body, ic='📌') {
   const safeTtl = ttl.replace(/'/g, '&apos;').replace(/"/g, '&quot;');
   return `<div class="sec"><div class="sec-hd"><div class="sec-hl"><span class="sec-ico">${ic}</span>${ttl}</div><div class="sec-acts"><button class="btn-cp" onclick="navigator.clipboard.writeText(document.getElementById('${id}').innerText).then(()=>{this.textContent='✓';setTimeout(()=>this.textContent='Copy',1400)}).catch(()=>{})">Copy</button></div></div><div class="sec-bd" id="${id}">${body}</div></div>`;
+}
+
+// Phần đánh giá chuyên môn — đồng bộ 2 chiều với dashboard báo cáo.
+// Mỗi form có tiêu đề & bộ trường riêng, chỉ hiển thị những gì hợp ngữ cảnh.
+function SecDashboard(idx) {
+  const r = D?._report || {};
+  if (!r.risk && !r.risk_reason && !Array.isArray(r.red_flags) && !r.risk_matrix) return '';
+
+  const rm = r.risk_matrix || {};
+  const pf = r.parentification || {};
+  const nw = r.needs_vs_wants || {};
+  const rf = Array.isArray(r.red_flags) ? r.red_flags.filter(Boolean) : [];
+  const rfText = rf.length ? rf.map(f=>'• '+f).join('\n') : '';
+
+  const overview = () =>
+    F('Mức độ rủi ro', r.risk, '-', '_report.risk') +
+    F('Lý do đánh giá', r.risk_reason, '-', '_report.risk_reason') +
+    (r.urgent ? F('Trạng thái khẩn cấp', 'CÓ', '-', '_report.urgent') : '');
+
+  const matrix = () => [
+    ['🛡 An toàn Thể chất','an_toan_the_chat'],
+    ['🧠 An toàn Tâm lý','an_toan_tam_ly'],
+    ['🏠 Môi trường Sống','moi_truong'],
+    ['📚 Giáo dục & Phát triển','giao_duc'],
+    ['👨‍👩‍👧 Hệ thống Bảo vệ','he_thong_bao_ve']
+  ].map(([lb, k]) => {
+    const o = rm[k] || {};
+    return F(lb + ' — Mức', o.level, '-', '_report.risk_matrix.'+k+'.level')
+         + F(lb + ' — Chi tiết', o.detail, '-', '_report.risk_matrix.'+k+'.detail');
+  }).join('');
+
+  const redFlags = () => F('Red flags quan sát', rfText, '-', '_report.red_flags');
+
+  const needsWants = () =>
+    F('Nhu cầu (Needs)', Array.isArray(nw.needs)?nw.needs.join('\n• '):nw.needs, '-', '_report.needs_vs_wants.needs') +
+    F('Mong muốn (Wants)', Array.isArray(nw.wants)?nw.wants.join('\n• '):nw.wants, '-', '_report.needs_vs_wants.wants');
+  const hasNW = () => !!(nw.needs || nw.wants);
+
+  const parent = () =>
+    F('Phát hiện phụ mẫu hóa', pf.detected ? 'Có' : 'Không', '-', '_report.parentification.detected') +
+    F('Loại', pf.type, '-', '_report.parentification.type') +
+    F('Mô tả', pf.description, '-', '_report.parentification.description');
+  const hasPF = () => !!(pf.detected || pf.type || pf.description);
+
+  const MAP = {
+    0:  { title: 'F. Đánh giá chuyên môn',                       icon: '🎯',
+          body: Dv('Tổng quan rủi ro') + overview() +
+                Dv('Ma trận rủi ro đa chiều') + matrix() +
+                Dv('Red flags') + redFlags() +
+                (hasNW() ? Dv('Nhu cầu ưu tiên') + needsWants() : '') +
+                (hasPF() ? Dv('Phụ mẫu hóa') + parent() : '') },
+    1:  { title: 'E. Đánh giá rủi ro ban đầu',                   icon: '⚠️',
+          body: Dv('Tổng quan') + overview() + Dv('Red flags') + redFlags() },
+    2:  { title: 'C. Cập nhật đánh giá rủi ro sau vãng gia',     icon: '🔄',
+          body: Dv('Tổng quan') + overview() +
+                Dv('Ma trận rủi ro đa chiều') + matrix() +
+                Dv('Red flags') + redFlags() },
+    3:  { title: 'B. Ma trận đánh giá khẩn cấp',                 icon: '🚨',
+          body: Dv('Tổng quan') + overview() +
+                Dv('Ma trận rủi ro 5 chiều') + matrix() +
+                Dv('Red flags') + redFlags() },
+    4:  { title: 'E. Phân tích nhu cầu chuyên sâu',              icon: '🧠',
+          body: (hasNW() ? Dv('Nhu cầu vs Mong muốn') + needsWants() : '') +
+                (hasPF() ? Dv('Phụ mẫu hóa') + parent() : '') +
+                Dv('Ngữ cảnh rủi ro') + F('Mức độ rủi ro', r.risk, '-', '_report.risk') },
+    5:  { title: 'E. Ngữ cảnh rủi ro định hướng kế hoạch',       icon: '🎯',
+          body: Dv('Tổng quan') + overview() +
+                Dv('Red flags cần giải quyết') + redFlags() +
+                (hasNW() ? Dv('Nhu cầu ưu tiên (input cho mục tiêu)') + needsWants() : '') },
+    8:  { title: 'D. Tóm tắt rủi ro phục vụ chuyển gửi',         icon: '📤',
+          body: Dv('Tổng quan') + overview() + Dv('Red flags') + redFlags() },
+    9:  { title: 'F. Đánh giá rủi ro khi đóng ca',               icon: '🏁',
+          body: Dv('Tổng quan cuối') + overview() +
+                Dv('Ma trận rủi ro cuối') + matrix() +
+                Dv('Red flags còn lại') + redFlags() },
+    10: { title: 'VI. Phân tích chuyên môn tổng hợp',            icon: '📊',
+          body: Dv('Tổng quan') + overview() +
+                Dv('Ma trận rủi ro') + matrix() +
+                Dv('Red flags') + redFlags() +
+                (hasNW() ? Dv('Nhu cầu vs Mong muốn') + needsWants() : '') +
+                (hasPF() ? Dv('Phụ mẫu hóa') + parent() : '') }
+  };
+
+  const cfg = MAP[idx];
+  if (!cfg || !cfg.body.trim()) return '';
+  return Sec(cfg.title, 's_dash_'+idx, cfg.body, cfg.icon);
 }
 
 function Dv(t) { return `<div class="dv">${t}</div>`; }
@@ -2223,7 +2360,8 @@ function renderFormTab(idx) {
     <div class="fv-acts">
       <button class="btn-fv-edit" id="btn-fv-edit-${idx}" onclick="toggleFvEditMode(${idx})">✏️ Chỉnh sửa</button>
       <button class="btn-fv-save" onclick="saveCaseNow()">💾 Lưu ca</button>
-      <button class="btn-dl-docx" onclick="dlDocx(${idx})">⬇ .docx</button>
+      <button class="btn-dl-docx" title="Bản Word trích xuất nguyên cấu trúc form web — dùng để chỉnh sửa, nối tiếp" onclick="dlDocx(${idx})">📝 Bản form web</button>
+      <button class="btn-dl-docx-brand" title="Bản in chính thức — có bìa logo Thảo Đàn, footer trên mỗi trang" onclick="dlDocxBranded(${idx})">📄 Bản in Thảo Đàn</button>
     </div>
   </div>`;
 
@@ -2307,6 +2445,8 @@ function renderFormTab(idx) {
     h+=Sec("PHẦN I — Thông tin cơ bản","sbc1",F("Họ tên",cb.ho_ten)+F("Năm sinh",cb.ngay_sinh)+F("Yêu cầu",dg.yeu_cau_tre)+F("Nguy cơ",dg.nguy_co));
     h+=Sec("PHẦN II — Tiến trình","sbc2",F("Bối cảnh GĐ",gd.hoan_canh)+F("Nhu cầu thể chất",dg.nhu_cau_the_chat)+F("Nhu cầu tâm lý",dg.nhu_cau_tam_ly)+F("Ưu thế trẻ",dg.uu_the_tre)+F("Đề xuất",D.de_xuat));
   }
+  // Gắn phần Đánh giá chuyên môn tương ứng với từng form (SecDashboard tự bỏ qua form 5/6 vận hành).
+  if (D && D._report) h += SecDashboard(idx);
   document.getElementById('fv').innerHTML = h;
 }
 
@@ -2666,17 +2806,76 @@ function showCaseDetail(id) {
     ? `<button class="btn-secondary" style="color:#16a34a;border-color:#bbf7d0;" onclick="_reopenCaseFromList('${id}')">🔓 Mở lại ca</button>`
     : `<button class="btn-secondary" style="color:#f07020;border-color:#fed7aa;" onclick="_closeCaseFromList('${id}')">✅ Đóng ca</button>`;
 
+  // ── Tab contents ──
+  const tabOverview = `
+    <div class="cd-section">
+      <div class="cd-section-title">Thông tin ca</div>
+      <div class="cd-kv-grid">
+        <div class="cd-kv"><span class="cd-k">Tên ca</span><span class="cd-v">${esc(c.name||'—')}</span></div>
+        <div class="cd-kv"><span class="cd-k">Trẻ</span><span class="cd-v">${childName ? esc(childName) + (childDob?' · SN '+childDob:'') : '—'}</span></div>
+        <div class="cd-kv"><span class="cd-k">Tạo</span><span class="cd-v">${fmtVN(c.createdAt)}</span></div>
+        <div class="cd-kv"><span class="cd-k">Cập nhật</span><span class="cd-v">${_timeAgo(c.updatedAt)}</span></div>
+        <div class="cd-kv"><span class="cd-k">Ghi chép</span><span class="cd-v">${(c.entries||[]).length}</span></div>
+        <div class="cd-kv"><span class="cd-k">Giai đoạn</span><span class="cd-v">GĐ ${stage} — ${stageLabels[stage]||''}</span></div>
+        ${isClosed ? `<div class="cd-kv"><span class="cd-k">Đóng ca</span><span class="cd-v">${fmtVN(c.closedAt)}</span></div>` : ''}
+      </div>
+    </div>
+    <div class="cd-section">
+      <div class="cd-section-title">Tiến trình</div>
+      <div style="display:flex;align-items:center;gap:0;max-width:280px;">${stageDots}</div>
+    </div>`;
+
+  const tabEntries = entries.length
+    ? entries.map(e=>`<div class="ct-item"><div class="ct-date">📅 ${fmtVN(e.date)}</div><div class="ct-notes">${esc((e.notes||'').substring(0,300))}</div></div>`).join('')
+    : '<div class="cd-empty">Chưa có ghi chép</div>';
+
+  const tabEditLog = (c.editLog && c.editLog.length)
+    ? `<div class="cd-section">
+         <div class="cd-section-title">📝 Lịch sử chỉnh sửa form (${c.editLog.length})</div>
+         <div class="cd-editlog">
+           ${[...c.editLog].reverse().slice(0,50).map(e=>`
+             <div class="cd-editlog-row">
+               <span class="cd-editlog-ts">${fmtVN(e.ts)}</span>
+               <span class="cd-editlog-stage">GĐ${e.stage} ${esc(e.stageLabel)}</span>
+               <span class="cd-editlog-src">${esc(e.source)}</span>
+             </div>`).join('')}
+         </div>
+       </div>`
+    : '<div class="cd-empty">Chưa có chỉnh sửa form nào</div>';
+
+  const tabFollowUp = isClosed
+    ? _renderFollowUpSection(id, c)
+    : '<div class="cd-empty">Tab này chỉ khả dụng khi ca đã đóng</div>';
+
+  const tabFiles = `<div class="cd-section">
+      <div class="cd-section-title">📎 Tài liệu đính kèm</div>
+      ${renderFileUpload(id)}
+    </div>`;
+
+  const tabDef = [
+    { key:'overview', label:'Tổng quan', icon:'📋' },
+    { key:'entries',  label:`Ghi chép (${entries.length})`, icon:'📝' },
+    { key:'editlog',  label:`Lịch sử chỉnh sửa${c.editLog?.length?' ('+c.editLog.length+')':''}`, icon:'🕘' },
+    ...(isClosed ? [{ key:'followup', label:'Theo dõi sau đóng', icon:'📞' }] : []),
+    { key:'files',    label:'Tài liệu', icon:'📎' }
+  ];
+  const active = _caseDetailActiveTab[id] || 'overview';
+  const tabsBar = tabDef.map(t => `
+    <button class="cd-tab ${active===t.key?'active':''}" onclick="_switchCaseDetailTab('${id}','${t.key}')">
+      <span class="cd-tab-ico">${t.icon}</span>${esc(t.label)}
+    </button>`).join('');
+
+  const panelMap = { overview: tabOverview, entries: tabEntries, editlog: tabEditLog, followup: tabFollowUp, files: tabFiles };
+  const activePanel = panelMap[active] || tabOverview;
+
   main.innerHTML = `
     <div class="case-detail-hd">
-      <div style="flex:1;">
+      <div style="flex:1;min-width:0;">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
           <div class="case-detail-title">${esc(c.name||'?')}</div>
           ${statusBadge} ${riskHtml}
         </div>
-        ${childName ? `<div style="font-size:13px;color:var(--t1);margin-top:2px;">👤 <b>${esc(childName)}</b>${childDob ? ' · SN: '+childDob : ''}</div>` : ''}
-        <div class="case-detail-meta">Tạo: ${fmtVN(c.createdAt)} · ${(c.entries||[]).length} ghi chép · Cập nhật: ${_timeAgo(c.updatedAt)}${closedAtTxt}</div>
-        <div style="display:flex;align-items:center;gap:0;margin-top:8px;max-width:280px;">${stageDots}</div>
-        <div style="font-size:10px;color:var(--org);font-weight:600;margin-top:3px;">GĐ ${stage} — ${stageLabels[stage]||''}</div>
+        <div class="case-detail-meta">Tạo ${fmtVN(c.createdAt)} · Cập nhật ${_timeAgo(c.updatedAt)}${closedAtTxt}</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         <button class="btn-secondary" onclick="loadCaseIntoApp('${id}');switchMain('dash')">🔬 Mở</button>
@@ -2685,31 +2884,17 @@ function showCaseDetail(id) {
         <button class="btn-secondary" onclick="deleteCase('${id}')" style="color:#b91c1c;border-color:#fecaca;">🗑 Xóa</button>
       </div>
     </div>
-    <div class="case-detail-body">
-      ${entries.length ? entries.map(e=>`<div class="ct-item"><div class="ct-date">📅 ${fmtVN(e.date)}</div><div class="ct-notes">${esc((e.notes||'').substring(0,300))}</div></div>`).join('') : '<div style="text-align:center;padding:40px;color:var(--t3);">Chưa có ghi chép</div>'}
-      ${(c.editLog && c.editLog.length) ? `
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);">
-        <div style="font-weight:700;font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px;">📝 Lịch sử chỉnh sửa form (${c.editLog.length})</div>
-        <div style="display:flex;flex-direction:column;gap:3px;">
-          ${[...c.editLog].reverse().slice(0,20).map(e=>`
-            <div style="display:flex;align-items:center;gap:8px;font-size:11px;padding:4px 0;border-bottom:1px solid #f1f5f9;">
-              <span style="color:var(--t3);white-space:nowrap;flex-shrink:0;">${fmtVN(e.ts)}</span>
-              <span style="background:#eff6ff;color:#1e40af;border-radius:4px;padding:1px 6px;font-weight:600;font-size:10px;flex-shrink:0;">GĐ${e.stage} ${esc(e.stageLabel)}</span>
-              <span style="color:var(--t2);">${esc(e.source)}</span>
-            </div>`).join('')}
-        </div>
-      </div>` : ''}
-      ${_renderFollowUpSection(id, c)}
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);">
-        <div style="font-weight:600;font-size:13px;margin-bottom:6px;">📎 Tài liệu đính kèm</div>
-        ${renderFileUpload(id)}
-      </div>
-    </div>
-    <div class="case-actions">
-      <button class="btn-analyze" style="font-size:11px;flex:none;padding:7px 14px;" onclick="loadCaseIntoApp('${id}');switchMain('dash')">🔬 Phân tích</button>
-    </div>`;
+    <div class="cd-tabs-bar">${tabsBar}</div>
+    <div class="case-detail-body cd-panel-${active}">${activePanel}</div>`;
   // Load files async
-  refreshFileList(id);
+  if (active === 'files') refreshFileList(id);
+}
+
+// Ghi nhớ tab đang mở cho mỗi case id
+const _caseDetailActiveTab = {};
+function _switchCaseDetailTab(id, key) {
+  _caseDetailActiveTab[id] = key;
+  showCaseDetail(id);
 }
 
 function _closeCaseFromList(id) {
@@ -3144,6 +3329,85 @@ async function dlDocx(fi){
     URL.revokeObjectURL(url);
     showNotif('✅ Đã tải '+FORM_NAMES[fi]);
   }catch(e){showNotif('❌ '+e.message,'err');}
+}
+
+// ── Bản in Thảo Đàn: bìa có logo lớn + thông tin ca + form chuẩn + footer ảnh ──
+async function dlDocxBranded(fi){
+  if(!D){showNotif('⚠️ Chưa có dữ liệu','warn');return;}
+  try{
+    const lib=await loadDocxLib();
+    const [logoData, footerData] = await Promise.all([fetchImg(LOGO_URL), fetchImg(FOOTER_URL)]);
+    // Lấy body + footerSection từ buildDocx gốc (giữ nguyên thông số layout)
+    const collector = [];
+    await buildDocx(fi, logoData, footerData, collector);
+    const pack = collector[0] || { body: [], footerSection: {} };
+    const body = pack.body || [];
+    const footerSection = pack.footerSection || {};
+
+    const { Document, Paragraph, TextRun, AlignmentType, ImageRun } = lib;
+    const PW=11906, PH=16838, MG=1134;
+    const TNR='Times New Roman', NAVY='0F2D6B';
+    const childName = (D.co_ban && D.co_ban.ho_ten) || '—';
+    const caseDate = new Date().toLocaleDateString('vi-VN');
+    const stageLabel = (typeof STAGE_CONFIG !== 'undefined' && STAGE_CONFIG[currentStage]?.label) || ('Giai đoạn '+currentStage);
+
+    const cover = [];
+    // Logo lớn giữa trang
+    if (logoData) {
+      cover.push(new Paragraph({
+        children:[new ImageRun({data:logoData,transformation:{width:180,height:180},type:'png'})],
+        alignment:AlignmentType.CENTER,
+        spacing:{before:2400,after:300}
+      }));
+    }
+    cover.push(new Paragraph({
+      children:[new TextRun({text:'CƠ SỞ THẢO ĐÀN',bold:true,size:40,font:TNR,color:NAVY})],
+      alignment:AlignmentType.CENTER,
+      spacing:{before:100,after:60}
+    }));
+    cover.push(new Paragraph({
+      children:[new TextRun({text:'Hỗ trợ Công tác Xã hội cho Trẻ em',italics:true,size:24,font:TNR,color:'334155'})],
+      alignment:AlignmentType.CENTER,
+      spacing:{before:0,after:1400}
+    }));
+    cover.push(new Paragraph({
+      children:[new TextRun({text:(FORM_NAMES[fi]||'').toUpperCase(),bold:true,size:44,font:TNR,color:NAVY})],
+      alignment:AlignmentType.CENTER,
+      spacing:{before:200,after:500}
+    }));
+    cover.push(new Paragraph({
+      children:[new TextRun({text:'Họ tên trẻ: '+childName,size:28,font:TNR})],
+      alignment:AlignmentType.CENTER,
+      spacing:{before:200,after:80}
+    }));
+    cover.push(new Paragraph({
+      children:[new TextRun({text:stageLabel,size:26,font:TNR,color:'0F2D6B'})],
+      alignment:AlignmentType.CENTER,
+      spacing:{before:100,after:80}
+    }));
+    cover.push(new Paragraph({
+      children:[new TextRun({text:'Ngày phát hành: '+caseDate,size:24,font:TNR,color:'6B7280'})],
+      alignment:AlignmentType.CENTER,
+      spacing:{before:100,after:400}
+    }));
+
+    const pageProps = { page: { size:{width:PW,height:PH}, margin:{top:MG,right:MG,bottom:720,left:MG,footer:0} } };
+    const doc = new Document({
+      sections: [
+        { properties: pageProps, footers: footerSection, children: cover },
+        { properties: pageProps, footers: footerSection, children: body }
+      ]
+    });
+    const blob = await lib.Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'ThaoDan_BanIn_' + FF[fi] + '.docx'; a.click();
+    URL.revokeObjectURL(url);
+    showNotif('✅ Đã tải Bản in Thảo Đàn — '+FORM_NAMES[fi]);
+  } catch(e){
+    console.error(e);
+    showNotif('❌ '+e.message,'err');
+  }
 }
 
 async function buildDocx(fi,logoData,footerData,_collector){
@@ -3867,6 +4131,111 @@ async function buildDocx(fi,logoData,footerData,_collector){
     body.push(DATE_R());
     body.push(SGN(["Giám sát case"]));
     body.push(NOTE("CƠ SỞ THẢO ĐÀN"));
+  }
+
+  // ══ PHẦN ĐÁNH GIÁ CHUYÊN MÔN — bám đúng cấu trúc form web ══
+  // Mỗi form có tiêu đề + bộ trường riêng; loại Form 5 (idx=6) và Form 6 (idx=7) — operational trackers.
+  const _rep = D && D._report;
+  const _hasRep = _rep && (_rep.risk || _rep.risk_reason || _rep.red_flags?.length || _rep.risk_matrix);
+  if (_hasRep) {
+    const _rm = _rep.risk_matrix || {};
+    const _pf = _rep.parentification || {};
+    const _nw = _rep.needs_vs_wants || {};
+    const _rf = Array.isArray(_rep.red_flags) ? _rep.red_flags.filter(Boolean) : [];
+    const _needs = Array.isArray(_nw.needs) ? _nw.needs.filter(Boolean).join(' • ') : _nw.needs;
+    const _wants = Array.isArray(_nw.wants) ? _nw.wants.filter(Boolean).join(' • ') : _nw.wants;
+    const _matrixKeys = [
+      ['🛡 An toàn Thể chất', 'an_toan_the_chat'],
+      ['🧠 An toàn Tâm lý', 'an_toan_tam_ly'],
+      ['🏠 Môi trường Sống', 'moi_truong'],
+      ['📚 Giáo dục & Phát triển', 'giao_duc'],
+      ['👨‍👩‍👧 Hệ thống Bảo vệ', 'he_thong_bao_ve']
+    ];
+    const _hasMatrix = _matrixKeys.some(([_, k]) => _rm[k] && (_rm[k].level || _rm[k].detail));
+    const _hasNW = _needs || _wants;
+    const _hasPF = _pf.detected || _pf.type || _pf.description;
+
+    const _pushOverview = () => {
+      body.push(SUB("Tổng quan"));
+      body.push(FL("Mức độ rủi ro", _rep.risk || ''));
+      body.push(FL("Lý do đánh giá", _rep.risk_reason || ''));
+      if (_rep.urgent) body.push(FL("Trạng thái khẩn cấp", 'CÓ'));
+    };
+    const _pushMatrix = (label) => {
+      if (!_hasMatrix) return;
+      body.push(SUB(label || "Ma trận rủi ro 5 chiều"));
+      _matrixKeys.forEach(([lb, k]) => {
+        const o = _rm[k] || {};
+        if (o.level || o.detail) {
+          body.push(FL(lb + ' — Mức', o.level || ''));
+          body.push(FL(lb + ' — Chi tiết', o.detail || ''));
+        }
+      });
+    };
+    const _pushRedFlags = (label) => {
+      if (!_rf.length) return;
+      body.push(SUB(label || "Red flags"));
+      _rf.forEach(f => body.push(FL("•", f)));
+    };
+    const _pushNeedsWants = (label) => {
+      if (!_hasNW) return;
+      body.push(SUB(label || "Nhu cầu vs Mong muốn"));
+      if (_needs) body.push(FL("Nhu cầu (Needs)", _needs));
+      if (_wants) body.push(FL("Mong muốn (Wants)", _wants));
+    };
+    const _pushParent = () => {
+      if (!_hasPF) return;
+      body.push(SUB("Phụ mẫu hóa (Parentification)"));
+      body.push(FL("Phát hiện", _pf.detected ? 'Có' : 'Không'));
+      if (_pf.type) body.push(FL("Loại", _pf.type));
+      if (_pf.description) body.push(FL("Mô tả", _pf.description));
+    };
+
+    // Per-form dispatch
+    switch (fi) {
+      case 0:
+        body.push(SH("F. ĐÁNH GIÁ CHUYÊN MÔN"));
+        _pushOverview(); _pushMatrix("Ma trận rủi ro đa chiều"); _pushRedFlags();
+        _pushNeedsWants("Nhu cầu ưu tiên"); _pushParent();
+        break;
+      case 1:
+        body.push(SH("E. ĐÁNH GIÁ RỦI RO BAN ĐẦU"));
+        _pushOverview(); _pushRedFlags();
+        break;
+      case 2:
+        body.push(SH("C. CẬP NHẬT ĐÁNH GIÁ RỦI RO SAU VÃNG GIA"));
+        _pushOverview(); _pushMatrix(); _pushRedFlags();
+        break;
+      case 3:
+        body.push(SH("B. MA TRẬN ĐÁNH GIÁ KHẨN CẤP"));
+        _pushOverview(); _pushMatrix(); _pushRedFlags();
+        break;
+      case 4:
+        body.push(SH("E. PHÂN TÍCH NHU CẦU CHUYÊN SÂU"));
+        _pushNeedsWants(); _pushParent();
+        body.push(SUB("Ngữ cảnh rủi ro"));
+        body.push(FL("Mức độ rủi ro", _rep.risk || ''));
+        break;
+      case 5:
+        body.push(SH("E. NGỮ CẢNH RỦI RO ĐỊNH HƯỚNG KẾ HOẠCH"));
+        _pushOverview(); _pushRedFlags("Red flags cần giải quyết");
+        _pushNeedsWants("Nhu cầu ưu tiên (input cho mục tiêu)");
+        break;
+      case 8:
+        body.push(SH("D. TÓM TẮT RỦI RO PHỤC VỤ CHUYỂN GỬI"));
+        _pushOverview(); _pushRedFlags();
+        break;
+      case 9:
+        body.push(SH("F. ĐÁNH GIÁ RỦI RO KHI ĐÓNG CA"));
+        _pushOverview(); _pushMatrix("Ma trận rủi ro cuối"); _pushRedFlags("Red flags còn lại");
+        break;
+      case 10:
+        body.push(SH("VI. PHÂN TÍCH CHUYÊN MÔN TỔNG HỢP"));
+        _pushOverview(); _pushMatrix(); _pushRedFlags();
+        _pushNeedsWants(); _pushParent();
+        break;
+      // fi = 6, 7 → skip (trackers vận hành)
+    }
   }
 
   // ══ FOOTER IMAGE ══
