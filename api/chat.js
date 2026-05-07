@@ -1,9 +1,3 @@
-const KEYS = [
-  process.env.GROQ_KEY_1,
-  process.env.GROQ_KEY_2,
-  process.env.GROQ_KEY_3,
-].filter(Boolean);
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://thaodan.vercel.app');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -11,6 +5,13 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  // Read keys inside handler so Vercel picks up updated env vars without module cache
+  const KEYS = [
+    process.env.GROQ_KEY_1,
+    process.env.GROQ_KEY_2,
+    process.env.GROQ_KEY_3,
+  ].filter(Boolean);
 
   if (KEYS.length === 0)
     return res.status(500).json({ error: { message: 'Chưa cấu hình GROQ_KEY_1/2/3 trên Vercel' } });
