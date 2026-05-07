@@ -116,16 +116,28 @@ body {
   background:linear-gradient(90deg, var(--sc) 0%, color-mix(in srgb, var(--sc) 50%, transparent) 100%);
   transition:background .4s;
 }
-.stage-progress-row {
-  display:flex; gap:4px; margin-bottom:10px; align-items:center;
+.stage-tabs-row {
+  display:flex; gap:4px; margin-bottom:6px;
 }
-.sp-step {
-  height:4px; border-radius:2px; flex:1; background:#e5e7eb;
-  transition:all .4s;
+.stage-tab-btn {
+  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:6px 4px; border-radius:8px; border:1.5px solid #e2e8f0;
+  background:#f1f5f9; cursor:default; transition:all .3s; min-width:0;
+  font-family:inherit;
 }
-.sp-step.done { background:var(--sc); opacity:.5; }
-.sp-step.active { background:var(--sc); }
-.sp-step.locked { background:#e5e7eb; }
+.stb-num { font-size:11px; font-weight:800; color:#9ca3af; white-space:nowrap; }
+.stb-lbl { font-size:8px; font-weight:600; color:#9ca3af; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.stage-tab-btn.active { background:var(--sc); border-color:var(--sc); }
+.stage-tab-btn.active .stb-num,
+.stage-tab-btn.active .stb-lbl { color:#fff; }
+.stage-tab-btn.done { background:var(--sc-bg); border-color:var(--sc-bd); cursor:pointer; }
+.stage-tab-btn.done .stb-num,
+.stage-tab-btn.done .stb-lbl { color:var(--sc); }
+.stage-tab-btn.done:hover { opacity:.8; transform:translateY(-1px); }
+.stage-tab-hint {
+  font-size:9.5px; color:var(--org); font-weight:600;
+  margin-bottom:8px; display:flex; align-items:center; gap:4px;
+}
 
 .stage-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
 .stage-pill {
@@ -1124,10 +1136,9 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 .fup-ci-due   { background:#fffbeb; color:#d97706; border:1px solid #fde68a; }
 
 /* ════════════════════════════════════════════════════
-   STAGE PROGRESS DOTS — click để chuyển GĐ
+   STAGE TAB BUTTONS — click để chuyển GĐ
    ════════════════════════════════════════════════════ */
-.sp-step.done { background:var(--sc); opacity:.75; transition:opacity .15s, transform .15s; }
-.sp-step.done:hover { opacity:1; transform:scale(1.25); }
+.stage-tab-btn.done { transition:opacity .15s, transform .15s; }
 
 /* ════════════════════════════════════════════════════
    STAGE HISTORY PANEL — Lịch sử nhập mỗi giai đoạn
