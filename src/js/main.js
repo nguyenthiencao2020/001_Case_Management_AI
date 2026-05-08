@@ -350,22 +350,32 @@ function saveOneCase(caseId) {
 }
 
 async function initStorage() {
-  if (_currentUser) {
-    try {
-      let query = _supabase.from('cases_v2').select('id, data, user_id');
-      if (!isAdmin()) query = query.eq('user_id', _currentUser.id);
-      const { data } = await query.order('updated_at', { ascending: false });
-      if (data?.length) {
-        _cases = {};
-        data.forEach(row => {
-          if (row.data) {
-            row.data._ownerId = row.user_id;
-            _cases[row.id] = row.data;
-          }
-        });
-      }
-    } catch(e) { console.warn('Supabase load error:', e); }
-  }
+  if (!_currentUser) return;
+  try {
+    let rows;
+    if (isAdmin()) {
+      const { data, error } = await _supabase.from('cases_v2')
+        .select('id, data, user_id')
+        .order('updated_at', { ascending: false });
+      if (error) throw error;
+      rows = data;
+    } else {
+      const { data, error } = await _supabase.from('cases_v2')
+        .select('id, data').eq('user_id', _currentUser.id)
+        .order('updated_at', { ascending: false });
+      if (error) throw error;
+      rows = data;
+    }
+    if (rows?.length) {
+      _cases = {};
+      rows.forEach(row => {
+        if (row.data) {
+          if (row.user_id) row.data._ownerId = row.user_id;
+          _cases[row.id] = row.data;
+        }
+      });
+    }
+  } catch(e) { console.warn('Supabase load error:', e); }
 }
 
 async function deleteCaseFromDB(caseId) {
