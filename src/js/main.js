@@ -375,7 +375,7 @@ async function initStorage() {
         }
       });
     }
-  } catch(e) { console.warn('Supabase load error:', e); }
+  } catch(e) { console.error('[initStorage] Supabase error:', e?.message || e); }
 }
 
 async function deleteCaseFromDB(caseId) {
